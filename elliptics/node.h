@@ -27,6 +27,9 @@ typedef void ell_node;
 ell_node*
 new_node(ell_file_logger *fl);
 
+void                        
+node_add_remote(ell_node *node, const char *addr, const int port, const int family);
+
 #ifdef __cplusplus 
 }
 #endif

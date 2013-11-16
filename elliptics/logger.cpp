@@ -13,13 +13,14 @@
 * GNU General Public License for more details.
 */
 
+#include <elliptics/session.hpp>
+
 #include "logger.h"
-#include <ios>
+
 #include <errno.h>
+#include <ios>
 #include <iostream>
 #include <memory>
-
-#include <elliptics/session.hpp>
 
 using namespace ioremap;
 
