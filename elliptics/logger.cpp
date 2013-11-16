@@ -13,13 +13,14 @@
 * GNU General Public License for more details.
 */
 
+#include <elliptics/session.hpp>
+
 #include "logger.h"
-#include <ios>
+
 #include <errno.h>
+#include <ios>
 #include <iostream>
 #include <memory>
-
-#include <elliptics/session.hpp>
 
 using namespace ioremap;
 
@@ -31,27 +32,25 @@ new_file_logger(const char *file) {
 		elliptics::file_logger* l = new elliptics::file_logger(file);
 		return (ell_file_logger*)l;
 	} catch (const std::ios_base::failure& e) {
-		errno = ENOENT;
-		std::cerr << e.what() << std::endl;
 		return NULL;
 	}
 }
 
 void                 
 file_logger_log(ell_file_logger *fl, int level, const char *msg) {
-    ioremap::elliptics::file_logger *x = (ioremap::elliptics::file_logger*)fl;
-	x->log(level, msg);
+    elliptics::file_logger *efl = (elliptics::file_logger*)fl;
+	efl->log(level, msg);
 }
 
 int
 file_logger_get_level(ell_file_logger *fl) {
-	ioremap::elliptics::file_logger *x = (ioremap::elliptics::file_logger*)fl;
-	return x->get_log_level();
+	elliptics::file_logger *efl = (elliptics::file_logger*)fl;
+	return efl->get_log_level();
 }
 
 void 
 delete_file_logger(ell_file_logger *fl) {
-	delete (ioremap::elliptics::file_logger*)fl;
+	delete (elliptics::file_logger*)fl;
 }
 
 } // extern "C"
