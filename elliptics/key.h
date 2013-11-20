@@ -16,12 +16,15 @@
 #ifndef KEY_H
 #define KEY_H
 
-
 #ifdef __cplusplus
-extern "C" {
-#endif
 
+#include <elliptics/session.hpp>
+typedef ioremap::elliptics::key ell_key;
+extern "C" {
+
+#else
 typedef void ell_key;
+#endif
 
 ell_key* 
 new_key();
@@ -32,11 +35,11 @@ new_key_remote(const char* remote);
 const char* 
 key_remote(ell_key * key);
 
-bool 
-key_by_id(ell_key *c_key);
+int
+key_by_id(ell_key * key);
 
-void 
-key_set_id(ell_key *c_key, const dnet_id &id);
+// void 
+// key_set_id(ell_key *c_key, const dnet_id &id);
 
 void 
 delete_key(ell_key *c_key);
@@ -45,4 +48,4 @@ delete_key(ell_key *c_key);
 }
 #endif
 
-#endif
+#endif  // KEY_H

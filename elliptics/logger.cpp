@@ -13,7 +13,6 @@
 * GNU General Public License for more details.
 */
 
-#include <elliptics/session.hpp>
 
 #include "logger.h"
 
@@ -30,7 +29,7 @@ ell_file_logger*
 new_file_logger(const char *file) {
 	try {
 		elliptics::file_logger* l = new elliptics::file_logger(file);
-		return (ell_file_logger*)l;
+		return l;
 	} catch (const std::ios_base::failure& e) {
 		return NULL;
 	}
@@ -38,19 +37,17 @@ new_file_logger(const char *file) {
 
 void                 
 file_logger_log(ell_file_logger *fl, int level, const char *msg) {
-    elliptics::file_logger *efl = (elliptics::file_logger*)fl;
-	efl->log(level, msg);
+	fl->log(level, msg);
 }
 
 int
 file_logger_get_level(ell_file_logger *fl) {
-	elliptics::file_logger *efl = (elliptics::file_logger*)fl;
-	return efl->get_log_level();
+	return fl->get_log_level();
 }
 
 void 
 delete_file_logger(ell_file_logger *fl) {
-	delete (elliptics::file_logger*)fl;
+	delete fl;
 }
 
 } // extern "C"

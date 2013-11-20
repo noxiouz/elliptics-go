@@ -18,10 +18,13 @@
 
 
 #ifdef __cplusplus
+#include <elliptics/session.hpp>
+typedef ioremap::elliptics::file_logger ell_file_logger;
 extern "C" {
+#else
+typedef void ell_file_logger;
 #endif
 
-typedef void ell_file_logger;
 
 ell_file_logger*
 new_file_logger(const char *file);

@@ -14,7 +14,8 @@
 */
 
 #include "key.h"
-#include <elliptics/session.hpp>
+
+
 
 using namespace ioremap;
 
@@ -22,32 +23,29 @@ extern "C" {
 
 ell_key*
 new_key() {
-    elliptics::key * k = new elliptics::key();
-    return (ell_key *) k;
+    return new elliptics::key();
 }
 
 ell_key*
 new_key_remote(const char * remote) {
-	elliptics::key * k = new elliptics::key(std::string(remote));
-	return (ell_key *) k;
+	return new elliptics::key(std::string(remote));
 }
 
 const char*
-key_remote(ell_key *c_key) {
-	 elliptics::key * k = (elliptics::key *)c_key;
-	 std::string remote(k->remote());
-	 return remote.c_str();
+key_remote(ell_key *key) {
+	std::string remote(key->remote());
+	return remote.c_str();
 }
 
-bool
+int
 key_by_id(ell_key *key) {
-	 return key->by_id();
+	return key->by_id();
 }
 
-void 
-key_set_id(ell_key *key, const dnet_id &id) {
-	key->set_id(id);
-}
+// void 
+// key_set_id(ell_key *key, const dnet_id &id) {
+// 	key->set_id(id);
+// }
 
 void 
 delete_key(ell_key *key) {

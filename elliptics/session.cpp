@@ -13,35 +13,15 @@
 * GNU General Public License for more details.
 */
 
-#ifndef NODE_H
-#define NODE_H
+#include "session.h"
 
-#include "logger.h"
+using namespace ioremap;
 
-#ifdef __cplusplus
-#include <elliptics/session.hpp>
-typedef ioremap::elliptics::node ell_node;
 extern "C" {
-#else
-typedef void ell_node;
-#endif
 
-
-ell_node*
-new_node(ell_file_logger *fl);
-
-void
-delete_node(ell_node *node);
-
-void                        
-node_add_remote(ell_node *node, const char *addr, const int port, const int family);
-
-void 
-node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout);
-
-
-#ifdef __cplusplus 
+ell_session*
+new_elliptics_session(ell_node* node) {
+	return new elliptics::session(*node);
 }
-#endif
 
-#endif
+}

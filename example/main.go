@@ -28,4 +28,12 @@ func main() {
 		log.Fatalln("AddRemote: ", err)
 	}
 
+	key, _ := elliptics.NewKey()
+	log.Println(key)
+
+	session, err := elliptics.NewSession(node)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(session)
 }

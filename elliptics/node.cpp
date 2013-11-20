@@ -13,7 +13,6 @@
 * GNU General Public License for more details.
 */
 
-#include <elliptics/session.hpp>
 #include "node.h"
 #include <errno.h>
 
@@ -23,29 +22,26 @@ extern "C" {
 
 ell_node*
 new_node(ell_file_logger *fl) {
-	elliptics::node *node = new elliptics::node(*(elliptics::file_logger*)fl);
-	return (ell_node*)node;
+	elliptics::node *node = new elliptics::node(*fl);
+	return node;
 }
 
 void
 delete_node(ell_node *node) {
-	elliptics::node *n = (elliptics::node *)node;
-	delete n;
+	delete node;
 }
 
 void                        
 node_add_remote(ell_node* node, const char *addr, const int port, const int family) {
-	elliptics::node *n = (elliptics::node *)node;
 	try {
-	n->add_remote(addr, port, family);
+	node->add_remote(addr, port, family);
 	} catch (ioremap::elliptics::error &e) {
 	}	
 }
 
 void 
 node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout) {
-	elliptics::node *n = (elliptics::node *)node;
-	n->set_timeouts(wait_timeout, check_timeout);
+	node->set_timeouts(wait_timeout, check_timeout);
 }
 
 } // extern "C"
