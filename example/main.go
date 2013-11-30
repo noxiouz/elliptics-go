@@ -36,4 +36,6 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println(session)
+	a := session.StatLog()
+	<-a
 }

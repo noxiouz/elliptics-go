@@ -13,39 +13,38 @@
 * GNU General Public License for more details.
 */
 
-#ifndef KEY_H
-#define KEY_H
+#ifndef SESSION_H
+#define SESSION_H
+
+#include "node.h"
+#include "key.h"
 
 #ifdef __cplusplus
 
+#include <iostream>
+#include <functional>
 #include <elliptics/session.hpp>
-typedef ioremap::elliptics::key ell_key;
+typedef ioremap::elliptics::session ell_session;
 extern "C" {
 
 #else
-typedef void ell_key;
+typedef void ell_session;
 #endif
 
-ell_key* 
-new_key();
+typedef void(*Callback)(void*, void*);
 
-ell_key* 
-new_key_remote(const char* remote);
+ell_session*
+new_elliptics_session(ell_node* node);
 
-const char* 
-key_remote(ell_key * key);
+void
+session_read_data(ell_session *session, ell_key *key);
 
-int
-key_by_id(ell_key * key);
+void
+session_stat_log(ell_session *session, Callback clb, void *ch);
 
-// void 
-// key_set_id(ell_key *c_key, const dnet_id &id);
 
-void 
-delete_key(ell_key *c_key);
-
-#ifdef __cplusplus
+#ifdef __cplusplus 
 }
 #endif
 
-#endif  // KEY_H
+#endif

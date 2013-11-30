@@ -1,9 +1,9 @@
 .PHONY: clean
 
-TARGET=test
+#TARGET=test
 
-$(TARGET): libell.so
-	go build .
+#$(TARGET): libell.so
+#	go build .
 
 libell.so: logger.o node.o key.o session.o
 	g++ -shared -o $@ $^

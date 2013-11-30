@@ -13,27 +13,30 @@
 * GNU General Public License for more details.
 */
 
-#ifndef SESSION_H
-#define SESSION_H
+#include "session.h"
 
-#include "node.h"
+using namespace ioremap;
 
-#ifdef __cplusplus
-
-#include <elliptics/session.hpp>
-typedef ioremap::elliptics::session ell_session;
 extern "C" {
 
-#else
-typedef void ell_session;
-#endif
+void on_stat_result(Callback clb, void *ch, const elliptics::sync_stat_result &result) {
+	std::cerr << "on_stat_result";
+	clb(result[0].statistics(), ch);
+}
 
 ell_session*
-new_elliptics_session(ell_node* node);
-
-
-#ifdef __cplusplus 
+new_elliptics_session(ell_node* node) {
+	return new elliptics::session(*node);
 }
-#endif
 
-#endif
+void
+session_read_data(ell_session *session, ell_key *key) {
+	//session->read_data(*key, 0, 0).connect(std::bind(&k, std::placeholders::_1));
+}
+
+void
+session_stat_log(ell_session *session, Callback clb, void *ch) {
+	session->stat_log().connect(std::bind(&on_stat_result, clb, ch, std::placeholders::_1));
+}
+
+}
