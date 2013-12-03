@@ -15,8 +15,6 @@
 
 #include "key.h"
 
-
-
 using namespace ioremap;
 
 extern "C" {

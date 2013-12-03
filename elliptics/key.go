@@ -1,9 +1,7 @@
 package elliptics
 
 /*
-#cgo LDFLAGS: -lell -lelliptics_cpp -L .
-#include "lib/key.h"
-#include <elliptics/interface.h>
+#include "key.h"
 
 extern void my_callback(void*);
 

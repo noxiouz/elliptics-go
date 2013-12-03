@@ -21,7 +21,7 @@ extern "C" {
 
 void on_stat_result(Callback clb, void *ch, const elliptics::sync_stat_result &result) {
 	std::cerr << "on_stat_result";
-	clb(result[0].statistics(), ch);
+	//clb(result[0].statistics(), ch);
 }
 
 ell_session*
@@ -36,7 +36,7 @@ session_read_data(ell_session *session, ell_key *key) {
 
 void
 session_stat_log(ell_session *session, Callback clb, void *ch) {
-	session->stat_log().connect(std::bind(&on_stat_result, clb, ch, std::placeholders::_1));
+	//session->stat_log().connect(std::bind(&on_stat_result, clb, ch, std::placeholders::_1));
 }
 
 }

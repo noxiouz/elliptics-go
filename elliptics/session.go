@@ -6,8 +6,7 @@ import (
 )
 
 /*
-  #cgo LDFLAGS: -lell -lelliptics_cpp -L .
-  #include "lib/session.h"
+#include "session.h"
 
  	extern void Test(void*, void*);
 

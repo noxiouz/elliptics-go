@@ -30,12 +30,13 @@ func main() {
 
 	key, _ := elliptics.NewKey()
 	log.Println(key)
+	//key.Id()
 
 	session, err := elliptics.NewSession(node)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println(session)
-	a := session.StatLog()
-	<-a
+	//	a := session.StatLog()
+	//	<-a
 }

@@ -1,7 +1,6 @@
 package elliptics
 
-// #cgo LDFLAGS: -lell -lelliptics_cpp -L .
-// #include "lib/node.h"
+// #include "node.h"
 // #include <stdlib.h>
 import "C"
 

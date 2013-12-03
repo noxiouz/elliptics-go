@@ -1,7 +1,6 @@
 package elliptics
 
-// #cgo LDFLAGS: -lell -lelliptics_cpp -L .
-// #include "lib/logger.h"
+// #include "logger.h"
 // #include <stdlib.h>
 import "C"
 
