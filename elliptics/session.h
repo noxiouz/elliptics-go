@@ -19,6 +19,7 @@
 #include "node.h"
 #include "key.h"
 
+
 #ifdef __cplusplus
 
 #include <iostream>
@@ -31,16 +32,19 @@ extern "C" {
 typedef void ell_session;
 #endif
 
-typedef void(*Callback)(void*, void*);
+typedef void(*gocallback)(void*, void*);
 
 ell_session*
 new_elliptics_session(ell_node* node);
 
 void
-session_read_data(ell_session *session, ell_key *key);
+session_set_groups(ell_session *session, int* groups, int count);
 
 void
-session_stat_log(ell_session *session, Callback clb, void *ch);
+session_read_data(ell_session *session, void *context, ell_key *key);
+
+void
+session_stat_log(ell_session *session, void *context);
 
 
 #ifdef __cplusplus 

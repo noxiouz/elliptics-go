@@ -2,17 +2,10 @@ package elliptics
 
 /*
 #include "key.h"
-
-extern void my_callback(void*);
-
-static void my_test(void *key) {
-	my_callback(key);
-}
 */
 import "C"
 
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -28,11 +21,11 @@ func NewKey() (key *Key, err error) {
 	return &Key{ckey}, nil
 }
 
-func (k *Key) Call() {
-	C.my_test(k.key)
+func (k *Key) ById() bool {
+	return int(C.key_by_id(k.key)) > 0
 }
 
-//export  my_callback
-func my_callback(p unsafe.Pointer) {
-	fmt.Println("GOPA")
+func (k *Key) SetId(dnetId *DnetId) (err error) {
+	_, err = C.key_set_id(k.key, dnetId._dnet_id)
+	return
 }

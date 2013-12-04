@@ -35,7 +35,7 @@ void
 node_add_remote(ell_node* node, const char *addr, const int port, const int family) {
 	try {
 	node->add_remote(addr, port, family);
-	} catch (ioremap::elliptics::error &e) {
+	} catch (elliptics::error &e) {
 	}	
 }
 

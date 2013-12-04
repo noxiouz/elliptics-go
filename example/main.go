@@ -37,6 +37,8 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println(session)
-	//	a := session.StatLog()
-	//	<-a
+	session.SetGroups([]int{1, 2, 3})
+	a := session.StatLog()
+	<-a
+	a = session.Read(key)
 }

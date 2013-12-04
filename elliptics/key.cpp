@@ -15,6 +15,7 @@
 
 #include "key.h"
 
+
 using namespace ioremap;
 
 extern "C" {
@@ -40,10 +41,10 @@ key_by_id(ell_key *key) {
 	return key->by_id();
 }
 
-// void 
-// key_set_id(ell_key *key, const dnet_id &id) {
-// 	key->set_id(id);
-// }
+void 
+key_set_id(ell_key *key, const struct dnet_id *id) {
+	key->set_id(*id);
+}
 
 void 
 delete_key(ell_key *key) {

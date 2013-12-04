@@ -1,18 +1,12 @@
 package elliptics
 
 import (
-	"fmt"
 	"unsafe"
 )
 
 /*
 #include "session.h"
-
- 	extern void Test(void*, void*);
-
-	static void my_Test(void *s, void *ch) {
-		session_stat_log(s, &Test, ch);
-	}
+#include <stdio.h>
 */
 import "C"
 
@@ -28,21 +22,27 @@ func NewSession(node *Node) (*Session, error) {
 	return &Session{session}, err
 }
 
-func (s *Session) Read(key *Key) {
-	C.session_read_data(s.session, key.key)
+func (s *Session) SetGroups(groups []int) {
+	// count := C.int(len(groups))
+	// f := (*C.int)(&groups[0])
+	// fmt.Println(&f, " ", &groups[0])
+	//C.session_set_groups(s.session, f, count)
 }
 
-func (s *Session) StatLog() (a chan bool) {
-	//C.session_stat_log(s.session)
+func (s *Session) Read(key *Key) (a chan bool) {
 	a = make(chan bool, 1)
-	fmt.Println("Pointer tot channel", &a)
-	C.my_Test(s.session, unsafe.Pointer(&a))
+	context := func(result unsafe.Pointer) {
+		a <- true
+	}
+	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
 
-//export Test
-func Test(p unsafe.Pointer, ch unsafe.Pointer) {
-	fmt.Println("CALLBACK CALLBACK mypointer", p, ch)
-	_ch := (*chan bool)(ch)
-	*_ch <- true
+func (s *Session) StatLog() (a chan bool) {
+	a = make(chan bool, 1)
+	context := func(result unsafe.Pointer) {
+		a <- true
+	}
+	C.session_stat_log(s.session, unsafe.Pointer(&context))
+	return
 }
