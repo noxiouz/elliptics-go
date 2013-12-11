@@ -7,38 +7,52 @@ import (
 	"time"
 )
 
+const TESTKEY = "TESTKEY"
+const ELLHOST = "elstorage01f.kit.yandex.net:1025"
+
 func main() {
 	// Create file logger
-	l, err := elliptics.NewFileLogger("LOG.log")
+	log.Println("Create logger")
+	EllLog, err := elliptics.NewFileLogger("LOG.log")
 	if err != nil {
 		log.Fatalln("NewFileLogger: ", err)
 	}
-	defer l.Free()
-	l.Log(4, fmt.Sprintf("%v\n", time.Now()))
-	log.Println("Log level: ", l.GetLevel())
+	defer EllLog.Free()
+	EllLog.Log(4, fmt.Sprintf("%v\n", time.Now()))
 
 	// Create elliptics node
-	node, err := elliptics.NewNode(l)
+	log.Println("Create elliptics node")
+	node, err := elliptics.NewNode(EllLog)
 	if err != nil {
 		log.Println(err)
 	}
+	defer node.Free()
 
 	node.SetTimeouts(100, 1000)
-	if err = node.AddRemote("elstorage01f.kit.yandex.net:1025"); err != nil {
+	log.Println("Add remotes")
+	if err = node.AddRemote(ELLHOST); err != nil {
 		log.Fatalln("AddRemote: ", err)
 	}
 
-	key, _ := elliptics.NewKey()
-	log.Println(key)
-	//key.Id()
-
 	session, err := elliptics.NewSession(node)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error", err)
 	}
-	log.Println(session)
-	session.SetGroups([]int{1, 2, 3})
-	a := session.StatLog()
-	<-a
-	a = session.Read(key)
+	log.Println("Session ", session)
+
+	session.SetGroups([]int32{1, 2, 3})
+	rd := <-session.ReadData(TESTKEY)
+	if rd.Error() != nil {
+		log.Fatal("read error ", rd.Error())
+	}
+	log.Printf("%s \n", rd.Data())
+	rw := <-session.WriteData(TESTKEY, "dsdsds")
+	if rw.Error() != nil {
+		log.Fatal("write error", rw.Error())
+	}
+	rd = <-session.ReadData(TESTKEY)
+	if rd.Error() != nil {
+		log.Fatal("read error ", rd.Error())
+	}
+	log.Printf("%s \n", rd.Data())
 }

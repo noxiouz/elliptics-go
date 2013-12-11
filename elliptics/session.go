@@ -1,6 +1,7 @@
 package elliptics
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -10,6 +11,41 @@ import (
 */
 import "C"
 
+var _ = fmt.Scanf
+
+// Result of read operation
+type IReadDataResult interface {
+	Error() error
+	Data() string
+}
+
+type readDataResult struct {
+	err error
+	res string
+}
+
+func (r *readDataResult) Error() error {
+	return r.err
+}
+
+func (r *readDataResult) Data() string {
+	return r.res
+}
+
+//Result of write operation
+type IWriteDataResult interface {
+	Error() error
+}
+
+type writeDataResult struct {
+	err error
+}
+
+func (w *writeDataResult) Error() error {
+	return w.err
+}
+
+// Session context
 type Session struct {
 	session unsafe.Pointer
 }
@@ -22,27 +58,50 @@ func NewSession(node *Node) (*Session, error) {
 	return &Session{session}, err
 }
 
-func (s *Session) SetGroups(groups []int) {
-	// count := C.int(len(groups))
-	// f := (*C.int)(&groups[0])
-	// fmt.Println(&f, " ", &groups[0])
-	//C.session_set_groups(s.session, f, count)
+//Set elliptics groups for the session
+func (s *Session) SetGroups(groups []int32) {
+	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
 }
 
-func (s *Session) Read(key *Key) (a chan bool) {
-	a = make(chan bool, 1)
+func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
+	a = make(chan IReadDataResult, 1)
 	context := func(result unsafe.Pointer) {
-		a <- true
+		res := C.GoString((*C.char)(result))
+		a <- &readDataResult{err: nil, res: res}
 	}
 	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
 
-func (s *Session) StatLog() (a chan bool) {
-	a = make(chan bool, 1)
-	context := func(result unsafe.Pointer) {
-		a <- true
+func (s *Session) ReadData(key string) (a chan IReadDataResult) {
+	ekey, err := NewKey(key)
+	if err != nil {
+		errCh := make(chan IReadDataResult, 1)
+		errCh <- &readDataResult{err, ""}
+		return errCh
 	}
-	C.session_stat_log(s.session, unsafe.Pointer(&context))
+	defer ekey.Free()
+	return s.ReadKey(ekey)
+}
+
+func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
+	ekey, err := NewKey(key)
+	if err != nil {
+		return
+	}
+	defer ekey.Free()
+	return s.WriteKey(ekey, blob)
+}
+
+func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
+	a = make(chan IWriteDataResult, 1)
+	context := func(result unsafe.Pointer) {
+		res := C.GoString((*C.char)(result))
+		fmt.Println(res)
+		a <- &writeDataResult{err: nil}
+	}
+	raw_data := C.CString(blob)
+	defer C.free(unsafe.Pointer(raw_data))
+	C.session_write_data(s.session, unsafe.Pointer(&context), key.key, raw_data, C.size_t(len(blob)))
 	return
 }

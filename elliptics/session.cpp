@@ -23,12 +23,29 @@ extern "C" {
 #include "_cgo_export.h"
 
 void on_stat_result(void *context, const elliptics::sync_stat_result &result) {
-	std::cerr << "on_stat_result" << std::endl;
 	GoCallback(result[0].statistics(), context);
 }
 
-void on_read_result(void *context, const elliptics::sync_read_result &result, const ioremap::elliptics::error_info &error) {
-	std::cerr << "on_read_result" << std::endl;
+void on_read_result(void *context, 
+	const elliptics::sync_read_result &result,
+	const elliptics::error_info &error) {
+	if (error) {
+		std::cerr << -error.code() <<  error.message() << std::endl;
+	} else {
+	    std::string blob = result[0].file().to_string();
+		GoCallback(const_cast<char*>(blob.c_str()), context);
+	}
+}
+
+void on_write_result(void *context, 
+	const elliptics::sync_write_result &result,
+	const elliptics::error_info &error) {
+	if (error) {
+		std::cerr << -error.code() <<  error.message() << std::endl;
+	} else {
+		std::string ok("OK");
+		GoCallback(const_cast<char*>(ok.c_str()), context);
+	}
 }
 
 
@@ -38,15 +55,15 @@ new_elliptics_session(ell_node* node) {
 }
 
 void
-session_set_groups(ell_session *session, int* groups, int count) {
+session_set_groups(ell_session *session, int32_t *groups, int count) {
 	std::vector<int> g(groups, groups + count);
 	session->set_groups(g);
+	std::cerr << "Setup " << session->get_groups().size() << " groups" << std::endl;
 }
 
 void
 session_read_data(ell_session *session, void *context, ell_key *key) {
 	using namespace std::placeholders;
-	std::cerr << "session_read_data DISABLED" << std::endl;
 	try {
 		session->read_data(*key, 0, 0).connect(std::bind(&on_read_result,
 			context,
@@ -54,6 +71,17 @@ session_read_data(ell_session *session, void *context, ell_key *key) {
 	} catch (elliptics::error &e) {
 		std::cerr << e.what() << std::endl;
 	}
+}
+
+void
+session_write_data(ell_session *session, void *context, 
+	ell_key *key, 
+	char *data,
+	size_t size) {
+	using namespace std::placeholders;
+	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_write_result,
+		context,
+		_1, _2));
 }
 
 void

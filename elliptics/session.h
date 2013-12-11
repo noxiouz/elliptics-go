@@ -38,10 +38,13 @@ ell_session*
 new_elliptics_session(ell_node* node);
 
 void
-session_set_groups(ell_session *session, int* groups, int count);
+session_set_groups(ell_session *session, int32_t* groups, int count);
 
 void
 session_read_data(ell_session *session, void *context, ell_key *key);
+
+void
+session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
 
 void
 session_stat_log(ell_session *session, void *context);
