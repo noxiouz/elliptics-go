@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const TESTKEY = "TESTKEY"
+const TESTKEY = "TESTKEYsssd"
 const ELLHOST = "elstorage01f.kit.yandex.net:1025"
 
 func main() {
@@ -50,9 +50,11 @@ func main() {
 	if rw.Error() != nil {
 		log.Fatal("write error", rw.Error())
 	}
+	log.Println("YYYYYYY")
 	rd = <-session.ReadData(TESTKEY)
 	if rd.Error() != nil {
 		log.Fatal("read error ", rd.Error())
 	}
+	log.Println("TTTTTTT")
 	log.Printf("%s \n", rd.Data())
 }

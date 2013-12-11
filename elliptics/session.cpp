@@ -22,30 +22,46 @@ extern "C" {
 
 #include "_cgo_export.h"
 
+struct GoRes*
+new_go_res(int errcode, void* res) {
+	struct GoRes* r = new GoRes();
+	r->errcode = errcode;
+	r->result = res;
+	return r;
+}
+
 void on_stat_result(void *context, const elliptics::sync_stat_result &result) {
-	GoCallback(result[0].statistics(), context);
+	std::cerr << "Not implemented" << std::endl;
 }
 
 void on_read_result(void *context, 
 	const elliptics::sync_read_result &result,
 	const elliptics::error_info &error) {
+	GoRes* r;
 	if (error) {
-		std::cerr << -error.code() <<  error.message() << std::endl;
+		r = new_go_res(error.code(),
+						const_cast<char*>(error.message().c_str()));
 	} else {
 	    std::string blob = result[0].file().to_string();
-		GoCallback(const_cast<char*>(blob.c_str()), context);
+		r = new_go_res(0,
+						const_cast<char*>(blob.c_str()));
 	}
+	GoCallback(r, context);
 }
 
 void on_write_result(void *context, 
 	const elliptics::sync_write_result &result,
 	const elliptics::error_info &error) {
+	GoRes* r;
 	if (error) {
-		std::cerr << -error.code() <<  error.message() << std::endl;
+		r = new_go_res(error.code(),
+						const_cast<char*>(error.message().c_str()));
 	} else {
-		std::string ok("OK");
-		GoCallback(const_cast<char*>(ok.c_str()), context);
+		std::string blob("ok");
+		r = new_go_res(0,
+						const_cast<char*>(blob.c_str()));
 	}
+	GoCallback(r, context);
 }
 
 
