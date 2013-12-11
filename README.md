@@ -3,6 +3,20 @@ elliptics-go
 
 Go binding for Elliptics key-value storage.
 
+## Installation
+
+```
+go get github.com/noxiouz/elliptics-go/elliptics
+```
+
+Specify the following environment variables, if libraries and heders are located in a non-standard location:
+ + CFLAGS - C flags
+ + CPPFLAGS - both C++/C flags
+ + CXXFLAGS - C++ flags
+ + LDFLAGS - flags for linker
+
+## Example
+
 ``` go
 package main
 
