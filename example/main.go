@@ -1,11 +1,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"github.com/noxiouz/elliptics-go/elliptics"
 	"log"
 	"time"
+
+	"github.com/noxiouz/elliptics-go/elliptics"
 )
+
+var HOST string
+var KEY string
+
+func init() {
+	flag.StringVar(&HOST, "host", ELLHOST, "elliptics host:port")
+	flag.StringVar(&KEY, "key", TESTKEY, "key")
+	flag.Parse()
+}
 
 const TESTKEY = "TESTKEYsssd"
 const ELLHOST = "elstorage01f.kit.yandex.net:1025"
@@ -30,7 +41,7 @@ func main() {
 
 	node.SetTimeouts(100, 1000)
 	log.Println("Add remotes")
-	if err = node.AddRemote(ELLHOST); err != nil {
+	if err = node.AddRemote(HOST); err != nil {
 		log.Fatalln("AddRemote: ", err)
 	}
 
@@ -38,23 +49,23 @@ func main() {
 	if err != nil {
 		log.Fatal("Error", err)
 	}
-	log.Println("Session ", session)
-
 	session.SetGroups([]int32{1, 2, 3})
-	rd := <-session.ReadData(TESTKEY)
+
+	rd := <-session.ReadData(KEY)
 	if rd.Error() != nil {
-		log.Fatal("read error ", rd.Error())
+		log.Println("read error ", rd.Error())
+	} else {
+		log.Printf("%s \n", rd.Data())
 	}
-	log.Printf("%s \n", rd.Data())
-	rw := <-session.WriteData(TESTKEY, "dsdsds")
+
+	rw := <-session.WriteData(KEY, "TESTDATA")
 	if rw.Error() != nil {
 		log.Fatal("write error", rw.Error())
 	}
-	log.Println("YYYYYYY")
-	rd = <-session.ReadData(TESTKEY)
-	if rd.Error() != nil {
-		log.Fatal("read error ", rd.Error())
+
+	rd2 := <-session.ReadData(KEY)
+	if rd2.Error() != nil {
+		log.Fatal("read error ", rd2.Error())
 	}
-	log.Println("TTTTTTT")
-	log.Printf("%s \n", rd.Data())
+	log.Printf("%s \n", rd2.Data())
 }
