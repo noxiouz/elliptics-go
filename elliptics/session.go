@@ -66,9 +66,18 @@ func (s *Session) SetGroups(groups []int32) {
 func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
 	a = make(chan IReadDataResult, 1)
 	context := func(result unsafe.Pointer) {
-		res := C.GoString((*C.char)(result))
-		a <- &readDataResult{err: nil, res: res}
+		resa := (*C.struct_GoRes)(result)
+		defer C.free(result)
+		err := C.int(resa.errcode)
+		if err != 0 {
+			a <- &readDataResult{err: fmt.Errorf("%s", C.GoString((*C.char)(resa.result))),
+				res: ""}
+		} else {
+			res := C.GoString((*C.char)(resa.result))
+			a <- &readDataResult{err: nil, res: res}
+		}
 	}
+
 	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
@@ -96,10 +105,18 @@ func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
 func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	a = make(chan IWriteDataResult, 1)
 	context := func(result unsafe.Pointer) {
-		res := C.GoString((*C.char)(result))
-		fmt.Println(res)
-		a <- &writeDataResult{err: nil}
+		resa := (*C.struct_GoRes)(result)
+		//defer C.free(result)
+		err := C.int(resa.errcode)
+		if err != 0 {
+			errmsg := C.GoString((*C.char)(resa.result))
+			a <- &readDataResult{err: fmt.Errorf("%s", errmsg),
+				res: ""}
+		} else {
+			a <- &readDataResult{err: nil, res: ""}
+		}
 	}
+
 	raw_data := C.CString(blob)
 	defer C.free(unsafe.Pointer(raw_data))
 	C.session_write_data(s.session, unsafe.Pointer(&context), key.key, raw_data, C.size_t(len(blob)))

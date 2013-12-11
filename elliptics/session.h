@@ -32,6 +32,15 @@ extern "C" {
 typedef void ell_session;
 #endif
 
+struct GoRes
+{
+	int errcode;
+	void *result;
+};
+
+struct GoRes* 
+new_go_res(int errorcode, void* res);
+
 typedef void(*gocallback)(void*, void*);
 
 ell_session*
