@@ -22,13 +22,6 @@ extern "C" {
 
 #include "_cgo_export.h"
 
-struct GoRes*
-new_go_res(int errcode, void* res) {
-	struct GoRes* r = new GoRes();
-	r->errcode = errcode;
-	r->result = res;
-	return r;
-}
 
 void on_stat_result(void *context, const elliptics::sync_stat_result &result) {
 	std::cerr << "Not implemented" << std::endl;
@@ -37,31 +30,31 @@ void on_stat_result(void *context, const elliptics::sync_stat_result &result) {
 void on_read_result(void *context, 
 	const elliptics::sync_read_result &result,
 	const elliptics::error_info &error) {
-	GoRes* r;
+	go_read_result *to_go;
 	if (error) {
-		r = new_go_res(error.code(),
-						const_cast<char*>(error.message().c_str()));
+		go_read_callback(NULL, 0, error.code(), context);
 	} else {
-	    std::string blob = result[0].file().to_string();
-		r = new_go_res(0,
-						const_cast<char*>(blob.c_str()));
+		to_go = new go_read_result[result.size()];
+		for (size_t i = 0; i < result.size(); i++) {
+			std::string s = result[0].file().to_string();
+			to_go[i].file = s.c_str();
+		}
+		go_read_callback(to_go, result.size(), error.code(), context);
+		delete[] to_go; 
 	}
-	GoCallback(r, context);
 }
 
 void on_write_result(void *context, 
 	const elliptics::sync_write_result &result,
 	const elliptics::error_info &error) {
-	GoRes* r;
-	if (error) {
-		r = new_go_res(error.code(),
-						const_cast<char*>(error.message().c_str()));
-	} else {
-		std::string blob("ok");
-		r = new_go_res(0,
-						const_cast<char*>(blob.c_str()));
+	go_write_result *to_go = new go_write_result[result.size()];
+	for (size_t i = 0 ; i < result.size(); i++) {
+		to_go[i].addr = result[i].storage_address();
+		to_go[i].info = result[i].file_info();
+		to_go[i].path = result[i].file_path();
 	}
-	GoCallback(r, context);
+	go_write_callback(to_go, result.size(), error.code(), context);
+	delete[] to_go;
 }
 
 

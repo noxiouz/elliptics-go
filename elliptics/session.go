@@ -13,36 +13,44 @@ import "C"
 
 var _ = fmt.Scanf
 
+var f []interface{}
+
 // Result of read operation
 type IReadDataResult interface {
 	Error() error
-	Data() string
+	Data() []ReadResult
 }
 
 type readDataResult struct {
 	err error
-	res string
+	res []ReadResult
 }
 
 func (r *readDataResult) Error() error {
 	return r.err
 }
 
-func (r *readDataResult) Data() string {
+func (r *readDataResult) Data() []ReadResult {
 	return r.res
 }
 
 //Result of write operation
 type IWriteDataResult interface {
+	Lookup() []WriteResult
 	Error() error
 }
 
 type writeDataResult struct {
-	err error
+	lookup []WriteResult
+	err    error
 }
 
 func (w *writeDataResult) Error() error {
 	return w.err
+}
+
+func (w *writeDataResult) Lookup() []WriteResult {
+	return w.lookup
 }
 
 // Session context
@@ -65,19 +73,16 @@ func (s *Session) SetGroups(groups []int32) {
 
 func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
 	a = make(chan IReadDataResult, 1)
-	context := func(result unsafe.Pointer) {
-		resa := (*C.struct_GoRes)(result)
-		defer C.free(result)
-		err := C.int(resa.errcode)
+	context := func(results []ReadResult, err int) {
 		if err != 0 {
-			a <- &readDataResult{err: fmt.Errorf("%s", C.GoString((*C.char)(resa.result))),
-				res: ""}
+			a <- &readDataResult{
+				err: fmt.Errorf("%v", err),
+				res: nil}
 		} else {
-			res := C.GoString((*C.char)(resa.result))
-			a <- &readDataResult{err: nil, res: res}
+			a <- &readDataResult{err: nil, res: results}
 		}
 	}
-
+	f = append(f, context)
 	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
@@ -86,7 +91,7 @@ func (s *Session) ReadData(key string) (a chan IReadDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		errCh := make(chan IReadDataResult, 1)
-		errCh <- &readDataResult{err, ""}
+		errCh <- &readDataResult{err, nil}
 		return errCh
 	}
 	defer ekey.Free()
@@ -104,18 +109,18 @@ func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
 
 func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	a = make(chan IWriteDataResult, 1)
-	context := func(result unsafe.Pointer) {
-		resa := (*C.struct_GoRes)(result)
-		//defer C.free(result)
-		err := C.int(resa.errcode)
+	context := func(result []WriteResult, err int) {
 		if err != 0 {
-			errmsg := C.GoString((*C.char)(resa.result))
-			a <- &readDataResult{err: fmt.Errorf("%s", errmsg),
-				res: ""}
+			a <- &writeDataResult{
+				err:    fmt.Errorf("%v", err),
+				lookup: nil}
 		} else {
-			a <- &readDataResult{err: nil, res: ""}
+			a <- &writeDataResult{
+				err:    nil,
+				lookup: result}
 		}
 	}
+	f = append(f, context)
 
 	raw_data := C.CString(blob)
 	defer C.free(unsafe.Pointer(raw_data))

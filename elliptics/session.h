@@ -32,10 +32,16 @@ extern "C" {
 typedef void ell_session;
 #endif
 
-struct GoRes
+struct go_read_result 
 {
-	int errcode;
-	void *result;
+	const char *file;
+};
+
+struct go_write_result 
+{
+	struct dnet_file_info *info;
+	struct dnet_addr *addr;
+	const char *path;
 };
 
 struct GoRes* 
