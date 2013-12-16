@@ -35,9 +35,7 @@ void on_read_result(void *context,
 	} else {
 		std::vector<go_read_result> to_go;
 		for (size_t i = 0; i < result.size(); i++) {
-			std::string s = result[0].file().to_string();
-
-			to_go.push_back(go_read_result{s.c_str()});
+			to_go.push_back(go_read_result{(char *)result[i].file().data()});
 		}
 		go_read_callback(&to_go[0], result.size(), error.code(), context);
 	}

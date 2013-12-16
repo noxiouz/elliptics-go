@@ -66,17 +66,18 @@ func main() {
 			log.Println(rw.Lookup())
 		}
 
-		rm := <-session.Remove(KEY)
-		if rm.Error() != nil {
-			log.Println("remove error", rm.Error())
-		}
-
 		rd := <-session.ReadData(KEY)
 		if rd.Error() != nil {
 			log.Println("read error ", rd.Error())
 		} else {
 			log.Printf("%s \n", rd.Data())
 		}
+
+		rm := <-session.Remove(KEY)
+		if rm.Error() != nil {
+			log.Println("remove error", rm.Error())
+		}
+
 	}
 
 }

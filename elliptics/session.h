@@ -34,7 +34,7 @@ typedef void ell_session;
 
 struct go_read_result 
 {
-	const char *file;
+	char *file;
 };
 
 struct go_write_result 
