@@ -82,7 +82,6 @@ func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
 			a <- &readDataResult{err: nil, res: results}
 		}
 	}
-	f = append(f, context)
 	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
@@ -120,7 +119,6 @@ func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 				lookup: result}
 		}
 	}
-	f = append(f, context)
 
 	raw_data := C.CString(blob)
 	defer C.free(unsafe.Pointer(raw_data))
