@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -29,7 +28,7 @@ func main() {
 		log.Fatalln("NewFileLogger: ", err)
 	}
 	defer EllLog.Free()
-	EllLog.Log(elliptics.INFO, fmt.Sprintf("%v\n", time.Now()))
+	EllLog.Log(elliptics.INFO, "started: %v, level: %d", time.Now(), level)
 
 	// Create elliptics node
 	node, err := elliptics.NewNode(EllLog)
