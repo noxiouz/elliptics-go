@@ -19,11 +19,11 @@ const (
 	DEBUG
 )
 
-func NewFileLogger(file string) (logger *Logger, err error) {
+func NewFileLogger(file string, level int) (logger *Logger, err error) {
 	cfile := C.CString(file)
 	defer C.free(unsafe.Pointer(cfile))
 
-	ellLogger, err := C.new_file_logger(cfile)
+	ellLogger, err := C.new_file_logger(cfile, C.int(level))
 	if err != nil {
 		return
 	}
