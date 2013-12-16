@@ -30,31 +30,35 @@ void on_stat_result(void *context, const elliptics::sync_stat_result &result) {
 void on_read_result(void *context, 
 	const elliptics::sync_read_result &result,
 	const elliptics::error_info &error) {
-	go_read_result *to_go;
 	if (error) {
 		go_read_callback(NULL, 0, error.code(), context);
 	} else {
-		to_go = new go_read_result[result.size()];
+		std::vector<go_read_result> to_go;
 		for (size_t i = 0; i < result.size(); i++) {
 			std::string s = result[0].file().to_string();
-			to_go[i].file = s.c_str();
+
+			to_go.push_back(go_read_result{s.c_str()});
 		}
-		go_read_callback(to_go, result.size(), error.code(), context);
-		delete[] to_go; 
+		go_read_callback(&to_go[0], result.size(), error.code(), context);
 	}
 }
 
 void on_write_result(void *context, 
 	const elliptics::sync_write_result &result,
 	const elliptics::error_info &error) {
-	go_write_result *to_go = new go_write_result[result.size()];
-	for (size_t i = 0 ; i < result.size(); i++) {
-		to_go[i].addr = result[i].storage_address();
-		to_go[i].info = result[i].file_info();
-		to_go[i].path = result[i].file_path();
+	if (error) {
+		go_read_callback(NULL, 0, error.code(), context);
+	} else {
+		std::vector<go_write_result> to_go;
+		for (size_t i = 0 ; i < result.size(); i++) {
+			go_write_result tmp;
+			tmp.info = result[i].file_info();
+			tmp.addr = result[i].storage_address();
+			tmp.path = result[i].file_path();
+			to_go.push_back(tmp);
+		}
+		go_write_callback(&to_go[0], result.size(), error.code(), context);
 	}
-	go_write_callback(to_go, result.size(), error.code(), context);
-	delete[] to_go;
 }
 
 void on_remove(void *context,
