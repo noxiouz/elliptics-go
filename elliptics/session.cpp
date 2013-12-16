@@ -57,6 +57,12 @@ void on_write_result(void *context,
 	delete[] to_go;
 }
 
+void on_remove(void *context,
+	const elliptics::sync_remove_result &result,
+	const elliptics::error_info &error) {
+	go_remove_callback(error.code(), context);
+}
+
 
 ell_session*
 new_elliptics_session(ell_node* node) {
@@ -89,6 +95,14 @@ session_write_data(ell_session *session, void *context,
 	size_t size) {
 	using namespace std::placeholders;
 	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_write_result,
+		context,
+		_1, _2));
+}
+
+void
+session_remove(ell_session *session, void *context, ell_key *key) {
+	using namespace std::placeholders;
+	session->remove(*key).connect(std::bind(&on_remove,
 		context,
 		_1, _2));
 }

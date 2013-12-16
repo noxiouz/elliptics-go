@@ -62,6 +62,9 @@ void
 session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
 
 void
+session_remove(ell_session *session, void *context, ell_key *key);
+
+void
 session_stat_log(ell_session *session, void *context);
 
 

@@ -65,3 +65,9 @@ func go_read_callback(result *C.struct_go_read_result, size int, err int, contex
 		callback(Results, err)
 	}
 }
+
+//export go_remove_callback
+func go_remove_callback(err int, context unsafe.Pointer) {
+	callback := *(*func(int))(context)
+	callback(err)
+}

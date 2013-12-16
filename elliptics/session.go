@@ -53,6 +53,19 @@ func (w *writeDataResult) Lookup() []WriteResult {
 	return w.lookup
 }
 
+//Result of remove
+type IRemoveResult interface {
+	Error() error
+}
+
+type removeResult struct {
+	err error
+}
+
+func (r *removeResult) Error() error {
+	return r.err
+}
+
 // Session context
 type Session struct {
 	session unsafe.Pointer
@@ -123,5 +136,24 @@ func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	raw_data := C.CString(blob)
 	defer C.free(unsafe.Pointer(raw_data))
 	C.session_write_data(s.session, unsafe.Pointer(&context), key.key, raw_data, C.size_t(len(blob)))
+	return
+}
+
+func (s *Session) Remove(key string) (a chan IRemoveResult) {
+	ekey, err := NewKey(key)
+	if err != nil {
+		return
+	}
+	defer ekey.Free()
+	return s.RemoveKey(ekey)
+}
+
+func (s *Session) RemoveKey(key *Key) (a chan IRemoveResult) {
+	a = make(chan IRemoveResult, 1)
+	context := func(err int) {
+		a <- &removeResult{err: fmt.Errorf("%v", err)}
+	}
+
+	C.session_remove(s.session, unsafe.Pointer(&context), key.key)
 	return
 }

@@ -50,20 +50,25 @@ func main() {
 		log.Fatal("Error", err)
 	}
 	session.SetGroups([]int32{1, 2, 3})
+
 	for {
-
-		// rd2 := <-session.ReadData("sdsdsds")
-		// if rd2.Error() != nil {
-		// 	log.Println("read error ", rd2.Error())
-		// }
-		// log.Printf("%s \n", rd2.Data())
-
-		rw := <-session.WriteData(KEY, "TESTDATA")
-		if rw.Error() != nil {
-			log.Fatal("write error", rw.Error())
+		rd2 := <-session.ReadData("sdsdsds")
+		if rd2.Error() != nil {
+			log.Println("read error ", rd2.Error())
+		} else {
+			log.Printf("%s \n", rd2.Data())
 		}
 
-		log.Println(rw.Lookup())
+		// rw := <-session.WriteData(KEY, "TESTDATA")
+		// if rw.Error() != nil {
+		// 	log.Fatal("write error", rw.Error())
+		// }
+
+		// log.Println(rw.Lookup())
+		rm := <-session.Remove(KEY)
+		if rm.Error() != nil {
+			log.Println("remove error", rm.Error())
+		}
 
 		rd := <-session.ReadData(KEY)
 		if rd.Error() != nil {
