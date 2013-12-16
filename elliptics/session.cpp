@@ -57,7 +57,7 @@ void on_write_result(void *context,
 			tmp.path = result[i].file_path();
 			to_go.push_back(tmp);
 		}
-		go_write_callback(&to_go[0], result.size(), error.code(), context);
+		go_lookup_callback(&to_go[0], result.size(), error.code(), context);
 	}
 }
 
@@ -77,7 +77,6 @@ void
 session_set_groups(ell_session *session, int32_t *groups, int count) {
 	std::vector<int> g(groups, groups + count);
 	session->set_groups(g);
-	std::cerr << "Setup " << session->get_groups().size() << " groups" << std::endl;
 }
 
 void
@@ -98,7 +97,7 @@ session_write_data(ell_session *session, void *context,
 	char *data,
 	size_t size) {
 	using namespace std::placeholders;
-	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_write_result,
+	session->write_data(*key, elliptics::data_pointer::copy(data, size), 0).connect(std::bind(&on_write_result,
 		context,
 		_1, _2));
 }

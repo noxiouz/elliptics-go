@@ -36,12 +36,12 @@ func (r *readDataResult) Data() []ReadResult {
 
 //Result of write operation
 type IWriteDataResult interface {
-	Lookup() []WriteResult
+	Lookup() []LookupResult
 	Error() error
 }
 
 type writeDataResult struct {
-	lookup []WriteResult
+	lookup []LookupResult
 	err    error
 }
 
@@ -49,7 +49,7 @@ func (w *writeDataResult) Error() error {
 	return w.err
 }
 
-func (w *writeDataResult) Lookup() []WriteResult {
+func (w *writeDataResult) Lookup() []LookupResult {
 	return w.lookup
 }
 
@@ -121,7 +121,9 @@ func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
 
 func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	a = make(chan IWriteDataResult, 1)
-	context := func(result []WriteResult, err int) {
+	raw_data := C.CString(blob)
+	defer C.free(unsafe.Pointer(raw_data))
+	context := func(result []LookupResult, err int) {
 		if err != 0 {
 			a <- &writeDataResult{
 				err:    fmt.Errorf("%v", err),
@@ -132,9 +134,6 @@ func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 				lookup: result}
 		}
 	}
-
-	raw_data := C.CString(blob)
-	defer C.free(unsafe.Pointer(raw_data))
 	C.session_write_data(s.session, unsafe.Pointer(&context), key.key, raw_data, C.size_t(len(blob)))
 	return
 }

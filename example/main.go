@@ -52,19 +52,20 @@ func main() {
 	session.SetGroups([]int32{1, 2, 3})
 
 	for {
-		rd2 := <-session.ReadData("sdsdsds")
+		rd2 := <-session.ReadData(KEY)
 		if rd2.Error() != nil {
 			log.Println("read error ", rd2.Error())
 		} else {
 			log.Printf("%s \n", rd2.Data())
 		}
 
-		// rw := <-session.WriteData(KEY, "TESTDATA")
-		// if rw.Error() != nil {
-		// 	log.Fatal("write error", rw.Error())
-		// }
+		rw := <-session.WriteData(KEY, "TESTDATA")
+		if rw.Error() != nil {
+			log.Fatal("write error", rw.Error())
+		} else {
+			log.Println(rw.Lookup())
+		}
 
-		// log.Println(rw.Lookup())
 		rm := <-session.Remove(KEY)
 		if rm.Error() != nil {
 			log.Println("remove error", rm.Error())

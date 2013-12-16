@@ -10,15 +10,15 @@ import (
 	"unsafe"
 )
 
-type WriteResult struct {
+type LookupResult struct {
 	info C.struct_dnet_file_info //dnet_file_info
 	addr C.struct_dnet_addr
 	path string //file_path
 }
 
-//export go_write_callback
-func go_write_callback(result *C.struct_go_write_result, size int, err int, context unsafe.Pointer) {
-	callback := *(*func([]WriteResult, int))(context)
+//export go_lookup_callback
+func go_lookup_callback(result *C.struct_go_write_result, size int, err int, context unsafe.Pointer) {
+	callback := *(*func([]LookupResult, int))(context)
 	if err != 0 {
 		callback(nil, err)
 	} else {
@@ -28,9 +28,9 @@ func go_write_callback(result *C.struct_go_write_result, size int, err int, cont
 		sliceHeader.Len = size
 		sliceHeader.Data = uintptr(unsafe.Pointer(result))
 
-		var Results []WriteResult
+		var Results []LookupResult
 		for _, item := range tmp {
-			Results = append(Results, WriteResult{
+			Results = append(Results, LookupResult{
 				info: *item.info,
 				addr: *item.addr,
 				path: C.GoString(item.path)})
