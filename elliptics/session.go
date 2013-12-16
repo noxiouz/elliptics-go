@@ -121,8 +121,7 @@ func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
 
 func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	a = make(chan IWriteDataResult, 1)
-	raw_data := C.CString(blob)
-	defer C.free(unsafe.Pointer(raw_data))
+	raw_data := C.CString(blob) // Mustn't call free. Elliptics'll do it.
 	context := func(result []LookupResult, err int) {
 		if err != 0 {
 			a <- &writeDataResult{

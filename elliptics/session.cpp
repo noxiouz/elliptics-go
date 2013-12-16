@@ -97,7 +97,7 @@ session_write_data(ell_session *session, void *context,
 	char *data,
 	size_t size) {
 	using namespace std::placeholders;
-	session->write_data(*key, elliptics::data_pointer::copy(data, size), 0).connect(std::bind(&on_write_result,
+	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_write_result,
 		context,
 		_1, _2));
 }
