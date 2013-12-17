@@ -20,27 +20,35 @@ using namespace ioremap;
 
 extern "C" {
 
-ell_node*
-new_node(ell_file_logger *fl) {
+ell_node* new_node(ell_file_logger *fl)
+{
 	elliptics::node *node = new elliptics::node(*fl);
 	return node;
 }
 
-void
-delete_node(ell_node *node) {
+void delete_node(ell_node *node)
+{
 	delete node;
 }
 
-void                        
-node_add_remote(ell_node* node, const char *addr, const int port, const int family) {
+void node_add_remote(ell_node* node, const char *addr, const int port, const int family)
+{
 	try {
-	node->add_remote(addr, port, family);
-	} catch (elliptics::error &e) {
+		node->add_remote(addr, port, family);
+	} catch (const elliptics::error &e) {
 	}	
 }
 
-void 
-node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout) {
+void node_add_remote_one(ell_node* node, const char *addr)
+{
+	try {
+		node->add_remote(addr);
+	} catch (const elliptics::error &e) {
+	}	
+}
+
+void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout)
+{
 	node->set_timeouts(wait_timeout, check_timeout);
 }
 

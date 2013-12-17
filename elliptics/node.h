@@ -27,17 +27,13 @@ typedef void ell_node;
 #endif
 
 
-ell_node*
-new_node(ell_file_logger *fl);
+ell_node* new_node(ell_file_logger *fl);
+void delete_node(ell_node *node);
 
-void
-delete_node(ell_node *node);
+void node_add_remote(ell_node *node, const char *addr, const int port, const int family);
+void node_add_remote_one(ell_node *node, const char *addr);
 
-void                        
-node_add_remote(ell_node *node, const char *addr, const int port, const int family);
-
-void 
-node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout);
+void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout);
 
 
 #ifdef __cplusplus 

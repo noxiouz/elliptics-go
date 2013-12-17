@@ -5,9 +5,6 @@ package elliptics
 import "C"
 
 import (
-	"errors"
-	"net"
-	"strconv"
 	"syscall"
 	"unsafe"
 )
@@ -41,43 +38,11 @@ func (node *Node) SetTimeouts(waitTimeout int, checkTimeout int) {
 	C.node_set_timeouts(node.node, C.int(waitTimeout), C.int(checkTimeout))
 }
 
-func (node *Node) AddRemote(args ...interface{}) (err error) {
-	var addr string
-	var sport string
-	var port int
-	var family int = syscall.AF_INET
-	var ok bool = false
-
-	switch count := len(args); count {
-	case 1:
-	case 2:
-		family, ok = args[1].(int)
-		if !ok {
-			return errors.New("Wrong type of family argument. Use uint")
-		}
-	default:
-		err = errors.New("Wrong arguments")
-		return
-	}
-
-	if addr, ok = args[0].(string); !ok {
-		return errors.New("Wrong type of endpoint argument")
-	}
-
-	addr, sport, err = net.SplitHostPort(addr)
-	if err != nil {
-		return
-	}
-
-	port, err = strconv.Atoi(sport)
-	if err != nil {
-		return
-	}
-
+func (node *Node) AddRemote(addr string) (err error) {
 	caddr := C.CString(addr)
 	defer C.free(unsafe.Pointer(caddr))
 
-	_, c_err := C.node_add_remote(node.node, caddr, C.int(port), C.int(family))
+	_, c_err := C.node_add_remote_one(node.node, caddr)
 	if c_err != nil {
 		if err, ok := c_err.(syscall.Errno); ok && isError(err) {
 			return err

@@ -25,28 +25,29 @@ using namespace ioremap;
 
 extern "C" {
 
-ell_file_logger* 
-new_file_logger(const char *file) {
+ell_file_logger* new_file_logger(const char *file, int level)
+{
 	try {
-		elliptics::file_logger* l = new elliptics::file_logger(file);
+		elliptics::file_logger* l = new elliptics::file_logger(file, level);
 		return l;
-	} catch (const std::ios_base::failure& e) {
+	} catch (const std::exception &e) {
+		std::cerr << "go: file-logger-exception: " << e.what() << std::endl;
 		return NULL;
 	}
 }
 
-void                 
-file_logger_log(ell_file_logger *fl, int level, const char *msg) {
+void file_logger_log(ell_file_logger *fl, int level, const char *msg)
+{
 	fl->log(level, msg);
 }
 
-int
-file_logger_get_level(ell_file_logger *fl) {
+int file_logger_get_level(ell_file_logger *fl)
+{
 	return fl->get_log_level();
 }
 
-void 
-delete_file_logger(ell_file_logger *fl) {
+void delete_file_logger(ell_file_logger *fl)
+{
 	delete fl;
 }
 
