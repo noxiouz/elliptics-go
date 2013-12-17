@@ -26,23 +26,16 @@
 	typedef void ell_key;
 #endif
 
-ell_key* 
-new_key();
+ell_key* new_key();
+ell_key* new_key_remote(const char* remote);
 
-ell_key* 
-new_key_remote(const char* remote);
+const char* key_remote(ell_key * key);
 
-const char* 
-key_remote(ell_key * key);
+int key_by_id(ell_key * key);
 
-int
-key_by_id(ell_key * key);
+void key_set_id(ell_key *c_key, const struct dnet_id *id);
 
-void 
-key_set_id(ell_key *c_key, const struct dnet_id *id);
-
-void 
-delete_key(ell_key *c_key);
+void delete_key(ell_key *c_key);
 
 
 #ifdef __cplusplus
