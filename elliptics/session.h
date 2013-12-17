@@ -67,6 +67,8 @@ session_remove(ell_session *session, void *context, ell_key *key);
 void
 session_stat_log(ell_session *session, void *context);
 
+void
+session_set_namespace(ell_session *session, const char *name, int nsize);
 
 #ifdef __cplusplus 
 }

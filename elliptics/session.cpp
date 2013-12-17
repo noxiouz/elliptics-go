@@ -78,6 +78,11 @@ session_set_groups(ell_session *session, int32_t *groups, int count) {
 }
 
 void
+session_set_namespace(ell_session *session, const char *name, int nsize) {
+	session->set_namespace(name, nsize);
+}
+
+void
 session_read_data(ell_session *session, void *context, ell_key *key) {
 	using namespace std::placeholders;
 	try {

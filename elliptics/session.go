@@ -99,6 +99,12 @@ func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
 	return
 }
 
+func (s *Session) SetNamespace(namespace string) {
+	cnamespace := C.CString(namespace)
+	defer C.free(unsafe.Pointer(cnamespace))
+	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
+}
+
 func (s *Session) ReadData(key string) (a chan IReadDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {

@@ -47,7 +47,7 @@ func main() {
 		log.Fatal("Error", err)
 	}
 	session.SetGroups([]int32{1, 2, 3})
-
+	session.SetNamespace("TEST")
 	for {
 		rd2 := <-session.ReadData(KEY)
 		if rd2.Error() != nil {
