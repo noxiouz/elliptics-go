@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/bioothod/elliptics-go/elliptics"
+	"github.com/noxiouz/elliptics-go/elliptics"
 )
 
 var HOST string
@@ -18,7 +18,7 @@ func init() {
 }
 
 const TESTKEY = "TESTKEYsssd"
-const ELLHOST = "elstorage01f.kit.yandex.net:1025"
+const ELLHOST = "elstorage01f.kit.yandex.net:1025:2"
 
 func main() {
 	// Create file logger
