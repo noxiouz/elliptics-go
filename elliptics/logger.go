@@ -6,6 +6,7 @@ import "C"
 
 import (
 	"unsafe"
+	"fmt"
 )
 
 type Logger struct {
@@ -19,11 +20,11 @@ const (
 	DEBUG
 )
 
-func NewFileLogger(file string) (logger *Logger, err error) {
+func NewFileLogger(file string, level int) (logger *Logger, err error) {
 	cfile := C.CString(file)
 	defer C.free(unsafe.Pointer(cfile))
 
-	ellLogger, err := C.new_file_logger(cfile)
+	ellLogger, err := C.new_file_logger(cfile, C.int(level))
 	if err != nil {
 		return
 	}
@@ -35,11 +36,14 @@ func (logger *Logger) Free() {
 	C.delete_file_logger(logger.logger)
 }
 
-func (logger *Logger) Log(level int, msg string) {
-	cmsg := C.CString(msg)
-	defer C.free(unsafe.Pointer(cmsg))
+func (logger *Logger) Log(level int, format string, args ...interface{}) {
 
-	C.file_logger_log(logger.logger, C.int(level), cmsg)
+	str := fmt.Sprintf(format, args...)
+	cstr := C.CString(str)
+	defer C.free(unsafe.Pointer(cstr))
+
+
+	C.file_logger_log(logger.logger, C.int(level), cstr)
 }
 
 func (logger *Logger) GetLevel() (lvl int) {

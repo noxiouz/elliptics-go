@@ -2,18 +2,17 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
-	"github.com/noxiouz/elliptics-go/elliptics"
+	"github.com/bioothod/elliptics-go/elliptics"
 )
 
 var HOST string
 var KEY string
 
 func init() {
-	flag.StringVar(&HOST, "host", ELLHOST, "elliptics host:port")
+	flag.StringVar(&HOST, "host", ELLHOST, "elliptics host:port:family")
 	flag.StringVar(&KEY, "key", TESTKEY, "key")
 	flag.Parse()
 }
@@ -23,16 +22,15 @@ const ELLHOST = "elstorage01f.kit.yandex.net:1025"
 
 func main() {
 	// Create file logger
-	log.Println("Create logger")
-	EllLog, err := elliptics.NewFileLogger("LOG.log")
+	level := 2
+	EllLog, err := elliptics.NewFileLogger("/tmp/elliptics-go.log", level)
 	if err != nil {
 		log.Fatalln("NewFileLogger: ", err)
 	}
 	defer EllLog.Free()
-	EllLog.Log(4, fmt.Sprintf("%v\n", time.Now()))
+	EllLog.Log(elliptics.INFO, "started: %v, level: %d", time.Now(), level)
 
 	// Create elliptics node
-	log.Println("Create elliptics node")
 	node, err := elliptics.NewNode(EllLog)
 	if err != nil {
 		log.Println(err)
@@ -40,7 +38,6 @@ func main() {
 	defer node.Free()
 
 	node.SetTimeouts(100, 1000)
-	log.Println("Add remotes")
 	if err = node.AddRemote(HOST); err != nil {
 		log.Fatalln("AddRemote: ", err)
 	}
