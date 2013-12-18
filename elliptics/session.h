@@ -44,28 +44,20 @@ struct go_write_result
 	const char *path;
 };
 
-struct GoRes* 
-new_go_res(int errorcode, void* res);
+struct GoRes* new_go_res(int errorcode, void* res);
 
 typedef void(*gocallback)(void*, void*);
 
-ell_session*
-new_elliptics_session(ell_node* node);
+ell_session* new_elliptics_session(ell_node* node);
 
-void
-session_set_groups(ell_session *session, int32_t* groups, int count);
+void session_set_groups(ell_session *session, int32_t* groups, int count);
 
-void
-session_read_data(ell_session *session, void *context, ell_key *key);
+void session_read_data(ell_session *session, void *context, ell_key *key);
+void session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
 
-void
-session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
+void session_remove(ell_session *session, void *context, ell_key *key);
 
-void
-session_remove(ell_session *session, void *context, ell_key *key);
-
-void
-session_stat_log(ell_session *session, void *context);
+void session_stat_log(ell_session *session, void *context);
 
 
 #ifdef __cplusplus 
