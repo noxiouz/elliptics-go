@@ -79,33 +79,40 @@ func NewSession(node *Node) (*Session, error) {
 	return &Session{session}, err
 }
 
-//Set elliptics groups for the session
+//Set groups to the session
 func (s *Session) SetGroups(groups []int32) {
 	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
 }
 
-func (s *Session) ReadKey(key *Key) (a chan IReadDataResult) {
-	a = make(chan IReadDataResult, 1)
-	context := func(results []ReadResult, err int) {
-		if err != 0 {
-			a <- &readDataResult{
-				err: fmt.Errorf("%v", err),
-				res: nil}
-		} else {
-			a <- &readDataResult{err: nil, res: results}
-		}
-	}
-	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
-	return
-}
-
+//Set namespace for elliptics session.
+//Default namespace is empty string.
 func (s *Session) SetNamespace(namespace string) {
 	cnamespace := C.CString(namespace)
 	defer C.free(unsafe.Pointer(cnamespace))
 	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
 }
 
-func (s *Session) ReadData(key string) (a chan IReadDataResult) {
+func (s *Session) ReadKey(key *Key) (responceCh chan IReadDataResult) {
+	//Context is closure, which contains channel to answer in.
+	//It will pass as the last argument to exported go_*_callback
+	//through C++ callback after operation finish comes.
+	//go_read_callback casts context to properly go func,
+	//and calls with []ReadResult
+	responceCh = make(chan IReadDataResult, 1)
+	context := func(results []ReadResult, err int) {
+		if err != 0 {
+			responceCh <- &readDataResult{
+				err: fmt.Errorf("%v", err),
+				res: nil}
+		} else {
+			responceCh <- &readDataResult{err: nil, res: results}
+		}
+	}
+	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
+	return
+}
+
+func (s *Session) ReadData(key string) (responceCh chan IReadDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		errCh := make(chan IReadDataResult, 1)
@@ -116,7 +123,7 @@ func (s *Session) ReadData(key string) (a chan IReadDataResult) {
 	return s.ReadKey(ekey)
 }
 
-func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
+func (s *Session) WriteData(key string, blob string) (responceCh chan IWriteDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		return
@@ -125,16 +132,17 @@ func (s *Session) WriteData(key string, blob string) (a chan IWriteDataResult) {
 	return s.WriteKey(ekey, blob)
 }
 
-func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
-	a = make(chan IWriteDataResult, 1)
-	raw_data := C.CString(blob) // Mustn't call free. Elliptics'll do it.
+func (s *Session) WriteKey(key *Key, blob string) (responceCh chan IWriteDataResult) {
+	//Similary to ReadKey
+	responceCh = make(chan IWriteDataResult, 1)
+	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 	context := func(result []LookupResult, err int) {
 		if err != 0 {
-			a <- &writeDataResult{
+			responceCh <- &writeDataResult{
 				err:    fmt.Errorf("%v", err),
 				lookup: nil}
 		} else {
-			a <- &writeDataResult{
+			responceCh <- &writeDataResult{
 				err:    nil,
 				lookup: result}
 		}
@@ -143,7 +151,7 @@ func (s *Session) WriteKey(key *Key, blob string) (a chan IWriteDataResult) {
 	return
 }
 
-func (s *Session) Remove(key string) (a chan IRemoveResult) {
+func (s *Session) Remove(key string) (responceCh chan IRemoveResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		return
@@ -152,10 +160,10 @@ func (s *Session) Remove(key string) (a chan IRemoveResult) {
 	return s.RemoveKey(ekey)
 }
 
-func (s *Session) RemoveKey(key *Key) (a chan IRemoveResult) {
-	a = make(chan IRemoveResult, 1)
+func (s *Session) RemoveKey(key *Key) (responceCh chan IRemoveResult) {
+	responceCh = make(chan IRemoveResult, 1)
 	context := func(err int) {
-		a <- &removeResult{err: fmt.Errorf("%v", err)}
+		responceCh <- &removeResult{err: fmt.Errorf("%v", err)}
 	}
 
 	C.session_remove(s.session, unsafe.Pointer(&context), key.key)
