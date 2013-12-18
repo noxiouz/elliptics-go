@@ -20,34 +20,34 @@ using namespace ioremap;
 
 extern "C" {
 
-ell_key*
-new_key() {
+ell_key* new_key()
+{
     return new elliptics::key();
 }
 
-ell_key*
-new_key_remote(const char * remote) {
+ell_key* new_key_remote(const char * remote)
+{
 	return new elliptics::key(std::string(remote));
 }
 
-const char*
-key_remote(ell_key *key) {
+const char* key_remote(ell_key *key)
+{
 	std::string remote(key->remote());
 	return remote.c_str();
 }
 
-int
-key_by_id(ell_key *key) {
+int key_by_id(ell_key *key)
+{
 	return key->by_id();
 }
 
-void 
-key_set_id(ell_key *key, const struct dnet_id *id) {
+void key_set_id(ell_key *key, const struct dnet_id *id)
+{
 	key->set_id(*id);
 }
 
-void 
-delete_key(ell_key *key) {
+void delete_key(ell_key *key)
+{
 	delete key;
 }
 

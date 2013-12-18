@@ -25,8 +25,8 @@ extern "C" {
 typedef void ell_file_logger;
 #endif
 
-
 ell_file_logger* new_file_logger(const char *file, int level);
+
 void delete_file_logger(ell_file_logger *fl);
 
 void file_logger_log(ell_file_logger *logger, int level, const char *msg);
