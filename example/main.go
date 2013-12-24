@@ -47,34 +47,36 @@ func main() {
 		log.Fatal("Error", err)
 	}
 	session.SetGroups([]int32{1, 2, 3})
-	session.SetNamespace("TEST")
-	for {
-		rd2 := <-session.ReadData(KEY)
-		if rd2.Error() != nil {
-			log.Println("read error ", rd2.Error())
-		} else {
-			log.Printf("%s \n", rd2.Data())
-		}
-
-		rw := <-session.WriteData(KEY, "TESTDATA")
-		if rw.Error() != nil {
-			log.Fatal("write error", rw.Error())
-		} else {
-			log.Println(rw.Lookup())
-		}
-
-		rd := <-session.ReadData(KEY)
-		if rd.Error() != nil {
-			log.Println("read error ", rd.Error())
-		} else {
-			log.Printf("%s \n", rd.Data())
-		}
-
-		rm := <-session.Remove(KEY)
-		if rm.Error() != nil {
-			log.Println("remove error", rm.Error())
-		}
-
+	session.SetNamespace("TEST3")
+	//for {
+	rd2 := <-session.ReadData(KEY)
+	if rd2.Error() != nil {
+		log.Println("read error ", rd2.Error())
+	} else {
+		log.Printf("%s \n", rd2.Data())
 	}
+
+	rw := <-session.WriteData(KEY, "TESTDATA")
+	if rw.Error() != nil {
+		log.Fatal("write error", rw.Error())
+	} else {
+		log.Println(rw.Lookup())
+	}
+
+	rd := <-session.ReadData(KEY)
+	if rd.Error() != nil {
+		log.Println("read error ", rd.Error())
+	} else {
+		log.Printf("%s \n", rd.Data()[0].Data)
+	}
+
+	rm := <-session.Remove(KEY)
+	if rm.Error() != nil {
+		log.Println("remove error", rm.Error())
+	}
+
+	session.SetIndexes(KEY, []string{"A", "B"})
+
+	//}
 
 }

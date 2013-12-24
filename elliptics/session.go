@@ -169,3 +169,24 @@ func (s *Session) RemoveKey(key *Key) (responceCh chan IRemoveResult) {
 	C.session_remove(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
+
+func (s *Session) SetIndexes(key string, indexes []string) {
+	ekey, err := NewKey(key)
+	if err != nil {
+		return
+	}
+	defer ekey.Free()
+
+	context := func() {
+
+	}
+	var cindexes []*C.char
+	var cdatas []*C.char
+	for _, index := range indexes {
+		cindex := C.CString(index)
+		cindexes = append(cindexes, cindex)
+		cdatas = append(cdatas, cindex)
+	}
+	C.session_set_indexes(s.session, unsafe.Pointer(&context), ekey.key, (**C.char)(&cindexes[0]), (**C.char)(&cdatas[0]), C.size_t(len(indexes)))
+
+}

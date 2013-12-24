@@ -38,11 +38,11 @@ func go_lookup_callback(result *C.struct_go_write_result, size int, err int, con
 		// All data from cpp has been copied here.
 		defer callback(Results, err)
 	}
-
 }
 
 type ReadResult struct {
-	Data string
+	IoAttr C.struct_dnet_io_attr
+	Data   string
 }
 
 //export go_read_callback
@@ -59,7 +59,9 @@ func go_read_callback(result *C.struct_go_read_result, size int, err int, contex
 
 		var Results []ReadResult
 		for _, item := range tmp {
-			Results = append(Results, ReadResult{C.GoString(item.file)})
+			Results = append(Results, ReadResult{
+				Data: C.GoStringN(item.file, C.int(item.size)),
+			})
 		}
 		// All data from cpp has been copied here.
 		callback(Results, err)

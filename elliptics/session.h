@@ -23,7 +23,6 @@
 #ifdef __cplusplus
 
 #include <iostream>
-#include <functional>
 #include <elliptics/session.hpp>
 typedef ioremap::elliptics::session ell_session;
 extern "C" {
@@ -35,6 +34,7 @@ typedef void ell_session;
 struct go_read_result 
 {
 	char *file;
+	size_t size;
 };
 
 struct go_write_result 
@@ -52,6 +52,8 @@ void session_set_groups(ell_session *session, int32_t* groups, int count);
 
 void session_read_data(ell_session *session, void *context, ell_key *key);
 void session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
+
+void session_set_indexes(ell_session *session, void *context, ell_key *key, char *indexes[], char *data[], size_t nsize);
 
 void session_remove(ell_session *session, void *context, ell_key *key);
 

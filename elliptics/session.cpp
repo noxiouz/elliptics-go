@@ -37,7 +37,7 @@ void on_read_result(void *context, const elliptics::sync_read_result &result, co
 	} else {
 		std::vector<go_read_result> to_go;
 		for (size_t i = 0; i < result.size(); i++) {
-			to_go.push_back(go_read_result{(char *)result[i].file().data()});
+			to_go.push_back(go_read_result{(char *)result[i].file().data(), result[i].file().size()});
 		}
 		go_read_callback(&to_go[0], result.size(), error.code(), context);
 	}
@@ -71,7 +71,9 @@ void on_remove(void *context, const elliptics::sync_remove_result &result, const
 
 ell_session* new_elliptics_session(ell_node* node)
 {
-	return new elliptics::session(*node);
+	ell_session *session = new elliptics::session(*node);
+	session->set_exceptions_policy(elliptics::session::no_exceptions);
+	return session;
 }
 
 void session_set_groups(ell_session *session, int32_t *groups, int count)
@@ -88,11 +90,7 @@ void session_set_namespace(ell_session *session, const char *name, int nsize)
 void session_read_data(ell_session *session, void *context, ell_key *key)
 {
 	using namespace std::placeholders;
-	try {
-		session->read_data(*key, 0, 0).connect(std::bind(&on_read_result, context, _1, _2));
-	} catch (elliptics::error &e) {
-		std::cerr << e.what() << std::endl;
-	}
+	session->read_data(*key, 0, 0).connect(std::bind(&on_read_result, context, _1, _2));
 }
 
 void session_write_data(ell_session *session, void *context, ell_key *key, char *data, size_t size)
@@ -105,6 +103,17 @@ void session_remove(ell_session *session, void *context, ell_key *key)
 {
 	using namespace std::placeholders;
 	session->remove(*key).connect(std::bind(&on_remove, context, _1, _2));
+}
+
+void session_set_indexes(ell_session *session, void *context, ell_key *key, char *indexes[], char *data[], size_t nsize) {
+	std::vector<std::string> index_names;
+	std::vector<elliptics::data_pointer> index_data;
+	for (size_t i = 0; i < nsize; i++)
+	{
+		index_names.push_back(indexes[i]);
+		index_data.push_back(elliptics::data_pointer::copy(data[i], sizeof(*data[i])));
+	}
+	session->set_indexes(*key, index_names, index_data);
 }
 
 void session_stat_log(ell_session *session, void *context)
