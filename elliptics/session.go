@@ -260,6 +260,10 @@ func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_all_indexes(s.session, onResult, onFinish,
 		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+	//Free cindexes
+	for _, item := range cindexes {
+		C.free(unsafe.Pointer(item))
+	}
 	return responseCh
 }
 
@@ -268,6 +272,10 @@ func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_any_indexes(s.session, onResult, onFinish,
 		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+	//Free cindexes
+	for _, item := range cindexes {
+		C.free(unsafe.Pointer(item))
+	}
 	return responseCh
 }
 
