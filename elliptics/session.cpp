@@ -170,6 +170,20 @@ void on_set_indexes(void *context, const elliptics::callback_result_entry &resul
 	(void) result;
 }
 
+void on_list_indexes(void *context, const elliptics::index_entry &result) {
+	c_index_entry to_go{
+		(const char *)result.data.data(),
+		result.data.size()};
+	go_index_entry_callback(&to_go, context);
+}
+
+void session_list_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
+{
+	using namespace std::placeholders;
+	session->list_indexes(*key).connect(std::bind(&on_list_indexes, on_chunk_context, _1),
+										std::bind(&on_finish, final_context, _1));
+}
+
 void session_set_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
 						 char *indexes[], struct go_data_pointer *data, size_t count) 
 {

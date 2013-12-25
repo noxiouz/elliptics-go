@@ -65,3 +65,9 @@ func go_find_callback(result *C.struct_go_find_result, context unsafe.Pointer) {
 		err:  nil,
 	})
 }
+
+//export go_index_entry_callback
+func go_index_entry_callback(result *C.struct_c_index_entry, context unsafe.Pointer) {
+	callback := *(*func(*IndexEntry))(context)
+	callback(&IndexEntry{Data: C.GoStringN(result.data, C.int(result.size))})
+}

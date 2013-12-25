@@ -73,32 +73,44 @@ func main() {
 		log.Println(lookUp)
 	}
 
-	// //KEY exists
-	// if rm, ok := <-session.Remove(KEY); !ok {
-	// 	log.Println("Remove successfully")
-	// } else {
-	// 	log.Println("Removing error: ", rm.Error())
-	// }
-
-	// //KEY doesn't exist
-	// if rm, ok := <-session.Remove(KEY); !ok {
-	// 	log.Println("Remove successfully")
-	// } else {
-	// 	log.Println("Removing error: ", rm.Error())
-	// }
-
 	indexes := map[string]string{
 		"F": "indexF",
+		"A": "indexA",
 	}
 	if si, ok := <-session.SetIndexes(KEY, indexes); !ok {
 		log.Println("SetIndexes successfully")
 	} else {
 		log.Println("SetIndexes error: ", si.Error())
 	}
+
+	log.Println("List indexes for key ", KEY)
+	for li := range session.ListIndexes(KEY) {
+		log.Println("Index: ", li.Data)
+	}
+
 	indexes["TTT"] = "IndexTTT"
-	if si, ok := <-session.UpdateIndexes(KEY, indexes); !ok {
+	if ui, ok := <-session.UpdateIndexes(KEY, indexes); !ok {
 		log.Println("UpdateIndexes successfully")
 	} else {
-		log.Println("UpdateIndexes error: ", si.Error())
+		log.Println("UpdateIndexes error: ", ui.Error())
+	}
+
+	log.Println("List indexes for key ", KEY)
+	for li := range session.ListIndexes(KEY) {
+		log.Println("Index: ", li.Data)
+	}
+
+	//KEY exists
+	if rm, ok := <-session.Remove(KEY); !ok {
+		log.Println("Remove successfully")
+	} else {
+		log.Println("Removing error: ", rm.Error())
+	}
+
+	//KEY doesn't exist
+	if rm, ok := <-session.Remove(KEY); !ok {
+		log.Println("Remove successfully")
+	} else {
+		log.Println("Removing error: ", rm.Error())
 	}
 }

@@ -250,6 +250,7 @@ type findResult struct {
 
 type IndexEntry struct {
 	Data string
+	err  error
 }
 
 func (f *findResult) Data() []IndexEntry {
@@ -379,4 +380,59 @@ func (s *Session) SetIndexes(key string, indexes map[string]string) <-chan Index
 
 func (s *Session) UpdateIndexes(key string, indexes map[string]string) <-chan Indexer {
 	return s.setOrUpdateIndexes(indexesUpdate, key, indexes)
+}
+
+func (s *Session) ListIndexes(key string) <-chan IndexEntry {
+	responseCh := make(chan IndexEntry, defaultVOLUME)
+	ekey, err := NewKey(key)
+	if err != nil {
+		panic(err)
+	}
+	defer ekey.Free()
+
+	onResult := func(indexentry *IndexEntry) {
+		responseCh <- *indexentry
+	}
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- IndexEntry{err: fmt.Errorf("%v", err)}
+		}
+		close(responseCh)
+	}
+
+	C.session_list_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), ekey.key)
+	return responseCh
+}
+
+func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
+	ekey, err := NewKey(key)
+	if err != nil {
+		panic(err)
+	}
+	defer ekey.Free()
+	responseCh := make(chan Indexer, defaultVOLUME)
+
+	var cindexes []*C.char
+	for _, index := range indexes {
+		cindex := C.CString(index) // free this
+		defer C.free(unsafe.Pointer(cindex))
+		cindexes = append(cindexes, cindex)
+	}
+
+	onResult := func() {
+		//It's never called. For the future.
+	}
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+		}
+		close(responseCh)
+	}
+
+	C.session_remove_indexes(s.session,
+		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		ekey.key, (**C.char)(&cindexes[0]), C.size_t(len(cindexes)))
+	return responseCh
 }

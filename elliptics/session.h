@@ -94,6 +94,8 @@ void session_update_indexes(ell_session *session, void *on_chunk_context, void *
 
 void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize);
 
+void session_list_indexes(ell_session *sesion, void *on_chunk_context, void *final_context, ell_key *key);
+
 #ifdef __cplusplus 
 }
 #endif
