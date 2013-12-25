@@ -17,25 +17,6 @@ const VOLUME = 10
 
 var f []interface{}
 
-// Result of read operation
-type IReadDataResult interface {
-	Error() error
-	Data() []ReadResult
-}
-
-type readDataResult struct {
-	err error
-	res []ReadResult
-}
-
-func (r *readDataResult) Error() error {
-	return r.err
-}
-
-func (r *readDataResult) Data() []ReadResult {
-	return r.res
-}
-
 //Result of write operation
 type IWriteDataResult interface {
 	Lookup() []LookupResult
@@ -94,31 +75,54 @@ func (s *Session) SetNamespace(namespace string) {
 	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
 }
 
-func (s *Session) ReadKey(key *Key) (responseCh chan IReadDataResult) {
+// Read
+type ReadResult interface {
+	Data() string
+	Error() error
+}
+
+type readResult struct {
+	ioAttr C.struct_dnet_io_attr
+	data   string
+	err    error
+}
+
+func (r *readResult) Data() string {
+	return r.data
+}
+
+func (r *readResult) Error() error {
+	return r.err
+}
+
+func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 	//Context is closure, which contains channel to answer in.
 	//It will pass as the last argument to exported go_*_callback
 	//through C++ callback after operation finish comes.
 	//go_read_callback casts context to properly go func,
 	//and calls with []ReadResult
-	responseCh = make(chan IReadDataResult, 1)
-	context := func(results []ReadResult, err int) {
-		if err != 0 {
-			responseCh <- &readDataResult{
-				err: fmt.Errorf("%v", err),
-				res: nil}
-		} else {
-			responseCh <- &readDataResult{err: nil, res: results}
-		}
+	responseCh := make(chan ReadResult, VOLUME)
+	onResult := func(result readResult) {
+		responseCh <- &result
 	}
-	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
-	return
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &readResult{err: fmt.Errorf("%d", err)}
+		}
+		close(responseCh)
+	}
+	C.session_read_data(s.session,
+		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		key.key)
+	return responseCh
 }
 
-func (s *Session) ReadData(key string) (responseCh chan IReadDataResult) {
+func (s *Session) ReadData(key string) <-chan ReadResult {
 	ekey, err := NewKey(key)
 	if err != nil {
-		errCh := make(chan IReadDataResult, 1)
-		errCh <- &readDataResult{err, nil}
+		errCh := make(chan ReadResult, 1)
+		errCh <- &readResult{err: err}
 		return errCh
 	}
 	defer ekey.Free()

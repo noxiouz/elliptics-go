@@ -56,13 +56,10 @@ func main() {
 	for res := range session.FindAnyIndexes([]string{"G", "Z", "Y", "T"}) {
 		log.Printf("%v", res.Data())
 	}
-	// //for {
-	// rd2 := <-session.ReadData(KEY)
-	// if rd2.Error() != nil {
-	// 	log.Println("read error ", rd2.Error())
-	// } else {
-	// 	log.Printf("%s \n", rd2.Data())
-	// }
+	//for {
+	for rd := range session.ReadData(KEY) {
+		log.Printf("%s \n", rd.Data())
+	}
 
 	// rw := <-session.WriteData(KEY, "TESTDATA")
 	// if rw.Error() != nil {

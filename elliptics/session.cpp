@@ -26,23 +26,10 @@ void on_finish(void *context, const elliptics::error_info &error) {
 	go_final_callback(error.code(), context);
 }
 
-void on_read_result(void *context, const elliptics::sync_read_result &result, const elliptics::error_info &error)
-{
-	if (error) {
-		go_read_callback(NULL, 0, error.code(), context);
-	} else {
-		std::vector<go_read_result> to_go;
-		for (size_t i = 0; i < result.size(); i++) {
-			to_go.push_back(go_read_result{(char *)result[i].file().data(), result[i].file().size()});
-		}
-		go_read_callback(&to_go[0], result.size(), error.code(), context);
-	}
-}
-
 void on_write_result(void *context, const elliptics::sync_write_result &result, const elliptics::error_info &error)
 {
 	if (error) {
-		go_read_callback(NULL, 0, error.code(), context);
+		//go_read_callback(NULL, 0, error.code(), context);
 	} else {
 		std::vector<go_write_result> to_go;
 
@@ -84,20 +71,37 @@ void session_set_namespace(ell_session *session, const char *name, int nsize)
 }
 
 /*
-	Read/Write/Remove
+	Read
 */
-void session_read_data(ell_session *session, void *context, ell_key *key)
+void on_read(void *context, const elliptics::read_result_entry &result)
 {
-	using namespace std::placeholders;
-	session->read_data(*key, 0, 0).connect(std::bind(&on_read_result, context, _1, _2));
+	elliptics::data_pointer data(result.file());
+	go_read_result to_go{
+		(char *)data.data(),
+		data.size(),
+		result.io_attribute()};
+	go_read_callback(&to_go, context);
 }
 
+void session_read_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
+{
+	using namespace std::placeholders;
+	session->read_data(*key, 0, 0).connect(std::bind(&on_read, on_chunk_context, _1),
+										   std::bind(&on_finish, final_context, _1));
+}
+
+/*
+	Write
+*/
 void session_write_data(ell_session *session, void *context, ell_key *key, char *data, size_t size)
 {
 	using namespace std::placeholders;
 	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_write_result, context, _1, _2));
 }
 
+/*
+	Remove
+*/
 void session_remove(ell_session *session, void *context, ell_key *key)
 {
 	using namespace std::placeholders;

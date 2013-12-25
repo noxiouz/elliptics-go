@@ -35,6 +35,7 @@ struct go_read_result
 {
 	char *file;
 	size_t size;
+	struct dnet_io_attr *io_attribute;
 };
 
 struct go_write_result 
@@ -63,7 +64,7 @@ ell_session* new_elliptics_session(ell_node* node);
 
 void session_set_groups(ell_session *session, int32_t* groups, int count);
 
-void session_read_data(ell_session *session, void *context, ell_key *key);
+void session_read_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key);
 void session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
 
 void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);

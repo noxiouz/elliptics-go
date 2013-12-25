@@ -40,11 +40,6 @@ func go_lookup_callback(result *C.struct_go_write_result, size int, err int, con
 	}
 }
 
-type ReadResult struct {
-	IoAttr C.struct_dnet_io_attr
-	Data   string
-}
-
 //export go_final_callback
 func go_final_callback(err int, context unsafe.Pointer) {
 	callback := *(*func(int))(context)
@@ -52,26 +47,16 @@ func go_final_callback(err int, context unsafe.Pointer) {
 }
 
 //export go_read_callback
-func go_read_callback(result *C.struct_go_read_result, size int, err int, context unsafe.Pointer) {
-	callback := *(*func([]ReadResult, int))(context)
-	if err != 0 {
-		callback(nil, err)
-	} else {
-		var tmp []C.struct_go_read_result
-		sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&tmp)))
-		sliceHeader.Cap = size
-		sliceHeader.Len = size
-		sliceHeader.Data = uintptr(unsafe.Pointer(result))
+func go_read_callback(item *C.struct_go_read_result, context unsafe.Pointer) {
+	callback := *(*func(readResult))(context)
 
-		var Results []ReadResult
-		for _, item := range tmp {
-			Results = append(Results, ReadResult{
-				Data: C.GoStringN(item.file, C.int(item.size)),
-			})
-		}
-		// All data from cpp has been copied here.
-		callback(Results, err)
+	Result := readResult{
+		data:   C.GoStringN(item.file, C.int(item.size)),
+		ioAttr: *item.io_attribute,
+		err:    nil,
 	}
+	// All data from C++ has been copied here.
+	callback(Result)
 }
 
 //export go_remove_callback
