@@ -66,9 +66,8 @@ void session_read_data(ell_session *session, void *on_chunk_context, void *final
 }
 
 /*
-	Write
+	Write and Lookup
 */
-
 void on_lookup(void *context, const elliptics::lookup_result_entry &result)
 {
 	go_lookup_result to_go{
@@ -84,6 +83,13 @@ void session_write_data(ell_session *session, void *on_chunk_context, void *fina
 	using namespace std::placeholders;
 	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_lookup, on_chunk_context, _1),
 																			  std::bind(&on_finish, final_context, _1));
+}
+
+void session_lookup(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
+{
+	using namespace std::placeholders;
+	session->lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1),
+								  std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -148,4 +154,5 @@ void session_find_any_indexes(ell_session *session, void *on_chunk_context, void
 	session->find_any_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
 												   std::bind(&on_finish, final_context, _1));
 }
+
 } // extern "C"

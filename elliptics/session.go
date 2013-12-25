@@ -179,6 +179,24 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 	return responseCh
 }
 
+func (s *Session) Lookup(key *Key) <-chan Lookuper {
+	responseCh := make(chan Lookuper, VOLUME)
+
+	onResult := func(lookup *lookupResult) {
+		responseCh <- lookup
+	}
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+		}
+		close(responseCh)
+	}
+
+	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	return responseCh
+}
+
 /*
 	Remove
 */

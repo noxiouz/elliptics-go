@@ -65,6 +65,11 @@ func main() {
 		log.Println(rw)
 	}
 
+	lookuped_key, _ := elliptics.NewKey(KEY)
+	defer lookuped_key.Free()
+	for lookUp := range session.Lookup(lookuped_key) {
+		log.Println(lookUp)
+	}
 	// rd := <-session.ReadData(KEY)
 	// if rd.Error() != nil {
 	// 	log.Println("read error ", rd.Error())
