@@ -22,12 +22,8 @@ extern "C" {
 
 #include "_cgo_export.h"
 
-
-void on_stat_result(void *context, const elliptics::sync_stat_result &result)
-{
-	(void) result;
-	(void) context;
-	std::cerr << "Not implemented" << std::endl;
+void on_finish(void *context, const elliptics::error_info &error) {
+	go_final_callback(error.code(), context);
 }
 
 void on_read_result(void *context, const elliptics::sync_read_result &result, const elliptics::error_info &error)
@@ -50,7 +46,8 @@ void on_write_result(void *context, const elliptics::sync_write_result &result, 
 	} else {
 		std::vector<go_write_result> to_go;
 
-		for (size_t i = 0 ; i < result.size(); i++) {
+		for (size_t i = 0 ; i < result.size(); i++)
+		{
 			go_write_result tmp;
 			tmp.info = result[i].file_info();
 			tmp.addr = result[i].storage_address();
@@ -67,7 +64,6 @@ void on_remove(void *context, const elliptics::sync_remove_result &result, const
 	(void) result;
 	go_remove_callback(error.code(), context);
 }
-
 
 ell_session* new_elliptics_session(ell_node* node)
 {
@@ -87,6 +83,9 @@ void session_set_namespace(ell_session *session, const char *name, int nsize)
 	session->set_namespace(name, nsize);
 }
 
+/*
+	Read/Write/Remove
+*/
 void session_read_data(ell_session *session, void *context, ell_key *key)
 {
 	using namespace std::placeholders;
@@ -105,21 +104,51 @@ void session_remove(ell_session *session, void *context, ell_key *key)
 	session->remove(*key).connect(std::bind(&on_remove, context, _1, _2));
 }
 
-void session_set_indexes(ell_session *session, void *context, ell_key *key, char *indexes[], char *data[], size_t nsize) {
-	std::vector<std::string> index_names;
-	std::vector<elliptics::data_pointer> index_data;
-	for (size_t i = 0; i < nsize; i++)
+/*
+	Find
+*/
+void on_find(void *context, const elliptics::find_indexes_result_entry &result) {
+	std::vector<c_index_entry> c_index_entries;
+	for(size_t i = 0; i< result.indexes.size(); i++)
 	{
-		index_names.push_back(indexes[i]);
-		index_data.push_back(elliptics::data_pointer::copy(data[i], sizeof(*data[i])));
+		c_index_entries.push_back(
+			c_index_entry{
+				(const char *)result.indexes[i].data.data(),
+				result.indexes[i].data.size()}
+			);
 	}
-	session->set_indexes(*key, index_names, index_data);
+	go_find_result to_go{
+		&result.id,
+		c_index_entries.size(),
+		c_index_entries.data()
+	};
+
+	go_find_callback(&to_go, context);
 }
 
-void session_stat_log(ell_session *session, void *context)
+void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
 {
 	using namespace std::placeholders;
-	session->stat_log().connect(std::bind(&on_stat_result, context, _1));
+	std::vector<std::string> index_names;
+	index_names.reserve(nsize);
+	for(size_t i = 0; i < nsize; i++)
+	{
+		index_names.push_back(indexes[i]);
+	}
+	session->find_all_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
+												   std::bind(&on_finish, final_context, _1));
 }
 
+void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
+{
+	using namespace std::placeholders;
+	std::vector<std::string> index_names;
+	index_names.reserve(nsize);
+	for(size_t i = 0; i < nsize; i++)
+	{
+		index_names.push_back(indexes[i]);
+	}
+	session->find_any_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
+												   std::bind(&on_finish, final_context, _1));
+}
 } // extern "C"

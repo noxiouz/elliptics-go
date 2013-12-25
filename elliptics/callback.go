@@ -45,6 +45,12 @@ type ReadResult struct {
 	Data   string
 }
 
+//export go_final_callback
+func go_final_callback(err int, context unsafe.Pointer) {
+	callback := *(*func(int))(context)
+	callback(err)
+}
+
 //export go_read_callback
 func go_read_callback(result *C.struct_go_read_result, size int, err int, context unsafe.Pointer) {
 	callback := *(*func([]ReadResult, int))(context)
@@ -72,4 +78,26 @@ func go_read_callback(result *C.struct_go_read_result, size int, err int, contex
 func go_remove_callback(err int, context unsafe.Pointer) {
 	callback := *(*func(int))(context)
 	callback(err)
+}
+
+//export go_find_callback
+func go_find_callback(result *C.struct_go_find_result, context unsafe.Pointer) {
+	callback := *(*func(*FindResult))(context)
+	var indexEntries []C.struct_c_index_entry
+	size := int(result.entries_count)
+	sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&indexEntries)))
+	sliceHeader.Cap = size
+	sliceHeader.Len = size
+	sliceHeader.Data = uintptr(unsafe.Pointer(result.entries))
+	var IndexDatas []IndexEntry
+	for _, item := range indexEntries {
+		IndexDatas = append(IndexDatas, IndexEntry{
+			Data: C.GoStringN(item.data, C.int(item.size)),
+		})
+	}
+	callback(&FindResult{
+		id:   *result.id,
+		data: IndexDatas,
+		err:  nil,
+	})
 }

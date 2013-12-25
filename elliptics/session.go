@@ -13,6 +13,8 @@ import "C"
 
 var _ = fmt.Scanf
 
+const VOLUME = 10
+
 var f []interface{}
 
 // Result of read operation
@@ -92,27 +94,27 @@ func (s *Session) SetNamespace(namespace string) {
 	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
 }
 
-func (s *Session) ReadKey(key *Key) (responceCh chan IReadDataResult) {
+func (s *Session) ReadKey(key *Key) (responseCh chan IReadDataResult) {
 	//Context is closure, which contains channel to answer in.
 	//It will pass as the last argument to exported go_*_callback
 	//through C++ callback after operation finish comes.
 	//go_read_callback casts context to properly go func,
 	//and calls with []ReadResult
-	responceCh = make(chan IReadDataResult, 1)
+	responseCh = make(chan IReadDataResult, 1)
 	context := func(results []ReadResult, err int) {
 		if err != 0 {
-			responceCh <- &readDataResult{
+			responseCh <- &readDataResult{
 				err: fmt.Errorf("%v", err),
 				res: nil}
 		} else {
-			responceCh <- &readDataResult{err: nil, res: results}
+			responseCh <- &readDataResult{err: nil, res: results}
 		}
 	}
 	C.session_read_data(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
 
-func (s *Session) ReadData(key string) (responceCh chan IReadDataResult) {
+func (s *Session) ReadData(key string) (responseCh chan IReadDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		errCh := make(chan IReadDataResult, 1)
@@ -123,7 +125,7 @@ func (s *Session) ReadData(key string) (responceCh chan IReadDataResult) {
 	return s.ReadKey(ekey)
 }
 
-func (s *Session) WriteData(key string, blob string) (responceCh chan IWriteDataResult) {
+func (s *Session) WriteData(key string, blob string) (responseCh chan IWriteDataResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		return
@@ -132,17 +134,17 @@ func (s *Session) WriteData(key string, blob string) (responceCh chan IWriteData
 	return s.WriteKey(ekey, blob)
 }
 
-func (s *Session) WriteKey(key *Key, blob string) (responceCh chan IWriteDataResult) {
+func (s *Session) WriteKey(key *Key, blob string) (responseCh chan IWriteDataResult) {
 	//Similary to ReadKey
-	responceCh = make(chan IWriteDataResult, 1)
+	responseCh = make(chan IWriteDataResult, VOLUME)
 	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 	context := func(result []LookupResult, err int) {
 		if err != 0 {
-			responceCh <- &writeDataResult{
+			responseCh <- &writeDataResult{
 				err:    fmt.Errorf("%v", err),
 				lookup: nil}
 		} else {
-			responceCh <- &writeDataResult{
+			responseCh <- &writeDataResult{
 				err:    nil,
 				lookup: result}
 		}
@@ -151,7 +153,7 @@ func (s *Session) WriteKey(key *Key, blob string) (responceCh chan IWriteDataRes
 	return
 }
 
-func (s *Session) Remove(key string) (responceCh chan IRemoveResult) {
+func (s *Session) Remove(key string) (responseCh chan IRemoveResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		return
@@ -160,33 +162,73 @@ func (s *Session) Remove(key string) (responceCh chan IRemoveResult) {
 	return s.RemoveKey(ekey)
 }
 
-func (s *Session) RemoveKey(key *Key) (responceCh chan IRemoveResult) {
-	responceCh = make(chan IRemoveResult, 1)
+func (s *Session) RemoveKey(key *Key) (responseCh chan IRemoveResult) {
+	responseCh = make(chan IRemoveResult, VOLUME)
 	context := func(err int) {
-		responceCh <- &removeResult{err: fmt.Errorf("%v", err)}
+		responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
 	}
 
 	C.session_remove(s.session, unsafe.Pointer(&context), key.key)
 	return
 }
 
-func (s *Session) SetIndexes(key string, indexes []string) {
-	ekey, err := NewKey(key)
-	if err != nil {
-		return
-	}
-	defer ekey.Free()
+//Find interface
+type Finder interface {
+	Error() error
+	Data() []IndexEntry
+}
 
-	context := func() {
+type FindResult struct {
+	id   C.struct_dnet_raw_id
+	data []IndexEntry
+	err  error
+}
 
-	}
-	var cindexes []*C.char
-	var cdatas []*C.char
+type IndexEntry struct {
+	Data string
+}
+
+func (f *FindResult) Data() []IndexEntry {
+	return f.data
+}
+
+func (f *FindResult) Error() error {
+	return f.err
+}
+
+func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
+	responseCh := make(chan Finder, VOLUME)
+	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
+	C.session_find_all_indexes(s.session, onResult, onFinish,
+		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+	return responseCh
+}
+
+func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
+	responseCh := make(chan Finder, VOLUME)
+	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
+	C.session_find_any_indexes(s.session, onResult, onFinish,
+		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+	return responseCh
+}
+
+func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResult, onFinish unsafe.Pointer, cindexes []*C.char) {
 	for _, index := range indexes {
 		cindex := C.CString(index)
 		cindexes = append(cindexes, cindex)
-		cdatas = append(cdatas, cindex)
 	}
-	C.session_set_indexes(s.session, unsafe.Pointer(&context), ekey.key, (**C.char)(&cindexes[0]), (**C.char)(&cdatas[0]), C.size_t(len(indexes)))
 
+	_result := func(result *FindResult) {
+		responseCh <- result
+	}
+	onResult = unsafe.Pointer(&_result)
+
+	_finish := func(err int) {
+		if err != 0 {
+			responseCh <- &FindResult{err: fmt.Errorf("%d", err)}
+		}
+		close(responseCh)
+	}
+	onFinish = unsafe.Pointer(&_finish)
+	return
 }
