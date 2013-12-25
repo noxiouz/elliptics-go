@@ -15,6 +15,11 @@ var _ = fmt.Scanf
 
 const defaultVOLUME = 10
 
+const (
+	indexesSet = iota
+	indexesUpdate
+)
+
 //Session
 type Session struct {
 	session unsafe.Pointer
@@ -298,4 +303,80 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 	}
 	onFinish = unsafe.Pointer(&_finish)
 	return
+}
+
+/*
+	Indexes
+*/
+
+type Indexer interface {
+	Error() error
+}
+
+type indexResult struct {
+	err error
+}
+
+func (i *indexResult) Error() error {
+	return i.err
+}
+
+func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[string]string) <-chan Indexer {
+	ekey, err := NewKey(key)
+	if err != nil {
+		panic(err)
+	}
+	defer ekey.Free()
+	responseCh := make(chan Indexer, defaultVOLUME)
+
+	var cindexes []*C.char
+	var cdatas []C.struct_go_data_pointer
+
+	for index, data := range indexes {
+		cindex := C.CString(index) // free this
+		defer C.free(unsafe.Pointer(cindex))
+		cindexes = append(cindexes, cindex)
+
+		cdata := C.new_data_pointer(
+			C.CString(data), // freed by ellipics::data_pointer in std::vector ???
+			C.int(len(data)),
+		)
+		cdatas = append(cdatas, cdata)
+	}
+
+	onResult := func() {
+		//It's never called. For the future.
+	}
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+		}
+		close(responseCh)
+	}
+	// TODO: Reimplement this with pointer on functions
+	switch operation {
+	case indexesSet:
+		C.session_set_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+			ekey.key,
+			(**C.char)(&cindexes[0]),
+			(*C.struct_go_data_pointer)(&cdatas[0]),
+			C.size_t(len(cindexes)))
+
+	case indexesUpdate:
+		C.session_update_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+			ekey.key,
+			(**C.char)(&cindexes[0]),
+			(*C.struct_go_data_pointer)(&cdatas[0]),
+			C.size_t(len(cindexes)))
+	}
+	return responseCh
+}
+
+func (s *Session) SetIndexes(key string, indexes map[string]string) <-chan Indexer {
+	return s.setOrUpdateIndexes(indexesSet, key, indexes)
+}
+
+func (s *Session) UpdateIndexes(key string, indexes map[string]string) <-chan Indexer {
+	return s.setOrUpdateIndexes(indexesUpdate, key, indexes)
 }

@@ -51,11 +51,11 @@ func main() {
 	session.SetNamespace("TEST3")
 
 	log.Println("Find all")
-	for res := range session.FindAllIndexes([]string{"G", "Z", "Y", "T"}) {
+	for res := range session.FindAllIndexes([]string{"F", "T"}) {
 		log.Printf("%v", res.Data())
 	}
 	log.Println("Find any")
-	for res := range session.FindAnyIndexes([]string{"G", "Z", "Y", "T"}) {
+	for res := range session.FindAnyIndexes([]string{"F", "T"}) {
 		log.Printf("%v", res.Data())
 	}
 
@@ -73,18 +73,32 @@ func main() {
 		log.Println(lookUp)
 	}
 
-	//KEY exists
-	if rm, ok := <-session.Remove(KEY); !ok {
-		log.Println("Remove successfully")
-	} else {
-		log.Println("Removing error: ", rm.Error())
-	}
+	// //KEY exists
+	// if rm, ok := <-session.Remove(KEY); !ok {
+	// 	log.Println("Remove successfully")
+	// } else {
+	// 	log.Println("Removing error: ", rm.Error())
+	// }
 
-	//KEY doesn't exist
-	if rm, ok := <-session.Remove(KEY); !ok {
-		log.Println("Remove successfully")
-	} else {
-		log.Println("Removing error: ", rm.Error())
-	}
+	// //KEY doesn't exist
+	// if rm, ok := <-session.Remove(KEY); !ok {
+	// 	log.Println("Remove successfully")
+	// } else {
+	// 	log.Println("Removing error: ", rm.Error())
+	// }
 
+	indexes := map[string]string{
+		"F": "indexF",
+	}
+	if si, ok := <-session.SetIndexes(KEY, indexes); !ok {
+		log.Println("SetIndexes successfully")
+	} else {
+		log.Println("SetIndexes error: ", si.Error())
+	}
+	indexes["TTT"] = "IndexTTT"
+	if si, ok := <-session.UpdateIndexes(KEY, indexes); !ok {
+		log.Println("UpdateIndexes successfully")
+	} else {
+		log.Println("UpdateIndexes error: ", si.Error())
+	}
 }

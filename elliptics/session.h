@@ -63,7 +63,13 @@ struct go_find_result
 	struct c_index_entry *entries;
 };
 
-typedef void(*gocallback)(void*, void*);
+struct go_data_pointer
+{
+	char *data;
+	int size;
+};
+
+struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session* new_elliptics_session(ell_node* node);
 
@@ -80,6 +86,13 @@ void session_remove(ell_session *session, void *on_chunk_context, void *final_co
 void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 
+void session_set_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
+						 char *indexes[], struct go_data_pointer *data, size_t count);
+
+void session_update_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
+						 char *indexes[], struct go_data_pointer *data, size_t count);
+
+void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize);
 
 #ifdef __cplusplus 
 }
