@@ -77,7 +77,7 @@ void session_write_data(ell_session *session, void *on_chunk_context, void *fina
 void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 
-void session_remove(ell_session *session, void *context, ell_key *key);
+void session_remove(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key);
 
 void session_set_namespace(ell_session *session, const char *name, int nsize);
 

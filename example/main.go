@@ -46,8 +46,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Error", err)
 	}
+
 	session.SetGroups([]int32{1, 2, 3})
 	session.SetNamespace("TEST3")
+
 	log.Println("Find all")
 	for res := range session.FindAllIndexes([]string{"G", "Z", "Y", "T"}) {
 		log.Printf("%v", res.Data())
@@ -56,7 +58,7 @@ func main() {
 	for res := range session.FindAnyIndexes([]string{"G", "Z", "Y", "T"}) {
 		log.Printf("%v", res.Data())
 	}
-	//for {
+
 	for rd := range session.ReadData(KEY) {
 		log.Printf("%s \n", rd.Data())
 	}
@@ -70,18 +72,19 @@ func main() {
 	for lookUp := range session.Lookup(lookuped_key) {
 		log.Println(lookUp)
 	}
-	// rd := <-session.ReadData(KEY)
-	// if rd.Error() != nil {
-	// 	log.Println("read error ", rd.Error())
-	// } else {
-	// 	log.Printf("%s \n", rd.Data()[0].Data)
-	// }
 
-	// // rm := <-session.Remove(KEY)
-	// // if rm.Error() != nil {
-	// // 	log.Println("remove error", rm.Error())
-	// // }
+	//KEY exists
+	if rm, ok := <-session.Remove(KEY); !ok {
+		log.Println("Remove successfully")
+	} else {
+		log.Println("Removing error: ", rm.Error())
+	}
 
-	//}
+	//KEY doesn't exist
+	if rm, ok := <-session.Remove(KEY); !ok {
+		log.Println("Remove successfully")
+	} else {
+		log.Println("Removing error: ", rm.Error())
+	}
 
 }

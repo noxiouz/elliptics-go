@@ -15,19 +15,6 @@ var _ = fmt.Scanf
 
 const VOLUME = 10
 
-//Result of remove
-type IRemoveResult interface {
-	Error() error
-}
-
-type removeResult struct {
-	err error
-}
-
-func (r *removeResult) Error() error {
-	return r.err
-}
-
 //Session
 type Session struct {
 	session unsafe.Pointer
@@ -201,23 +188,44 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	Remove
 */
 
-func (s *Session) Remove(key string) (responseCh chan IRemoveResult) {
+type Remover interface {
+	Error() error
+}
+
+type removeResult struct {
+	err error
+}
+
+func (r *removeResult) Error() error {
+	return r.err
+}
+
+func (s *Session) Remove(key string) <-chan Remover {
 	ekey, err := NewKey(key)
 	if err != nil {
-		return
+		responseCh := make(chan Remover, VOLUME)
+		responseCh <- &removeResult{err: err}
+		close(responseCh)
+		return responseCh
 	}
 	defer ekey.Free()
 	return s.RemoveKey(ekey)
 }
 
-func (s *Session) RemoveKey(key *Key) (responseCh chan IRemoveResult) {
-	responseCh = make(chan IRemoveResult, VOLUME)
-	context := func(err int) {
-		responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
+func (s *Session) RemoveKey(key *Key) <-chan Remover {
+	responseCh := make(chan Remover, VOLUME)
+	onResult := func() {
+		//It's never called.
+	}
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
+		}
+		close(responseCh)
 	}
 
-	C.session_remove(s.session, unsafe.Pointer(&context), key.key)
-	return
+	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	return responseCh
 }
 
 /*

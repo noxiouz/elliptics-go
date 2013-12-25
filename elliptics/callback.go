@@ -45,10 +45,10 @@ func go_read_callback(item *C.struct_go_read_result, context unsafe.Pointer) {
 }
 
 //export go_remove_callback
-func go_remove_callback(err int, context unsafe.Pointer) {
-	callback := *(*func(int))(context)
-	callback(err)
-}
+// func go_remove_callback(err int, context unsafe.Pointer) {
+// 	callback := *(*func(int))(context)
+// 	callback(err)
+// }
 
 //export go_find_callback
 func go_find_callback(result *C.struct_go_find_result, context unsafe.Pointer) {

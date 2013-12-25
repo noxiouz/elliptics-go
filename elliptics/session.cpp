@@ -95,16 +95,18 @@ void session_lookup(ell_session *session, void *on_chunk_context, void *final_co
 /*
 	Remove
 */
-void on_remove(void *context, const elliptics::sync_remove_result &result, const elliptics::error_info &error)
+// Not implemented. Don't know about anything usefull informaitopn from result.
+void on_remove(void *context, const elliptics::remove_result_entry &result)
 {
-	(void) result;
-	go_remove_callback(error.code(), context);
+	(void) result; 
+	(void) context;
 }
 
-void session_remove(ell_session *session, void *context, ell_key *key)
+void session_remove(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
 {
 	using namespace std::placeholders;
-	session->remove(*key).connect(std::bind(&on_remove, context, _1, _2));
+	session->remove(*key).connect(std::bind(&on_remove, on_chunk_context, _1),
+								  std::bind(&on_finish, final_context, _1));
 }
 
 /*
