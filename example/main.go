@@ -61,12 +61,9 @@ func main() {
 		log.Printf("%s \n", rd.Data())
 	}
 
-	// rw := <-session.WriteData(KEY, "TESTDATA")
-	// if rw.Error() != nil {
-	// 	log.Fatal("write error", rw.Error())
-	// } else {
-	// 	log.Println(rw.Lookup())
-	// }
+	for rw := range session.WriteData(KEY, "TESTDATA") {
+		log.Println(rw)
+	}
 
 	// rd := <-session.ReadData(KEY)
 	// if rd.Error() != nil {

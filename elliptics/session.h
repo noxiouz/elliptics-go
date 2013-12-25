@@ -31,6 +31,7 @@ extern "C" {
 typedef void ell_session;
 #endif
 
+//read_result_entry
 struct go_read_result 
 {
 	char *file;
@@ -38,19 +39,23 @@ struct go_read_result
 	struct dnet_io_attr *io_attribute;
 };
 
-struct go_write_result 
+//lookup_result_entry
+struct go_lookup_result
 {
 	struct dnet_file_info *info;
 	struct dnet_addr *addr;
 	const char *path;
 };
 
+
+//index_entry
 struct c_index_entry
 {
 	const char *data;
 	size_t size;
 };
 
+//find_indexes_result_entry
 struct go_find_result
 {
 	const struct dnet_raw_id *id;
@@ -65,7 +70,8 @@ ell_session* new_elliptics_session(ell_node* node);
 void session_set_groups(ell_session *session, int32_t* groups, int count);
 
 void session_read_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key);
-void session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
+//void session_write_data(ell_session *session, void *context, ell_key *key, char* data, size_t size);
+void session_write_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *data, size_t size);
 
 void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);

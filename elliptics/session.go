@@ -15,27 +15,6 @@ var _ = fmt.Scanf
 
 const VOLUME = 10
 
-var f []interface{}
-
-//Result of write operation
-type IWriteDataResult interface {
-	Lookup() []LookupResult
-	Error() error
-}
-
-type writeDataResult struct {
-	lookup []LookupResult
-	err    error
-}
-
-func (w *writeDataResult) Error() error {
-	return w.err
-}
-
-func (w *writeDataResult) Lookup() []LookupResult {
-	return w.lookup
-}
-
 //Result of remove
 type IRemoveResult interface {
 	Error() error
@@ -49,7 +28,7 @@ func (r *removeResult) Error() error {
 	return r.err
 }
 
-// Session context
+//Session
 type Session struct {
 	session unsafe.Pointer
 }
@@ -75,7 +54,10 @@ func (s *Session) SetNamespace(namespace string) {
 	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
 }
 
-// Read
+/*
+	Read
+*/
+
 type ReadResult interface {
 	Data() string
 	Error() error
@@ -123,39 +105,83 @@ func (s *Session) ReadData(key string) <-chan ReadResult {
 	if err != nil {
 		errCh := make(chan ReadResult, 1)
 		errCh <- &readResult{err: err}
+		close(errCh)
 		return errCh
 	}
 	defer ekey.Free()
 	return s.ReadKey(ekey)
 }
 
-func (s *Session) WriteData(key string, blob string) (responseCh chan IWriteDataResult) {
+/*
+	Write and Lookup
+*/
+
+type Lookuper interface {
+	Path() string
+	Addr() C.struct_dnet_addr
+	Info() C.struct_dnet_file_info
+	Error() error
+}
+
+type lookupResult struct {
+	info C.struct_dnet_file_info //dnet_file_info
+	addr C.struct_dnet_addr
+	path string //file_path
+	err  error
+}
+
+func (l *lookupResult) Path() string {
+	return l.path
+}
+
+func (l *lookupResult) Addr() C.struct_dnet_addr {
+	return l.addr
+}
+
+func (l *lookupResult) Info() C.struct_dnet_file_info {
+	return l.info
+}
+
+func (l *lookupResult) Error() error {
+	return l.err
+}
+
+func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
-		return
+		responseCh := make(chan Lookuper, VOLUME)
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
 	}
 	defer ekey.Free()
 	return s.WriteKey(ekey, blob)
 }
 
-func (s *Session) WriteKey(key *Key, blob string) (responseCh chan IWriteDataResult) {
-	//Similary to ReadKey
-	responseCh = make(chan IWriteDataResult, VOLUME)
+func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
+	responseCh := make(chan Lookuper, VOLUME)
 	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
-	context := func(result []LookupResult, err int) {
-		if err != 0 {
-			responseCh <- &writeDataResult{
-				err:    fmt.Errorf("%v", err),
-				lookup: nil}
-		} else {
-			responseCh <- &writeDataResult{
-				err:    nil,
-				lookup: result}
-		}
+
+	onResult := func(lookup *lookupResult) {
+		responseCh <- lookup
 	}
-	C.session_write_data(s.session, unsafe.Pointer(&context), key.key, raw_data, C.size_t(len(blob)))
-	return
+
+	onFinish := func(err int) {
+		if err != 0 {
+			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+		}
+		close(responseCh)
+	}
+
+	C.session_write_data(s.session,
+		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		key.key, raw_data, C.size_t(len(blob)))
+	return responseCh
 }
+
+/*
+	Remove
+*/
 
 func (s *Session) Remove(key string) (responseCh chan IRemoveResult) {
 	ekey, err := NewKey(key)
@@ -176,7 +202,10 @@ func (s *Session) RemoveKey(key *Key) (responseCh chan IRemoveResult) {
 	return
 }
 
-//Find interface
+/*
+	Find
+*/
+
 type Finder interface {
 	Error() error
 	Data() []IndexEntry
