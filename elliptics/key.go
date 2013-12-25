@@ -35,10 +35,10 @@ func (k *Key) ById() bool {
 	return int(C.key_by_id(k.key)) > 0
 }
 
-func (k *Key) SetId(dnetId *DnetId) (err error) {
-	_, err = C.key_set_id(k.key, dnetId._dnet_id)
-	return
-}
+// func (k *Key) SetId(dnetId *DnetId) (err error) {
+// 	_, err = C.key_set_id(k.key, dnetId._dnet_id)
+// 	return
+// }
 
 func (k *Key) Free() {
 	C.delete_key(k.key)

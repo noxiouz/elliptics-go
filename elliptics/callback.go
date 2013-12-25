@@ -52,7 +52,7 @@ func go_read_callback(item *C.struct_go_read_result, context unsafe.Pointer) {
 
 //export go_find_callback
 func go_find_callback(result *C.struct_go_find_result, context unsafe.Pointer) {
-	callback := *(*func(*FindResult))(context)
+	callback := *(*func(*findResult))(context)
 	var indexEntries []C.struct_c_index_entry
 	size := int(result.entries_count)
 	sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&indexEntries)))
@@ -65,7 +65,7 @@ func go_find_callback(result *C.struct_go_find_result, context unsafe.Pointer) {
 			Data: C.GoStringN(item.data, C.int(item.size)),
 		})
 	}
-	callback(&FindResult{
+	callback(&findResult{
 		id:   *result.id,
 		data: IndexDatas,
 		err:  nil,

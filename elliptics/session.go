@@ -13,7 +13,7 @@ import "C"
 
 var _ = fmt.Scanf
 
-const VOLUME = 10
+const defaultVOLUME = 10
 
 //Session
 type Session struct {
@@ -70,7 +70,7 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 	//through C++ callback after operation finish comes.
 	//go_read_callback casts context to properly go func,
 	//and calls with []ReadResult
-	responseCh := make(chan ReadResult, VOLUME)
+	responseCh := make(chan ReadResult, defaultVOLUME)
 	onResult := func(result readResult) {
 		responseCh <- &result
 	}
@@ -136,7 +136,7 @@ func (l *lookupResult) Error() error {
 func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
-		responseCh := make(chan Lookuper, VOLUME)
+		responseCh := make(chan Lookuper, defaultVOLUME)
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
 		return responseCh
@@ -146,7 +146,7 @@ func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 }
 
 func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
-	responseCh := make(chan Lookuper, VOLUME)
+	responseCh := make(chan Lookuper, defaultVOLUME)
 	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 
 	onResult := func(lookup *lookupResult) {
@@ -167,7 +167,7 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 }
 
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
-	responseCh := make(chan Lookuper, VOLUME)
+	responseCh := make(chan Lookuper, defaultVOLUME)
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -203,7 +203,7 @@ func (r *removeResult) Error() error {
 func (s *Session) Remove(key string) <-chan Remover {
 	ekey, err := NewKey(key)
 	if err != nil {
-		responseCh := make(chan Remover, VOLUME)
+		responseCh := make(chan Remover, defaultVOLUME)
 		responseCh <- &removeResult{err: err}
 		close(responseCh)
 		return responseCh
@@ -213,7 +213,7 @@ func (s *Session) Remove(key string) <-chan Remover {
 }
 
 func (s *Session) RemoveKey(key *Key) <-chan Remover {
-	responseCh := make(chan Remover, VOLUME)
+	responseCh := make(chan Remover, defaultVOLUME)
 	onResult := func() {
 		//It's never called.
 	}
@@ -237,7 +237,7 @@ type Finder interface {
 	Data() []IndexEntry
 }
 
-type FindResult struct {
+type findResult struct {
 	id   C.struct_dnet_raw_id
 	data []IndexEntry
 	err  error
@@ -247,16 +247,16 @@ type IndexEntry struct {
 	Data string
 }
 
-func (f *FindResult) Data() []IndexEntry {
+func (f *findResult) Data() []IndexEntry {
 	return f.data
 }
 
-func (f *FindResult) Error() error {
+func (f *findResult) Error() error {
 	return f.err
 }
 
 func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
-	responseCh := make(chan Finder, VOLUME)
+	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_all_indexes(s.session, onResult, onFinish,
 		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
@@ -264,7 +264,7 @@ func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 }
 
 func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
-	responseCh := make(chan Finder, VOLUME)
+	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_any_indexes(s.session, onResult, onFinish,
 		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
@@ -277,14 +277,14 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 		cindexes = append(cindexes, cindex)
 	}
 
-	_result := func(result *FindResult) {
+	_result := func(result *findResult) {
 		responseCh <- result
 	}
 	onResult = unsafe.Pointer(&_result)
 
 	_finish := func(err int) {
 		if err != 0 {
-			responseCh <- &FindResult{err: fmt.Errorf("%d", err)}
+			responseCh <- &findResult{err: fmt.Errorf("%d", err)}
 		}
 		close(responseCh)
 	}
