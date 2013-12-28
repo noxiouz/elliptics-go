@@ -24,6 +24,7 @@ import (
 	"unsafe"
 )
 
+//Logger provides file logger for Elliptics Node.
 type Logger struct {
 	logger unsafe.Pointer
 }
@@ -43,8 +44,9 @@ const (
 )
 
 /*NewFileLogger returns new Logger.
-file is path to logfile.
-level is log level.
+
+"file" is path to logfile.
+"level" is a verbosity level.
 */
 func NewFileLogger(file string, level int) (logger *Logger, err error) {
 	cfile := C.CString(file)
@@ -58,10 +60,13 @@ func NewFileLogger(file string, level int) (logger *Logger, err error) {
 	return
 }
 
+//Despose current Logger.
+//Do dispose Logger, if it is being used by any Node.
 func (logger *Logger) Free() {
 	C.delete_file_logger(logger.logger)
 }
 
+//Log writes args as formated string with given loglevel.
 func (logger *Logger) Log(level int, format string, args ...interface{}) {
 
 	str := fmt.Sprintf(format, args...)
@@ -71,6 +76,7 @@ func (logger *Logger) Log(level int, format string, args ...interface{}) {
 	C.file_logger_log(logger.logger, C.int(level), cstr)
 }
 
+//GetLevel returns current level of verbosity.
 func (logger *Logger) GetLevel() (lvl int) {
 	return int(C.file_logger_get_level(logger.logger))
 }

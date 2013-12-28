@@ -25,6 +25,8 @@ import (
 )
 
 //A Node is responsible for the connection with the server part.
+//Also it is responsible for checking timeouts, maintenance and checking of communication.
+//To initialize the Node you should use NewNode.
 type Node struct {
 	logger *Logger
 	node   unsafe.Pointer
