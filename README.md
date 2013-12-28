@@ -1,4 +1,4 @@
-# elliptics-go [![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics)
+# elliptics-go [![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics) [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go)
 
 
 Go binding for [Elliptics](https://github.com/reverbrain/elliptics) key-value storage.
