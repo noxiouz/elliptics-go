@@ -36,7 +36,7 @@ func main() {
 		log.Fatalln("NewFileLogger: ", err)
 	}
 	defer EllLog.Free()
-	EllLog.Log(elliptics.INFO, "started: %v, level: %d", time.Now(), level)
+	EllLog.Log(elliptics.LOGINFO, "started: %v, level: %d", time.Now(), level)
 
 	// Create elliptics node
 	node, err := elliptics.NewNode(EllLog)
