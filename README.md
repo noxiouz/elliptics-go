@@ -26,7 +26,7 @@ func init() {
 }
 
 const TESTKEY = "TESTKEYsssd"
-const ELLHOST = "elstorage01f.kit.yandex.net:1025:2"
+const ELLHOST = "localhost:1025:2"
 
 func main() {
 	// Create file logger
