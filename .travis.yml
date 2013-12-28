@@ -1,0 +1,12 @@
+language: go
+
+go:
+  - 1.2
+
+before_install:
+  - echo 'deb http://repo.reverbrain.com/precise current/amd64/' | sudo tee -a /etc/apt/sources.list
+  - sudo apt-get update -qq
+  - sudo apt-get install elliptics-dev
+
+script:
+  - go build ./elliptics/
