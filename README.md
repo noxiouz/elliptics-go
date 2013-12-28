@@ -1,5 +1,5 @@
-elliptics-go
-============
+# elliptics-go [![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics)
+
 
 Go binding for [Elliptics](https://github.com/reverbrain/elliptics) key-value storage.
 
