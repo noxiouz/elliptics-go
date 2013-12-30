@@ -14,9 +14,10 @@ type Logger struct {
 }
 
 const (
-	ERROR = iota
-	WARNING
+	DATA = iota
+	ERROR
 	INFO
+	NOTICE
 	DEBUG
 )
 
