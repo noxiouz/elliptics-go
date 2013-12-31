@@ -21,7 +21,7 @@ More information about Elliptics here: http://reverbrain.com/.
 Motivaiting example:
 
 	// Create filelogger
-	EllLog, err := elliptics.NewFileLogger("/tmp/elliptics-go.log", elliptics.LOGERROR)
+	EllLog, err := elliptics.NewFileLogger("/tmp/elliptics-go.log", elliptics.ERROR)
 	if err != nil {
 		log.Fatalln("NewFileLogger: ", err)
 	}

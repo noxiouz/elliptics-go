@@ -10,7 +10,8 @@ before_install:
 
 script:
   - echo "Building..."
-  - go build ./elliptics/
+  - ls -R ./
+  - go test github.com/noxiouz/elliptics-go
 
 branches:
   only:
