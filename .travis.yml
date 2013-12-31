@@ -9,9 +9,7 @@ before_install:
   - sudo apt-get install elliptics-dev --force-yes
 
 script:
-  - echo "Building..."
-  - ls -R ./
-  - go test github.com/noxiouz/elliptics-go
+  - go test github.com/noxiouz/elliptics-go/elliptics
 
 branches:
   only:
