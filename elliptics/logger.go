@@ -32,15 +32,15 @@ type Logger struct {
 //Constants for log level of Logger.
 const (
 	//Log very important data. Practically nothing is written
-	LOGDATA = iota
+	DATA = iota
 	//Log critical errors that materially affect the work
-	LOGERROR
+	ERROR
 	//Log messages about the time of the various operations
-	LOGINFO
+	INFO
 	//It's a first level of debugging
-	LOGNOTICE
+	NOTICE
 	//Logs all sort of information about errors and work
-	LOGDEBUG
+	DEBUG
 )
 
 /*NewFileLogger returns new Logger.
