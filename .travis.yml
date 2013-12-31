@@ -9,4 +9,9 @@ before_install:
   - sudo apt-get install elliptics-dev --force-yes
 
 script:
+  - echo "Building..."
   - go build ./elliptics/
+
+branches:
+  only:
+  - master
