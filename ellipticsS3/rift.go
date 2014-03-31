@@ -27,6 +27,11 @@ func (r *riftBackend) GetObject(key, bucket string) (data []byte, err error) {
 		return
 	}
 
+	if resp.StatusCode != 200 {
+		err = NewKeyNotFoundError(key, bucket)
+		return
+	}
+
 	// TODO: add error handler based on StatusCode
 	defer resp.Body.Close()
 	data, err = ioutil.ReadAll(resp.Body)
@@ -67,6 +72,10 @@ func (r *riftBackend) ObjectExists(key, bucket string) (exists bool, err error) 
 
 	exists = resp.StatusCode == 200
 	return
+}
+
+func (r *riftBackend) CreateBucket(bucket string) (err error) {
+	return fmt.Errorf("Not implemented")
 }
 
 func NewRiftbackend(endpoint string) (s S3Backend, err error) {
