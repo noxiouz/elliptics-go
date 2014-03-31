@@ -18,12 +18,12 @@ conn = boto.connect_s3(aws_access_key_id=access_key,
                        # calling_format=boto.s3.connection.VHostCallingFormat(),
                        )
 
-b = conn.get_bucket('testns')
-k = key.Key(b)
-k.key = 'xxx.jpg'
-# print k.get_contents_as_string()
-print k.set_metadata('meta1', 'This is the first metadata value')
-print k.set_contents_from_string("push through proxy")
+# b = conn.get_bucket('testns')
+# k = key.Key(b)
+# k.key = 'xxx.jpg'
+# # print k.get_contents_as_string()
+# print k.set_metadata('meta1', 'This is the first metadata value')
+# print k.set_contents_from_string("push through proxy")
 
 
 # possible_key = b.get_key('xxx.jpg')
@@ -31,7 +31,8 @@ print k.set_contents_from_string("push through proxy")
 # possible_key = b.get_key('xxxdsdsdsd.jpg')
 # print possible_key
 
-# res = conn.create_bucket('mybucket')
+res = conn.create_bucket('mybucket')
+print res
 
 # k = key.Key(b)
 # k.key = 'testKey'

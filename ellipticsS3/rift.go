@@ -2,6 +2,7 @@ package ellipticsS3
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -75,7 +76,38 @@ func (r *riftBackend) ObjectExists(key, bucket string) (exists bool, err error) 
 }
 
 func (r *riftBackend) CreateBucket(bucket string) (err error) {
-	return fmt.Errorf("Not implemented")
+	task := struct {
+		Key       string `json:"key"`
+		Groups    []int  `json:"groups"`
+		Flags     int    `json:"flags"`
+		MaxSize   int    `json:"max-size"`
+		MaxKeyNum int    `json:"max-key-num"`
+	}{
+		Key:       bucket,
+		Groups:    []int{1}, // Make it configurable
+		Flags:     0,
+		MaxSize:   0,
+		MaxKeyNum: 0,
+	}
+
+	body, _ := json.Marshal(task)
+
+	urlStr := fmt.Sprintf("http://%s/bucket-meta-create", r.endpoint)
+	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(body))
+	if err != nil {
+		return
+	}
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Unable to create bucket %s", bucket)
+	}
+
+	return
 }
 
 func NewRiftbackend(endpoint string) (s S3Backend, err error) {

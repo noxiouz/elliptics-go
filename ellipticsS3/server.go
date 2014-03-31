@@ -22,7 +22,16 @@ func bucketExists(w http.ResponseWriter, r *http.Request) {
 }
 
 func bucketCreate(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Not implemented")
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+
+	err := rift.CreateBucket(bucket)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	fmt.Fprintf(w, "OK")
 }
 
 // Objects
