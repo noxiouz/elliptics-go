@@ -22,13 +22,12 @@ const ELLHOST = "elstorage01f.kit.yandex.net:1025:2"
 
 func main() {
 	// Create file logger
-	level := 2
-	EllLog, err := elliptics.NewFileLogger("/tmp/elliptics-go.log", level)
+	EllLog, err := elliptics.NewFileLogger("/tmp/elliptics-go.log", elliptics.INFO)
 	if err != nil {
 		log.Fatalln("NewFileLogger: ", err)
 	}
 	defer EllLog.Free()
-	EllLog.Log(elliptics.INFO, "started: %v, level: %d", time.Now(), level)
+	EllLog.Log(elliptics.INFO, "started: %v, level: %d", time.Now(), elliptics.INFO)
 
 	// Create elliptics node
 	node, err := elliptics.NewNode(EllLog)

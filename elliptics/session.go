@@ -1,3 +1,18 @@
+/*
+* 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+* All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+ */
+
 package elliptics
 
 import (
@@ -20,11 +35,27 @@ const (
 	indexesUpdate
 )
 
-//Session
+/*Session allows to perfom any operations with data and indexes.
+
+Most of methods return channel. Channel will be closed after results end or
+error occurs. In case of error last value received from channel returns non nil value
+from Error method.
+
+For example Remove:
+
+	if rm, ok := <-session.Remove(KEY); !ok {
+		//Remove normally doesn't return any value, so chanel was closed.
+		log.Println("Remove successfully")
+	} else {
+		//We's received value from channel. It should be error message.
+		log.Println("Error occured: ", rm.Error())
+	}
+*/
 type Session struct {
 	session unsafe.Pointer
 }
 
+//NewSession returns Session connected with given Node.
 func NewSession(node *Node) (*Session, error) {
 	session, err := C.new_elliptics_session(node.node)
 	if err != nil {
@@ -33,13 +64,15 @@ func NewSession(node *Node) (*Session, error) {
 	return &Session{session}, err
 }
 
-//Set groups to the session
+//SetGroups points groups Session should work with.
 func (s *Session) SetGroups(groups []int32) {
 	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
 }
 
-//Set namespace for elliptics session.
-//Default namespace is empty string.
+/*SetNamespace sets the namespace for the Session.Default namespace is empty string.
+
+This feature allows you to share a single storage between services.
+And each service which uses own namespace will have own independent space of keys.*/
 func (s *Session) SetNamespace(namespace string) {
 	cnamespace := C.CString(namespace)
 	defer C.free(unsafe.Pointer(cnamespace))
@@ -50,8 +83,11 @@ func (s *Session) SetNamespace(namespace string) {
 	Read
 */
 
+//ReadResult wraps one result of read operation.
 type ReadResult interface {
+	//Data returns string represntation of readed data.
 	Data() string
+	//Error returns representation of error, which could occur.
 	Error() error
 }
 
@@ -61,20 +97,18 @@ type readResult struct {
 	err    error
 }
 
+//Data returns a string represntation of readed data.
 func (r *readResult) Data() string {
 	return r.data
 }
 
+//Error returns representation of error, which could occur.
 func (r *readResult) Error() error {
 	return r.err
 }
 
+//ReadKey performs a read operation by key.
 func (s *Session) ReadKey(key *Key) <-chan ReadResult {
-	//Context is closure, which contains channel to answer in.
-	//It will pass as the last argument to exported go_*_callback
-	//through C++ callback after operation finish comes.
-	//go_read_callback casts context to properly go func,
-	//and calls with []ReadResult
 	responseCh := make(chan ReadResult, defaultVOLUME)
 	onResult := func(result readResult) {
 		responseCh <- &result
@@ -92,6 +126,7 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 	return responseCh
 }
 
+//ReadKey performs a read operation by string representation of key.
 func (s *Session) ReadData(key string) <-chan ReadResult {
 	ekey, err := NewKey(key)
 	if err != nil {
@@ -108,10 +143,14 @@ func (s *Session) ReadData(key string) <-chan ReadResult {
 	Write and Lookup
 */
 
+//Lookuper represents one result of Write and Lookup operations.
 type Lookuper interface {
+	//Path returns a path to lookuped key.
 	Path() string
+	//Addr returns dnet_addr for a lookuped key.
 	Addr() C.struct_dnet_addr
 	Info() C.struct_dnet_file_info
+	//Error returns string respresentation of error.
 	Error() error
 }
 
@@ -138,6 +177,7 @@ func (l *lookupResult) Error() error {
 	return l.err
 }
 
+//WriteData writes blob by a given string representation of Key.
 func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
@@ -150,6 +190,7 @@ func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 	return s.WriteKey(ekey, blob)
 }
 
+//WriteKey writes blob by Key.
 func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
@@ -171,6 +212,7 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 	return responseCh
 }
 
+//Lookup returns an information about given Key.
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 
@@ -193,7 +235,9 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	Remove
 */
 
+//Remover wraps information about remove operation.
 type Remover interface {
+	//Error of remove operation.
 	Error() error
 }
 
@@ -205,6 +249,7 @@ func (r *removeResult) Error() error {
 	return r.err
 }
 
+//Remove performs remove operation by a string.
 func (s *Session) Remove(key string) <-chan Remover {
 	ekey, err := NewKey(key)
 	if err != nil {
@@ -217,6 +262,7 @@ func (s *Session) Remove(key string) <-chan Remover {
 	return s.RemoveKey(ekey)
 }
 
+//RemoveKey performs remove operation by key.
 func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	responseCh := make(chan Remover, defaultVOLUME)
 	onResult := func() {
@@ -237,6 +283,7 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	Find
 */
 
+//Finder is interface to result of find operations with Indexes.
 type Finder interface {
 	Error() error
 	Data() []IndexEntry
@@ -248,7 +295,9 @@ type findResult struct {
 	err  error
 }
 
+//IndexEntry represents one result of some index operations.
 type IndexEntry struct {
+	//Data is information associated with index.
 	Data string
 	err  error
 }
@@ -261,6 +310,7 @@ func (f *findResult) Error() error {
 	return f.err
 }
 
+//FindAllIndexes returns IndexEntries for keys, which were indexed with all of indexes.
 func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
@@ -273,6 +323,7 @@ func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 	return responseCh
 }
 
+//FindAnyIndexes returns IndexEntries for keys, which were indexed with any of indexes.
 func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
@@ -310,7 +361,9 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 	Indexes
 */
 
+//Indexer is an interface to result of any CRUD operations with indexes.
 type Indexer interface {
+	//Error returns string representation of error.
 	Error() error
 }
 
@@ -374,14 +427,17 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 	return responseCh
 }
 
+//SetIndexes sets indexes for a given key.
 func (s *Session) SetIndexes(key string, indexes map[string]string) <-chan Indexer {
 	return s.setOrUpdateIndexes(indexesSet, key, indexes)
 }
 
+//UpdateIndexes sets indexes for a given key.
 func (s *Session) UpdateIndexes(key string, indexes map[string]string) <-chan Indexer {
 	return s.setOrUpdateIndexes(indexesUpdate, key, indexes)
 }
 
+//ListIndexes gets list of all indxes, which are associated with key.
 func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 	responseCh := make(chan IndexEntry, defaultVOLUME)
 	ekey, err := NewKey(key)
@@ -405,6 +461,7 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 	return responseCh
 }
 
+//RemoveIndexes removes indexes from a key.
 func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 	ekey, err := NewKey(key)
 	if err != nil {
