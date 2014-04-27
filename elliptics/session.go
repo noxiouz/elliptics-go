@@ -69,6 +69,11 @@ func (s *Session) SetGroups(groups []int32) {
 	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
 }
 
+//SetTimeout sets wait timeout in seconds (time to wait for operation to complete) for all subsequent session operations
+func (s *Session) SetTimeout(timeout int) {
+	C.session_set_timeout(s.session, C.int(timeout))
+}
+
 /*SetNamespace sets the namespace for the Session.Default namespace is empty string.
 
 This feature allows you to share a single storage between services.
