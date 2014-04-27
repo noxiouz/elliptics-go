@@ -65,8 +65,7 @@ void on_read(void *context, const elliptics::read_result_entry &result)
 void session_read_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
 {
 	using namespace std::placeholders;
-	session->read_data(*key, 0, 0).connect(std::bind(&on_read, on_chunk_context, _1),
-										   std::bind(&on_finish, final_context, _1));
+	session->read_data(*key, 0, 0).connect(std::bind(&on_read, on_chunk_context, _1), std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -85,15 +84,17 @@ void on_lookup(void *context, const elliptics::lookup_result_entry &result)
 void session_write_data(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *data, size_t size)
 {
 	using namespace std::placeholders;
-	session->write_data(*key, elliptics::data_pointer(data, size), 0).connect(std::bind(&on_lookup, on_chunk_context, _1),
-																			  std::bind(&on_finish, final_context, _1));
+
+	std::string tmp(data, size);
+	session->write_data(*key, tmp, 0).connect(
+			std::bind(&on_lookup, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 void session_lookup(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
 {
 	using namespace std::placeholders;
-	session->lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1),
-								  std::bind(&on_finish, final_context, _1));
+	session->lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1), std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -109,8 +110,7 @@ void on_remove(void *context, const elliptics::remove_result_entry &result)
 void session_remove(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
 {
 	using namespace std::placeholders;
-	session->remove(*key).connect(std::bind(&on_remove, on_chunk_context, _1),
-								  std::bind(&on_finish, final_context, _1));
+	session->remove(*key).connect(std::bind(&on_remove, on_chunk_context, _1), std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -144,8 +144,9 @@ void session_find_all_indexes(ell_session *session, void *on_chunk_context, void
 	{
 		index_names.push_back(indexes[i]);
 	}
-	session->find_all_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
-												   std::bind(&on_finish, final_context, _1));
+	session->find_all_indexes(index_names).connect(
+			std::bind(&on_find, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
@@ -157,8 +158,9 @@ void session_find_any_indexes(ell_session *session, void *on_chunk_context, void
 	{
 		index_names.push_back(indexes[i]);
 	}
-	session->find_any_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
-												   std::bind(&on_finish, final_context, _1));
+	session->find_any_indexes(index_names).connect(
+			std::bind(&on_find, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -196,11 +198,11 @@ void session_set_indexes(ell_session *session, void *on_chunk_context, void *fin
 	for(size_t i = 0; i < count; i++)
 	{
 		index_names.push_back(indexes[i]);
-		elliptics::data_pointer dp(data[i].data, data[i].size);
-		index_datas.push_back(dp);
+		index_datas.emplace_back(elliptics::data_pointer::copy(data[i].data, data[i].size));
 	}
-	session->set_indexes(*key, index_names, index_datas).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-												   				 std::bind(&on_finish, final_context, _1));
+	session->set_indexes(*key, index_names, index_datas).connect(
+			std::bind(&on_set_indexes, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 void session_update_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
@@ -215,11 +217,11 @@ void session_update_indexes(ell_session *session, void *on_chunk_context, void *
 	for(size_t i = 0; i < count; i++)
 	{
 		index_names.push_back(indexes[i]);
-		elliptics::data_pointer dp(data[i].data, data[i].size);
-		index_datas.push_back(dp);
+		index_datas.emplace_back(elliptics::data_pointer::copy(data[i].data, data[i].size));
 	}
-	session->update_indexes(*key, index_names, index_datas).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-												   				 std::bind(&on_finish, final_context, _1));
+	session->update_indexes(*key, index_names, index_datas).connect(
+			std::bind(&on_set_indexes, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize)
@@ -231,8 +233,9 @@ void session_remove_indexes(ell_session *session, void *on_chunk_context, void *
 	{
 		index_names.push_back(indexes[i]);
 	}
-	session->remove_indexes(*key, index_names).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-												   std::bind(&on_finish, final_context, _1));
+	session->remove_indexes(*key, index_names).connect(
+			std::bind(&on_set_indexes, on_chunk_context, _1),
+			std::bind(&on_finish, final_context, _1));
 }
 
 } // extern "C"
