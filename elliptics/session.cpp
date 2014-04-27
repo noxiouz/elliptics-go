@@ -49,6 +49,11 @@ void session_set_namespace(ell_session *session, const char *name, int nsize)
 	session->set_namespace(name, nsize);
 }
 
+void session_set_timeout(ell_session *session, int timeout)
+{
+	session->set_timeout(timeout);
+}
+
 /*
 	Read
 */
