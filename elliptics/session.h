@@ -32,41 +32,41 @@ typedef void ell_session;
 #endif
 
 //read_result_entry
-struct go_read_result 
+struct go_read_result
 {
-	char *file;
-	size_t size;
-	struct dnet_io_attr *io_attribute;
+    char *file;
+    size_t size;
+    struct dnet_io_attr *io_attribute;
 };
 
 //lookup_result_entry
 struct go_lookup_result
 {
-	struct dnet_file_info *info;
-	struct dnet_addr *addr;
-	const char *path;
+    struct dnet_file_info *info;
+    struct dnet_addr *addr;
+    const char *path;
 };
 
 
 //index_entry
 struct c_index_entry
 {
-	const char *data;
-	size_t size;
+    const char *data;
+    size_t size;
 };
 
 //find_indexes_result_entry
 struct go_find_result
 {
-	const struct dnet_raw_id *id;
-	size_t entries_count;
-	struct c_index_entry *entries;
+    const struct dnet_raw_id *id;
+    size_t entries_count;
+    struct c_index_entry *entries;
 };
 
 struct go_data_pointer
 {
-	char *data;
-	int size;
+    char *data;
+    int size;
 };
 
 struct go_data_pointer new_data_pointer(char *data, int size);
@@ -87,16 +87,16 @@ void session_find_all_indexes(ell_session *session, void *on_chunk_context, void
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize);
 
 void session_set_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
-						 char *indexes[], struct go_data_pointer *data, size_t count);
+                         char *indexes[], struct go_data_pointer *data, size_t count);
 
 void session_update_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
-						 char *indexes[], struct go_data_pointer *data, size_t count);
+                         char *indexes[], struct go_data_pointer *data, size_t count);
 
 void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize);
 
 void session_list_indexes(ell_session *sesion, void *on_chunk_context, void *final_context, ell_key *key);
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 }
 #endif
 

@@ -144,8 +144,9 @@ void session_find_all_indexes(ell_session *session, void *on_chunk_context, void
     {
         index_names.push_back(indexes[i]);
     }
-    session->find_all_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
-                                                   std::bind(&on_finish, final_context, _1));
+    session->find_all_indexes(index_names).connect(
+                        std::bind(&on_find, on_chunk_context, _1),
+                        std::bind(&on_finish, final_context, _1));
 }
 
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
@@ -157,8 +158,9 @@ void session_find_any_indexes(ell_session *session, void *on_chunk_context, void
     {
         index_names.push_back(indexes[i]);
     }
-    session->find_any_indexes(index_names).connect(std::bind(&on_find, on_chunk_context, _1),
-                                                   std::bind(&on_finish, final_context, _1));
+    session->find_any_indexes(index_names).connect(
+                        std::bind(&on_find, on_chunk_context, _1),
+                        std::bind(&on_finish, final_context, _1));
 }
 
 /*
@@ -180,8 +182,9 @@ void on_list_indexes(void *context, const elliptics::index_entry &result) {
 void session_list_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key)
 {
     using namespace std::placeholders;
-    session->list_indexes(*key).connect(std::bind(&on_list_indexes, on_chunk_context, _1),
-                                        std::bind(&on_finish, final_context, _1));
+    session->list_indexes(*key).connect(
+                    std::bind(&on_list_indexes, on_chunk_context, _1),
+                    std::bind(&on_finish, final_context, _1));
 }
 
 void session_set_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
@@ -199,8 +202,9 @@ void session_set_indexes(ell_session *session, void *on_chunk_context, void *fin
         elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
         index_datas.push_back(dp);
     }
-    session->set_indexes(*key, index_names, index_datas).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-                                                                 std::bind(&on_finish, final_context, _1));
+    session->set_indexes(*key, index_names, index_datas).connect(
+                    std::bind(&on_set_indexes, on_chunk_context, _1),
+                    std::bind(&on_finish, final_context, _1));
 }
 
 void session_update_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key,
@@ -218,8 +222,9 @@ void session_update_indexes(ell_session *session, void *on_chunk_context, void *
         elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
         index_datas.push_back(dp);
     }
-    session->update_indexes(*key, index_names, index_datas).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-                                                                 std::bind(&on_finish, final_context, _1));
+    session->update_indexes(*key, index_names, index_datas).connect(
+                        std::bind(&on_set_indexes, on_chunk_context, _1),
+                        std::bind(&on_finish, final_context, _1));
 }
 
 void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize)
@@ -231,8 +236,9 @@ void session_remove_indexes(ell_session *session, void *on_chunk_context, void *
     {
         index_names.push_back(indexes[i]);
     }
-    session->remove_indexes(*key, index_names).connect(std::bind(&on_set_indexes, on_chunk_context, _1),
-                                                   std::bind(&on_finish, final_context, _1));
+    session->remove_indexes(*key, index_names).connect(
+                        std::bind(&on_set_indexes, on_chunk_context, _1),
+                        std::bind(&on_finish, final_context, _1));
 }
 
 } // extern "C"
