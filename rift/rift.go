@@ -116,9 +116,25 @@ func (r *RiftClient) CreateBucket(bucket string, bucketDir string, options Bucke
 // 	return
 // }
 
-// func (r *RiftClient) DeleteBucket(bucket string) (err error) {
-// 	return
-// }
+func (r *RiftClient) DeleteBucket(bucket string) (err error) {
+	urlStr := fmt.Sprintf("http://%s/delete-bucket/%s", r.endpoint, bucket)
+
+	req, err := http.NewRequest("POST", urlStr, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf(resp.Status)
+		return
+	}
+	return
+}
 
 func (r *RiftClient) GetObject(bucket string, key string) (blob []byte, err error) {
 	urlStr := fmt.Sprintf("http://%s/get/%s/%s", r.endpoint, bucket, key)
@@ -144,7 +160,6 @@ func (r *RiftClient) GetObject(bucket string, key string) (blob []byte, err erro
 
 func (r *RiftClient) UploadObject(bucket string, key string, blob []byte) (info Info, err error) {
 	urlStr := fmt.Sprintf("http://%s/upload/%s/%s", r.endpoint, bucket, key)
-	fmt.Println(bucket, key)
 
 	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(blob))
 	if err != nil {

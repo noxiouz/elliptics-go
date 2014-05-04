@@ -47,7 +47,6 @@ func TestEnv(t *testing.T) {
 }
 
 func TestBucketDir(t *testing.T) {
-	t.Logf("Test directory %s", testDir)
 	r, err := NewRiftClient(riftEndpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -117,19 +116,24 @@ func TestBucket(t *testing.T) {
 }
 
 func TestObject(t *testing.T) {
-	t.Logf("Test directory %s, bucket %s, key %s", testDir, testBucket, testKey)
 	r, err := NewRiftClient(riftEndpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	blob := []byte("TESTBLOB")
+	_, err = r.CreateBucket(testBucket, testDir, testBucketOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	info, err := r.UploadObject(testBucket, testKey, blob)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(info)
+	if len(info.Info) == 0 {
+		t.Fatalf("Wrong info %# v", pretty.Formatter(info))
+	}
 
 	value, err := r.GetObject(testBucket, testKey)
 	if err != nil {
