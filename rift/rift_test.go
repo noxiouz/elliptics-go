@@ -135,7 +135,7 @@ func TestObject(t *testing.T) {
 		t.Fatalf("Wrong info %# v", pretty.Formatter(info))
 	}
 
-	value, err := r.GetObject(testBucket, testKey)
+	value, err := r.GetObject(testBucket, testKey, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = r.GetObject(testBucket, testKey)
+	_, err = r.GetObject(testBucket, testKey, 0, 0)
 	if err == nil {
 		t.Fatalf("Error is expected %s", err)
 	}

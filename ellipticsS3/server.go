@@ -9,39 +9,39 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
+	"github.com/noxiouz/elliptics-go/rift"
 )
 
 var (
-	rift S3Backend
+	riftcli *rift.RiftClient
 )
-
-// Buckets
 
 func bucketExists(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Not implemented")
 }
 
-func bucketCreate(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	bucket := vars["bucket"]
+func bucketCreate(username string, w http.ResponseWriter, r *http.Request) {
+	fmt.Println(username)
+	// vars := mux.Vars(r)
+	// bucket := vars["bucket"]
 
-	err := rift.CreateBucket(bucket)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
+	// info, err := riftcli.CreateBucket(username, bucket)
+	// fmt.Println(info)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusNotFound)
+	// 	return
+	// }
 
-	fmt.Fprintf(w, "OK")
+	// fmt.Fprintf(w, "OK")
 }
-
-// Objects
 
 func objectGet(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 	key := vars["key"]
 
-	data, err := rift.GetObject(key, bucket)
+	data, err := riftcli.GetObject(key, bucket, 0, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -68,7 +68,7 @@ func objectPut(w http.ResponseWriter, r *http.Request) {
 	etag := fmt.Sprintf("\"%x\"", h.Sum(nil))
 	w.Header().Set("ETag", etag)
 
-	err = rift.UploadObject(key, bucket, data)
+	_, err = riftcli.UploadObject(key, bucket, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -82,13 +82,13 @@ func objectExists(w http.ResponseWriter, r *http.Request) {
 	bucket := vars["bucket"]
 	key := vars["key"]
 
-	exists, err := rift.ObjectExists(key, bucket)
+	exists, err := riftcli.GetObject(key, bucket, 1, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	if exists {
+	if len(exists) > 0 {
 		fmt.Fprintf(w, "")
 	} else {
 		http.Error(w, "", http.StatusNotFound)
@@ -96,7 +96,7 @@ func objectExists(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetRouter(endpoint string) (h http.Handler, err error) {
-	rift, err = NewRiftbackend(endpoint)
+	riftcli, err = rift.NewRiftClient(endpoint)
 	if err != nil {
 		return
 	}
@@ -105,7 +105,7 @@ func GetRouter(endpoint string) (h http.Handler, err error) {
 	router.StrictSlash(true)
 	// buckets
 	router.HandleFunc("/{bucket}/", bucketExists).Methods("HEAD")
-	router.HandleFunc("/{bucket}/", bucketCreate).Methods("PUT")
+	router.HandleFunc("/{bucket}/", GetAuth(bucketCreate)).Methods("PUT")
 	// objects
 	router.HandleFunc("/{bucket}/{key}", objectExists).Methods("HEAD")
 	router.HandleFunc("/{bucket}/{key}", objectGet).Methods("GET")

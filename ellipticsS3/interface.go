@@ -17,8 +17,6 @@ type S3Backend interface {
 	BucketController
 }
 
-// Errors
-
 type KeyNotFoundError struct {
 	key    string
 	bucket string

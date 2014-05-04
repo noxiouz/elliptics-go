@@ -136,12 +136,18 @@ func (r *RiftClient) DeleteBucket(bucket string) (err error) {
 	return
 }
 
-func (r *RiftClient) GetObject(bucket string, key string) (blob []byte, err error) {
+func (r *RiftClient) GetObject(bucket string, key string, size int64, offset int64) (blob []byte, err error) {
 	urlStr := fmt.Sprintf("http://%s/get/%s/%s", r.endpoint, bucket, key)
-
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		return
+	}
+
+	if size > 0 {
+		req.URL.Query().Add("size", fmt.Sprintf("%d", size))
+	}
+	if offset > 0 {
+		req.URL.Query().Add("offset", fmt.Sprintf("%d", offset))
 	}
 
 	resp, err := r.client.Do(req)
