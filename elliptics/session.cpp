@@ -145,10 +145,7 @@ void session_find_all_indexes(ell_session *session, void *on_chunk_context, void
     using namespace std::placeholders;
     std::vector<std::string> index_names;
     index_names.reserve(nsize);
-    for(size_t i = 0; i < nsize; i++)
-    {
-        index_names.push_back(indexes[i]);
-    }
+    index_names.insert(index_names.begin(), indexes, indexes + nsize);
     session->find_all_indexes(index_names).connect(
                         std::bind(&on_find, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
@@ -159,10 +156,7 @@ void session_find_any_indexes(ell_session *session, void *on_chunk_context, void
     using namespace std::placeholders;
     std::vector<std::string> index_names;
     index_names.reserve(nsize);
-    for(size_t i = 0; i < nsize; i++)
-    {
-        index_names.push_back(indexes[i]);
-    }
+    index_names.insert(index_names.begin(), indexes, indexes + nsize);
     session->find_any_indexes(index_names).connect(
                         std::bind(&on_find, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
@@ -237,10 +231,7 @@ void session_remove_indexes(ell_session *session, void *on_chunk_context, void *
     using namespace std::placeholders;
     std::vector<std::string> index_names;
     index_names.reserve(nsize);
-    for(size_t i = 0; i < nsize; i++)
-    {
-        index_names.push_back(indexes[i]);
-    }
+    index_names.insert(index_names.begin(), indexes, indexes + nsize);
     session->remove_indexes(*key, index_names).connect(
                         std::bind(&on_set_indexes, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
