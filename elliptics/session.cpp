@@ -143,9 +143,7 @@ void on_find(void *context, const elliptics::find_indexes_result_entry &result) 
 void session_find_all_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
 {
     using namespace std::placeholders;
-    std::vector<std::string> index_names;
-    index_names.reserve(nsize);
-    index_names.insert(index_names.begin(), indexes, indexes + nsize);
+    std::vector<std::string> index_names(indexes, indexes + nsize);
     session->find_all_indexes(index_names).connect(
                         std::bind(&on_find, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
@@ -154,9 +152,7 @@ void session_find_all_indexes(ell_session *session, void *on_chunk_context, void
 void session_find_any_indexes(ell_session *session, void *on_chunk_context, void *final_context, char *indexes[], size_t nsize)
 {
     using namespace std::placeholders;
-    std::vector<std::string> index_names;
-    index_names.reserve(nsize);
-    index_names.insert(index_names.begin(), indexes, indexes + nsize);
+    std::vector<std::string> index_names(indexes, indexes + nsize);
     session->find_any_indexes(index_names).connect(
                         std::bind(&on_find, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
@@ -191,13 +187,11 @@ void session_set_indexes(ell_session *session, void *on_chunk_context, void *fin
 {
     /* Move to util function */
     using namespace std::placeholders;
-    std::vector<std::string> index_names;
-    index_names.reserve(count);
+    std::vector<std::string> index_names(indexes, indexes + count);
     std::vector<elliptics::data_pointer> index_datas;
     index_datas.reserve(count);
     for(size_t i = 0; i < count; i++)
     {
-        index_names.push_back(indexes[i]);
         elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
         index_datas.push_back(dp);
     }
@@ -211,13 +205,11 @@ void session_update_indexes(ell_session *session, void *on_chunk_context, void *
 {
     /* Move to util function */
     using namespace std::placeholders;
-    std::vector<std::string> index_names;
-    index_names.reserve(count);
+    std::vector<std::string> index_names(indexes, indexes + count);
     std::vector<elliptics::data_pointer> index_datas;
     index_datas.reserve(count);
     for(size_t i = 0; i < count; i++)
     {
-        index_names.push_back(indexes[i]);
         elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
         index_datas.push_back(dp);
     }
@@ -229,9 +221,7 @@ void session_update_indexes(ell_session *session, void *on_chunk_context, void *
 void session_remove_indexes(ell_session *session, void *on_chunk_context, void *final_context, ell_key *key, char *indexes[], size_t nsize)
 {
     using namespace std::placeholders;
-    std::vector<std::string> index_names;
-    index_names.reserve(nsize);
-    index_names.insert(index_names.begin(), indexes, indexes + nsize);
+    std::vector<std::string> index_names(indexes, indexes + nsize);
     session->remove_indexes(*key, index_names).connect(
                         std::bind(&on_set_indexes, on_chunk_context, _1),
                         std::bind(&on_finish, final_context, _1));
