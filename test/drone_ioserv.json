@@ -1,6 +1,6 @@
 {
     "loggers": {
-        "type": "/dev/stderr",
+        "type": "Elliptics.log",
         "level": 4,
         "root": [{
             "formatter": {
