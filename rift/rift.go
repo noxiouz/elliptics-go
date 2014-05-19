@@ -85,7 +85,7 @@ func (r *RiftClient) DeleteBucketDirectory(bucket string) (err error) {
 }
 
 func (r *RiftClient) CreateBucket(bucket string, bucketDir string, options BucketOptions) (info Info, err error) {
-	urlStr := fmt.Sprintf("http://%s/update-bucket/%s/%s", r.endpoint, bucket, bucketDir)
+	urlStr := fmt.Sprintf("http://%s/update-bucket/%s/%s", r.endpoint, bucketDir, bucket)
 
 	body, err := json.Marshal(options)
 	if err != nil {
@@ -112,9 +112,28 @@ func (r *RiftClient) CreateBucket(bucket string, bucketDir string, options Bucke
 	return
 }
 
-// func (r *RiftClient) ListBucket(bucket string) (info Info, err error) {
-// 	return
-// }
+func (r *RiftClient) ListBucket(bucket string) (info ListingInfo, err error) {
+	urlStr := fmt.Sprintf("http://%s/list/%s/", r.endpoint, bucket)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf(resp.Status)
+		return
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	return
+}
 
 func (r *RiftClient) DeleteBucket(bucket string) (err error) {
 	urlStr := fmt.Sprintf("http://%s/delete-bucket/%s", r.endpoint, bucket)
