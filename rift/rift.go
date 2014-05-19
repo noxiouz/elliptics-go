@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 type RiftClient struct {
@@ -156,17 +157,25 @@ func (r *RiftClient) DeleteBucket(bucket string) (err error) {
 }
 
 func (r *RiftClient) GetObject(bucket string, key string, size int64, offset int64) (blob []byte, err error) {
-	urlStr := fmt.Sprintf("http://%s/get/%s/%s", r.endpoint, bucket, key)
-	req, err := http.NewRequest("GET", urlStr, nil)
+	u, err := url.Parse(fmt.Sprintf("http://%s/get/%s/%s", r.endpoint, bucket, key))
 	if err != nil {
 		return
 	}
 
 	if size > 0 {
-		req.URL.Query().Add("size", fmt.Sprintf("%d", size))
+		q := u.Query()
+		q.Set("size", fmt.Sprintf("%d", size))
+		u.RawQuery = q.Encode()
 	}
 	if offset > 0 {
-		req.URL.Query().Add("offset", fmt.Sprintf("%d", offset))
+		q := u.Query()
+		q.Set("offset", fmt.Sprintf("%d", offset))
+		u.RawQuery = q.Encode()
+	}
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return
 	}
 
 	resp, err := r.client.Do(req)

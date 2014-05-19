@@ -153,6 +153,15 @@ func TestObject(t *testing.T) {
 		t.Fatal("value is not equal to blob %s %s", value, blob)
 	}
 
+	secondByte, err := r.GetObject(testBucket, testKey, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(secondByte) == 0 || secondByte[0] != blob[1] {
+		t.Fatalf("%s %s", secondByte[0], blob[1])
+	}
+
 	err = r.DeleteObject(testBucket, testKey)
 	if err != nil {
 		t.Fatal(err)
