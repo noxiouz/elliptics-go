@@ -42,7 +42,7 @@
     },
     "backends": [{
         "type": "blob",
-        "group": 1,
+        "group": 2,
         "history": "/home/ubuntu/src/github.com/noxiouz/elliptics-go/history.2",
         "data": "/home/ubuntu/src/github.com/noxiouz/elliptics-go/eblob.2/data",
         "sync": "-1",
