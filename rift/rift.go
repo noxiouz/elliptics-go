@@ -173,10 +173,8 @@ func (r *RiftClient) GetObject(bucket string, key string, size int64, offset int
 		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return
-	}
+	// Don't check an error as it has been checked in url.Parse
+	req, _ := http.NewRequest("GET", u.String(), nil)
 
 	resp, err := r.client.Do(req)
 	if err != nil {
@@ -239,15 +237,11 @@ func NewRiftClient(endpoint string) (r *RiftClient, err error) {
 	// check endpoint by pinging Rift proxy
 	pingUrl := fmt.Sprintf("http://%s/ping/", endpoint)
 	resp, err := http.Get(pingUrl)
-	if err != nil {
+	if err != nil || resp.StatusCode != 200 {
+		err = fmt.Errorf("Rift is unavailable %s %s", endpoint, err)
 		return
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("Rift is unavailable %s", endpoint)
-	}
-
-	//
 	r = &RiftClient{
 		endpoint: endpoint,
 		client:   &http.Client{},
