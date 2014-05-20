@@ -56,7 +56,6 @@ func bucketExists(w http.ResponseWriter, r *http.Request) {
 	bucket := vars["bucket"]
 	_, err := riftcli.ReadBucket(bucket)
 	if err != nil {
-		log.Println(err)
 		http.Error(w, "Bucket doesn't exist", http.StatusNotFound)
 		return
 	}
