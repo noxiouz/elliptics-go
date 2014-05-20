@@ -27,11 +27,9 @@ func getAllBuckets(context Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Get all %s buckets: %v", context.Username, listing.Keys())
-
+	log.Printf("Get all %s buckets count: %d", context.Username, len(listing.Indexes))
 	XMLBuckets := make([]XMLBucketItem, 0, len(listing.Indexes))
 	for _, bucket := range listing.Indexes {
-		log.Println(bucket.Key, bucket.Timestamp, bucket.TimeSeconds)
 		XMLBuckets = append(XMLBuckets, XMLBucketItem{
 			Name:         bucket.Key,
 			CreationDate: bucket.TimeSeconds,
@@ -39,10 +37,13 @@ func getAllBuckets(context Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	v := XMLBucketDirectoryList{
-		Id:          context.Username,
-		DisplayName: context.Username,
-		Buckets:     XMLBuckets,
+		Owner: Owner{
+			Id:          context.Username,
+			DisplayName: context.Username,
+		},
+		Buckets: XMLBuckets,
 	}
+
 	enc := xml.NewEncoder(w)
 	enc.Indent("", "    ")
 	if err := enc.Encode(v); err != nil {
@@ -88,7 +89,7 @@ func bucketCreate(context Context, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "OK")
 }
 
-func bucketList(w http.ResponseWriter, r *http.Request) {
+func bucketList(context Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 	log.Printf("List directory %s", bucket)
@@ -97,7 +98,32 @@ func bucketList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	log.Printf("List of directory %s: %s", bucket, listing)
-	fmt.Println(w, "OK")
+
+	owner := Owner{
+		Id:          context.Username,
+		DisplayName: context.Username,
+	}
+
+	XMLKeys := make([]XMLContentItem, 0, len(listing.Indexes))
+	for _, key := range listing.Indexes {
+		XMLKeys = append(XMLKeys, XMLContentItem{
+			Key:          key.Key,
+			LastModified: key.Timestamp,
+			Owner:        owner,
+		})
+	}
+
+	v := XMLBucketList{
+		Name:     bucket,
+		MaxKeys:  -1000,
+		Contents: XMLKeys,
+	}
+
+	enc := xml.NewEncoder(w)
+	enc.Indent("", "    ")
+	if err := enc.Encode(v); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
 
 func objectGet(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +210,7 @@ func GetRouter(config Config) (h http.Handler, err error) {
 	router.StrictSlash(true)
 	// buckets
 	router.HandleFunc("/{bucket}/", bucketExists).Methods("HEAD")
-	router.HandleFunc("/{bucket}/", bucketList).Methods("GET")
+	router.HandleFunc("/{bucket}/", GetAuth(bucketList)).Methods("GET")
 	router.HandleFunc("/{bucket}/", GetAuth(bucketCreate)).Methods("PUT")
 	router.HandleFunc("/", GetAuth(getAllBuckets)).Methods("GET")
 	// objects

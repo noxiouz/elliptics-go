@@ -41,9 +41,6 @@ class TestS3:
         self.bucket = self.conn.create_bucket(test_bucket)
         self.bucket = self.conn.get_bucket(test_bucket)
 
-    #     for i in self.bucket.list():
-    #         print i
-
     def test_list_all_buckets(self):
         buckets = self.conn.get_all_buckets()
 
@@ -55,6 +52,10 @@ class TestS3:
         k = key.Key(self.bucket)
         k.key = test_key
         k.set_contents_from_string("TEST")
+
+        listing = [i for i in self.bucket.list()]
+        assert test_key in map(operator.attrgetter("key"), listing)
+
         possible_key = self.bucket.get_key(test_key)
         assert possible_key is not None
         assert possible_key.get_contents_as_string() == "TEST"
