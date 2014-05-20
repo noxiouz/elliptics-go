@@ -14,6 +14,11 @@ type BucketOptions struct {
 	MaxKeyNum int         `json:"max-key-num"`
 }
 
+type BucketInfo struct {
+	Key string `json:"key"`
+	BucketOptions
+}
+
 type BucketDirectoryOptions BucketOptions
 
 //

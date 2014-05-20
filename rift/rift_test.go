@@ -107,6 +107,13 @@ func TestBucket(t *testing.T) {
 		t.Fatalf("Wrong info %# v", pretty.Formatter(info))
 	}
 
+	bucketInfo, err := r.ReadBucket(testBucket)
+	if err != nil {
+		t.Fatalf("Unable to read bucket %s", testBucket)
+	}
+
+	t.Log(bucketInfo)
+
 	_, err = r.ListBucket(testBucket)
 	if err != nil {
 		t.Fatalf("Unable to list directory %s %s", testBucket, err)

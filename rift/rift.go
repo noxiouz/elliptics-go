@@ -130,8 +130,8 @@ func (r *RiftClient) ListBucket(bucket string) (info ListingInfo, err error) {
 		err = fmt.Errorf(resp.Status)
 		return
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&info)
 	return
 }
@@ -154,6 +154,31 @@ func (r *RiftClient) DeleteBucket(bucket string) (err error) {
 		return
 	}
 	return
+}
+
+func (r *RiftClient) ReadBucket(bucket string) (bucketInfo BucketInfo, err error) {
+	urlStr := fmt.Sprintf("http://%s/read-bucket/%s", r.endpoint, bucket)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf(resp.Status)
+		return
+	}
+
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&bucketInfo)
+
+	return
+
 }
 
 func (r *RiftClient) GetObject(bucket string, key string, size int64, offset int64) (blob []byte, err error) {
