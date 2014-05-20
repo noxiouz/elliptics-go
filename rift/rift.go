@@ -85,7 +85,7 @@ func (r *RiftClient) DeleteBucketDirectory(bucket string) (err error) {
 	return
 }
 
-func (r *RiftClient) CreateBucket(bucket string, bucketDir string, options BucketOptions) (info Info, err error) {
+func (r *RiftClient) CreateBucket(bucket, bucketDir string, options BucketOptions) (info Info, err error) {
 	urlStr := fmt.Sprintf("http://%s/update-bucket/%s/%s", r.endpoint, bucketDir, bucket)
 
 	body, err := json.Marshal(options)

@@ -18,5 +18,5 @@ _cgo_gotypes.go
 _cgo_export.*
 
 _testmain.go
+s3proxy
 
-*.exe

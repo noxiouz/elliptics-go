@@ -40,11 +40,18 @@ class TestS3:
         self.bucket = self.conn.create_bucket(test_bucket)
         self.bucket = self.conn.get_bucket(test_bucket)
 
+    #     for i in self.bucket.list():
+    #         print i
+
+    # def test_list_all_buckets(self):
+    #     self.conn.get_all_buckets()
+
     def test_key(self):
         self.bucket = self.conn.get_bucket(test_bucket)
         k = key.Key(self.bucket)
         k.key = test_key
         k.set_contents_from_string("TEST")
-        assert True, k.exists()
-        possible_key = self.bucket.get_key('xxx.jpg')
-        print possible_key
+        assert k.exists()
+        possible_key = self.bucket.get_key(test_key)
+        assert possible_key is not None
+        assert possible_key.get_contents_as_string() == "TEST"

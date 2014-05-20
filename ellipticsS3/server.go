@@ -15,8 +15,20 @@ import (
 )
 
 var (
-	riftcli *rift.RiftClient
+	riftcli     *rift.RiftClient
+	globalConfg Config
 )
+
+func getAllBuckets(context Context, w http.ResponseWriter, r *http.Request) {
+	listing, err := riftcli.ListBucketDirectory(context.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Get all %s buckets: %v", context.Username, listing)
+	fmt.Fprint(w, listing)
+}
 
 func bucketExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -31,23 +43,41 @@ func bucketExists(w http.ResponseWriter, r *http.Request) {
 }
 
 func bucketCreate(context Context, w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
-	return
-
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
-	log.Printf("Create bucket. user: %s, bucket: %s", context.Username, bucket)
+	log.Printf("Create bucket. user: %s, bucket: %s, groups: %v", context.Username, bucket, globalConfg.DataGroups)
 	if bucket == "" {
 		http.Error(w, "bucket is undefined", http.StatusBadRequest)
 	}
 
-	// _, err := riftcli.CreateBucket(username, bucket)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+	bucketOpt := rift.BucketOptions{
+		Groups:    globalConfg.DataGroups,
+		ACL:       make([]rift.ACLStruct, 0),
+		Flags:     0,
+		MaxSize:   0,
+		MaxKeyNum: 0,
+	}
 
-	// fmt.Fprintf(w, "OK")
+	info, err := riftcli.CreateBucket(bucket, context.Username, bucketOpt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Bucket %s has been created %v", bucket, info)
+	fmt.Fprintf(w, "OK")
+}
+
+func bucketList(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+	log.Printf("List directory %s", bucket)
+	listing, err := riftcli.ListBucket(bucket)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	log.Printf("List of directory %s: %s", bucket, listing)
+	fmt.Println(w, "OK")
 }
 
 func objectGet(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +85,7 @@ func objectGet(w http.ResponseWriter, r *http.Request) {
 	bucket := vars["bucket"]
 	key := vars["key"]
 
-	data, err := riftcli.GetObject(key, bucket, 0, 0)
+	data, err := riftcli.GetObject(bucket, key, 0, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -76,13 +106,13 @@ func objectPut(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// boto client check ETag header for proper MD5 summ
+	// boto client checks ETag header to verify MD5 summ
 	h := md5.New()
 	h.Write(data)
 	etag := fmt.Sprintf("\"%x\"", h.Sum(nil))
 	w.Header().Set("ETag", etag)
 
-	_, err = riftcli.UploadObject(key, bucket, data)
+	_, err = riftcli.UploadObject(bucket, key, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -96,7 +126,7 @@ func objectExists(w http.ResponseWriter, r *http.Request) {
 	bucket := vars["bucket"]
 	key := vars["key"]
 
-	exists, err := riftcli.GetObject(key, bucket, 1, 0)
+	exists, err := riftcli.GetObject(bucket, key, 1, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -109,8 +139,9 @@ func objectExists(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetRouter(endpoint string) (h http.Handler, err error) {
-	riftcli, err = rift.NewRiftClient(endpoint)
+func GetRouter(config Config) (h http.Handler, err error) {
+	globalConfg = config
+	riftcli, err = rift.NewRiftClient(globalConfg.Endpoint)
 	if err != nil {
 		return
 	}
@@ -119,7 +150,9 @@ func GetRouter(endpoint string) (h http.Handler, err error) {
 	router.StrictSlash(true)
 	// buckets
 	router.HandleFunc("/{bucket}/", bucketExists).Methods("HEAD")
+	router.HandleFunc("/{bucket}/", bucketList).Methods("GET")
 	router.HandleFunc("/{bucket}/", GetAuth(bucketCreate)).Methods("PUT")
+	router.HandleFunc("/", GetAuth(getAllBuckets)).Methods("GET")
 	// objects
 	router.HandleFunc("/{bucket}/{key}", objectExists).Methods("HEAD")
 	router.HandleFunc("/{bucket}/{key}", objectGet).Methods("GET")

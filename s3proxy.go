@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	s3 "github.com/noxiouz/elliptics-go/ellipticsS3"
+	"github.com/noxiouz/elliptics-go/ellipticsS3"
 )
 
 var (
@@ -48,7 +48,13 @@ func main() {
 		return
 	}
 
-	h, err := s3.GetRouter(endpoint)
+	cfg := ellipticsS3.Config{
+		Endpoint:       endpoint,
+		MetaDataGroups: metagroups,
+		DataGroups:     datagroups,
+	}
+
+	h, err := ellipticsS3.GetRouter(cfg)
 	if err != nil {
 		log.Fatalf("Unable to create backend %s", err)
 	}
