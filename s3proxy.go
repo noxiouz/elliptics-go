@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	endpoint   string
-	metagroups groupSliceFlag
-	datagroups groupSliceFlag
+	riftendpoint  string
+	proxyendpoint string
+	metagroups    groupSliceFlag
+	datagroups    groupSliceFlag
 )
 
 type groupSliceFlag []int
@@ -38,7 +39,8 @@ func (i *groupSliceFlag) Set(value string) error {
 }
 
 func main() {
-	flag.StringVar(&endpoint, "endpoint", ":9000", "riftendpoint")
+	flag.StringVar(&riftendpoint, "riftendpoint", ":9000", "riftendpoint")
+	flag.StringVar(&proxyendpoint, "endpoint", ":9000", "proxyendpoint")
 	flag.Var(&metagroups, "metagroups", "groups for metadata")
 	flag.Var(&datagroups, "datagroups", "groups for data")
 	flag.Parse()
@@ -49,14 +51,20 @@ func main() {
 	}
 
 	cfg := ellipticsS3.Config{
-		Endpoint:       endpoint,
+		Endpoint:       riftendpoint,
 		MetaDataGroups: metagroups,
 		DataGroups:     datagroups,
 	}
 
+	log.Printf("Connecting to Rift %s", riftendpoint)
 	h, err := ellipticsS3.GetRouter(cfg)
 	if err != nil {
 		log.Fatalf("Unable to create backend %s", err)
 	}
-	http.ListenAndServe(":9000", h)
+
+	log.Printf("Listening  %s", proxyendpoint)
+	err = http.ListenAndServe(proxyendpoint, h)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
