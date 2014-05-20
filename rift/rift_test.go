@@ -80,11 +80,6 @@ func TestBucketDir(t *testing.T) {
 	if keys := lst.Keys(); len(keys) == 0 || testBucket != keys[0] {
 		t.Fatalf("TestBucket is not found in listing %s %v", testBucket, lst)
 	}
-
-	// err = r.DeleteBucketDirectory(testDir)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
 }
 
 func TestBucket(t *testing.T) {
@@ -118,11 +113,6 @@ func TestBucket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to list directory %s %s", testBucket, err)
 	}
-
-	// err = r.DeleteBucket(testBucket)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
 }
 
 func TestObject(t *testing.T) {

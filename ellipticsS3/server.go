@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
@@ -18,18 +19,31 @@ var (
 )
 
 func bucketExists(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Not implemented")
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+	_, err := riftcli.ReadBucket(bucket)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Bucket doesn't exist", http.StatusNotFound)
+		return
+	}
+	fmt.Fprintf(w, "OK")
 }
 
-func bucketCreate(username string, w http.ResponseWriter, r *http.Request) {
-	fmt.Println(username)
-	// vars := mux.Vars(r)
-	// bucket := vars["bucket"]
+func bucketCreate(context Context, w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	return
 
-	// info, err := riftcli.CreateBucket(username, bucket)
-	// fmt.Println(info)
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+	log.Printf("Create bucket. user: %s, bucket: %s", context.Username, bucket)
+	if bucket == "" {
+		http.Error(w, "bucket is undefined", http.StatusBadRequest)
+	}
+
+	// _, err := riftcli.CreateBucket(username, bucket)
 	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusNotFound)
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
 	// 	return
 	// }
 

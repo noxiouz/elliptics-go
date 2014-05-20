@@ -30,6 +30,10 @@ class TestS3:
                                     )
         self.bucket = None
 
+    def test_bucket_exists(self):
+        with pytest.raises(S3ResponseError):
+            self.conn.get_bucket("SOMERANDOMBUCKET")
+
     def test_bucket(self):
         with pytest.raises(S3ResponseError):
             self.conn.get_bucket(test_bucket)

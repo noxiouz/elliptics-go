@@ -32,3 +32,7 @@ func NewKeyNotFoundError(key, bucket string) error {
 		bucket: bucket,
 	}
 }
+
+type Context struct {
+	Username string
+}
