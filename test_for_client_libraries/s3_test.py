@@ -51,7 +51,10 @@ class TestS3:
         k = key.Key(self.bucket)
         k.key = test_key
         k.set_contents_from_string("TEST")
-        assert k.exists()
         possible_key = self.bucket.get_key(test_key)
         assert possible_key is not None
         assert possible_key.get_contents_as_string() == "TEST"
+        k.delete()
+        possible_key = self.bucket.get_key(test_key)
+        with pytest.raises(S3ResponseError):
+            possible_key.get_contents_as_string()

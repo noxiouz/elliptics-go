@@ -139,6 +139,20 @@ func objectExists(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func objectDelete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+	key := vars["key"]
+
+	err := riftcli.DeleteObject(bucket, key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "No content", http.StatusNoContent)
+}
+
 func GetRouter(config Config) (h http.Handler, err error) {
 	globalConfg = config
 	riftcli, err = rift.NewRiftClient(globalConfg.Endpoint)
@@ -157,6 +171,7 @@ func GetRouter(config Config) (h http.Handler, err error) {
 	router.HandleFunc("/{bucket}/{key}", objectExists).Methods("HEAD")
 	router.HandleFunc("/{bucket}/{key}", objectGet).Methods("GET")
 	router.HandleFunc("/{bucket}/{key}", objectPut).Methods("PUT")
+	router.HandleFunc("/{bucket}/{key}", objectDelete).Methods("DELETE")
 	// debug
 	h = handlers.LoggingHandler(os.Stdout, router)
 	return
