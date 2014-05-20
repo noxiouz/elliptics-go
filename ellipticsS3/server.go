@@ -2,6 +2,7 @@ package ellipticsS3
 
 import (
 	"crypto/md5"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -26,8 +27,27 @@ func getAllBuckets(context Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Get all %s buckets: %v", context.Username, listing)
-	fmt.Fprint(w, listing)
+	log.Printf("Get all %s buckets: %v", context.Username, listing.Keys())
+
+	XMLBuckets := make([]XMLBucketItem, 0, len(listing.Indexes))
+	for _, bucket := range listing.Indexes {
+		log.Println(bucket.Key, bucket.Timestamp, bucket.TimeSeconds)
+		XMLBuckets = append(XMLBuckets, XMLBucketItem{
+			Name:         bucket.Key,
+			CreationDate: bucket.TimeSeconds,
+		})
+	}
+
+	v := XMLBucketDirectoryList{
+		Id:          context.Username,
+		DisplayName: context.Username,
+		Buckets:     XMLBuckets,
+	}
+	enc := xml.NewEncoder(w)
+	enc.Indent("", "    ")
+	if err := enc.Encode(v); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
 
 func bucketExists(w http.ResponseWriter, r *http.Request) {

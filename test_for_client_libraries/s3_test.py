@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import time
+import operator
 
 import boto
 import boto.s3.connection
@@ -43,8 +44,11 @@ class TestS3:
     #     for i in self.bucket.list():
     #         print i
 
-    # def test_list_all_buckets(self):
-    #     self.conn.get_all_buckets()
+    def test_list_all_buckets(self):
+        buckets = self.conn.get_all_buckets()
+
+        assert len(buckets) > 0
+        assert test_bucket in map(operator.attrgetter('name'), buckets)
 
     def test_key(self):
         self.bucket = self.conn.get_bucket(test_bucket)
