@@ -1,0 +1,41 @@
+{
+    "endpoints": [
+        "0.0.0.0:8080"
+    ],
+    "also-possible-endpoints": [
+        "unix:test.sock"
+    ],
+    "backlog": 128,
+    "threads": 2,
+    "buffer_size": 65536,
+    "logger": {
+        "file": "rift.log",
+        "level": 3
+    },
+    "daemon": {
+        "fork": false,
+        "uid": 1000
+    },
+    "monitor-port": 21000,
+    "application": {
+        "remotes": [
+            "localhost:1025:2-0"
+        ],
+        "groups": [
+            2
+        ],
+        "metadata-groups": [
+            2
+        ],
+        "cache1": {
+            "name": "cache",
+            "timeout": 60
+        },
+        "bucket": {
+            "timeout": 60
+        },
+        "read-timeout": 10,
+        "write-timeout": 16,
+        "XXX-redirect-port": 8080
+    }
+}

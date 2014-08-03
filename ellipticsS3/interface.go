@@ -2,23 +2,6 @@ package ellipticsS3
 
 import "fmt"
 
-type ObjectController interface {
-	GetObject(key, bucket string) ([]byte, error)
-	UploadObject(key, bucket string, body []byte) error
-	ObjectExists(key, bucket string) (exists bool, err error)
-}
-
-type BucketController interface {
-	CreateBucket(bucket string) error
-}
-
-type S3Backend interface {
-	ObjectController
-	BucketController
-}
-
-// Errors
-
 type KeyNotFoundError struct {
 	key    string
 	bucket string
@@ -33,4 +16,8 @@ func NewKeyNotFoundError(key, bucket string) error {
 		key:    key,
 		bucket: bucket,
 	}
+}
+
+type Context struct {
+	Username string
 }
