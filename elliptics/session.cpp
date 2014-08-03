@@ -57,11 +57,6 @@ void session_set_timeout(ell_session *session, int timeout)
 	session->set_timeout(timeout);
 }
 
-void session_set_timeout(ell_session *session, int timeout)
-{
-	session->set_timeout(timeout);
-}
-
 /*
  * Read
  */
