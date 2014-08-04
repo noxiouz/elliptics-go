@@ -39,7 +39,7 @@ void node_add_remote(ell_node *node, const char *addr, const int port, const int
 	}
 }
 
-void node_add_remote_one(ell_node * node, const char *addr)
+void node_add_remote_one(ell_node *node, const char *addr)
 {
 	try {
 		node->add_remote(addr);
@@ -47,7 +47,17 @@ void node_add_remote_one(ell_node * node, const char *addr)
 	}
 }
 
-void node_set_timeouts(ell_node * node, const int wait_timeout, const int check_timeout)
+void node_add_remote_array(ell_node *node, const char **addr, const int num)
+{
+	try {
+		std::vector<std::string> vaddr(addr, addr + num);
+		node->add_remote(vaddr);
+	} catch(const elliptics::error & e) {
+	}
+}
+
+
+void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout)
 {
 	node->set_timeouts(wait_timeout, check_timeout);
 }

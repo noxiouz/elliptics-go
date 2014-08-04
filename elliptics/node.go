@@ -15,8 +15,29 @@
 
 package elliptics
 
+
+/*
+#include "node.h"
+#include <stdlib.h>
+
+static char**makeCharArray(int size) {
+        return calloc(sizeof(char*), size);
+}
+
+static void setArrayString(char **a, char *s, int n) {
+        a[n] = s;
+}
+
+static void freeCharArray(char **a, int size) {
+        int i;
+        for (i = 0; i < size; i++)
+                free(a[i]);
+        free(a);
+}
+*/
+import "C"
+
 import (
-	"C"
 	"syscall"
 	"unsafe"
 )
@@ -77,6 +98,32 @@ func (node *Node) AddRemote(addr string) (err error) {
 	defer C.free(unsafe.Pointer(caddr))
 
 	_, c_err := C.node_add_remote_one(node.node, caddr)
+	if c_err != nil {
+		if err, ok := c_err.(syscall.Errno); ok && isError(err) {
+			return err
+		} else if !ok {
+			return nil
+		}
+	}
+	return
+}
+
+/*
+ * AddRemotes adds a connection to elliptics servers, it runs in parallel
+ * and connects to multiple nodes at once.
+ *
+ * Address is specified as Host:Port:Family. Family can be omitted.
+ * Suitable Family values are: 2 (AF_INET) and 10 (AF_INET6).
+ */
+
+func (node *Node) AddRemotes(addrs []string) (err error) {
+	cargs := C.makeCharArray(C.int(len(addrs)))
+	defer C.freeCharArray(cargs, C.int(len(addrs)))
+	for i, s := range addrs {
+		C.setArrayString(cargs, C.CString(s), C.int(i))
+	}
+
+	_, c_err := C.node_add_remote_array(node.node, cargs, C.int(len(addrs)))
 	if c_err != nil {
 		if err, ok := c_err.(syscall.Errno); ok && isError(err) {
 			return err
