@@ -1,16 +1,17 @@
-#ifndef __GOLOGGER_H
-#define __GOLOGGER_H
+#ifndef __ELLIPTICS_GOLOGGER_H
+#define __ELLITPICS_GOLOGGER_H
 
 #include "node.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-ell_node *gologger_create(void *func, void *priv, const int level);
+ell_node *gologger_create (void *func, void *priv, const int level);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __GOLOGGER_H */
+#endif /* __ELLIPTICS_GOLOGGER_H */

@@ -1,18 +1,17 @@
 /*
-* 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
-* All rights reserved.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*/
-
+ * 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
 
 #include "logger.h"
 
@@ -25,12 +24,12 @@ using namespace ioremap;
 
 extern "C" {
 
-ell_file_logger* new_file_logger(const char *file, int level)
+ell_file_logger *new_file_logger(const char *file, int level)
 {
 	try {
-		elliptics::file_logger* l = new elliptics::file_logger(file, level);
+		elliptics::file_logger *l = new elliptics::file_logger(file, level);
 		return l;
-	} catch (const std::exception &e) {
+	} catch(const std::exception & e) {
 		std::cerr << "go: file-logger-exception: " << e.what() << std::endl;
 		return NULL;
 	}
