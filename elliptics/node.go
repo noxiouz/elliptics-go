@@ -97,13 +97,10 @@ func (node *Node) AddRemote(addr string) (err error) {
 	caddr := C.CString(addr)
 	defer C.free(unsafe.Pointer(caddr))
 
-	_, c_err := C.node_add_remote_one(node.node, caddr)
-	if c_err != nil {
-		if err, ok := c_err.(syscall.Errno); ok && isError(err) {
-			return err
-		} else if !ok {
-			return nil
-		}
+	err = nil
+	c_err := C.node_add_remote_one(node.node, caddr)
+	if c_err < 0 {
+		err = syscall.Errno(-c_err)
 	}
 	return
 }
@@ -123,13 +120,10 @@ func (node *Node) AddRemotes(addrs []string) (err error) {
 		C.setArrayString(cargs, C.CString(s), C.int(i))
 	}
 
-	_, c_err := C.node_add_remote_array(node.node, cargs, C.int(len(addrs)))
-	if c_err != nil {
-		if err, ok := c_err.(syscall.Errno); ok && isError(err) {
-			return err
-		} else if !ok {
-			return nil
-		}
+	err = nil
+	c_err := C.node_add_remote_array(node.node, cargs, C.int(len(addrs)))
+	if c_err < 0 {
+		err = syscall.Errno(-c_err)
 	}
 	return
 }

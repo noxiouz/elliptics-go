@@ -31,29 +31,38 @@ void delete_node(ell_node *node)
 	delete node;
 }
 
-void node_add_remote(ell_node *node, const char *addr, const int port, const int family)
+int node_add_remote(ell_node *node, const char *addr, const int port, const int family)
 {
 	try {
 		node->add_remote(addr, port, family);
-	} catch(const elliptics::error & e) {
+	} catch(const elliptics::error &e) {
+		return e.error_code();
 	}
+
+	return 0;
 }
 
-void node_add_remote_one(ell_node *node, const char *addr)
+int node_add_remote_one(ell_node *node, const char *addr)
 {
 	try {
 		node->add_remote(addr);
-	} catch(const elliptics::error & e) {
+	} catch(const elliptics::error &e) {
+		return e.error_code();
 	}
+
+	return 0;
 }
 
-void node_add_remote_array(ell_node *node, const char **addr, const int num)
+int node_add_remote_array(ell_node *node, const char **addr, const int num)
 {
 	try {
 		std::vector<std::string> vaddr(addr, addr + num);
 		node->add_remote(vaddr);
-	} catch(const elliptics::error & e) {
+	} catch(const elliptics::error &e) {
+		return e.error_code();
 	}
+
+	return 0;
 }
 
 
