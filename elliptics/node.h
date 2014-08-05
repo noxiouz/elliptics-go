@@ -29,8 +29,10 @@ typedef void ell_node;
 ell_node *new_node(ell_file_logger *fl);
 void delete_node(ell_node *node);
 
-void node_add_remote(ell_node *node, const char *addr, const int port, const int family);
-void node_add_remote_one(ell_node *node, const char *addr);
+int node_add_remote(ell_node *node, const char *addr, const int port, const int family);
+int node_add_remote_one(ell_node *node, const char *addr);
+int node_add_remote_array(ell_node *node, const char **addr, const int num);
+
 void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout);
 
 #ifdef __cplusplus
