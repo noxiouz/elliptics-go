@@ -14,7 +14,7 @@
  */
 
 #ifndef __ELLIPTICS_NODE_H
-#define NODE_H
+#define __ELLIPTICS_NODE_H
 
 #include "logger.h"
 
