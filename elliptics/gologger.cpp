@@ -27,6 +27,7 @@ private:
 
 ell_node *gologger_create(void *func, void *priv, const int level)
 {
+    /*
 	try {
 		logger_interface *intf = new logger_interface(func, priv);
 
@@ -38,7 +39,7 @@ ell_node *gologger_create(void *func, void *priv, const int level)
 		}
 	} catch (...) {
 	}
-
+*/
 	return NULL;
 }
 

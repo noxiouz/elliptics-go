@@ -37,12 +37,13 @@ ell_file_logger *new_file_logger(const char *file, int level)
 
 void file_logger_log(ell_file_logger *fl, int level, const char *msg)
 {
-	fl->log(level, msg);
+    //ToDo: change log level
+    auto record = fl->open_record(::dnet_log_level::DNET_LOG_DATA);
 }
 
 int file_logger_get_level(ell_file_logger *fl)
 {
-	return fl->get_log_level();
+	return fl->verbosity();
 }
 
 void delete_file_logger(ell_file_logger *fl)
