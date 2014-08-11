@@ -1,16 +1,16 @@
 /*
-* 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
-* All rights reserved.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
+ * 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 package elliptics
@@ -90,24 +90,42 @@ func (s *Session) SetNamespace(namespace string) {
 
 //ReadResult wraps one result of read operation.
 type ReadResult interface {
-	//Data returns string represntation of readed data.
+	// server's reply
+	Cmd() *DnetCmd
+
+	// server's address
+	Addr() *DnetAddr
+
+	// IO parameters for given 
+	IO() *DnetIOAttr
+
+	//Data returns string represntation of read data
 	Data() string
-	//Error returns representation of error, which could occur.
+
+	// read error
 	Error() error
 }
 
 type readResult struct {
-	ioAttr C.struct_dnet_io_attr
-	data   string
-	err    error
+	cmd	DnetCmd
+	addr	DnetAddr
+	ioattr	DnetIOAttr
+	data	string
+	err	error
 }
 
-//Data returns a string represntation of readed data.
+func (r *readResult) Cmd() *DnetCmd {
+	return &r.cmd
+}
+func (r *readResult) Addr() *DnetAddr {
+	return &r.addr
+}
+func (r *readResult) IO() *DnetIOAttr {
+	return &r.ioattr
+}
 func (r *readResult) Data() string {
 	return r.data
 }
-
-//Error returns representation of error, which could occur.
 func (r *readResult) Error() error {
 	return r.err
 }
@@ -150,34 +168,49 @@ func (s *Session) ReadData(key string) <-chan ReadResult {
 
 //Lookuper represents one result of Write and Lookup operations.
 type Lookuper interface {
-	//Path returns a path to lookuped key.
+	// server's reply
+	Cmd() *DnetCmd
+
+	// server's address
+	Addr() *DnetAddr
+
+	// dnet_file_info structure contains basic information about key location
+	Info() *DnetFileInfo
+
+	// address of the node which hosts given key
+	StorageAddr() *DnetAddr
+
+	//Path returns a path to file hosting given key on the storage.
 	Path() string
-	//Addr returns dnet_addr for a lookuped key.
-	Addr() C.struct_dnet_addr
-	Info() C.struct_dnet_file_info
+
 	//Error returns string respresentation of error.
 	Error() error
 }
 
 type lookupResult struct {
-	info C.struct_dnet_file_info //dnet_file_info
-	addr C.struct_dnet_addr
-	path string //file_path
-	err  error
+	cmd		DnetCmd
+	addr		DnetAddr
+	info		DnetFileInfo
+	storage_addr	DnetAddr
+	path		string
+	err		error
 }
 
+func (l *lookupResult) Cmd() *DnetCmd {
+	return &l.cmd
+}
+func (l *lookupResult) Addr() *DnetAddr {
+	return &l.addr
+}
+func (l *lookupResult) Info() *DnetFileInfo {
+	return &l.info
+}
+func (l *lookupResult) StorageAddr() *DnetAddr {
+	return &l.storage_addr
+}
 func (l *lookupResult) Path() string {
 	return l.path
 }
-
-func (l *lookupResult) Addr() C.struct_dnet_addr {
-	return l.addr
-}
-
-func (l *lookupResult) Info() C.struct_dnet_file_info {
-	return l.info
-}
-
 func (l *lookupResult) Error() error {
 	return l.err
 }

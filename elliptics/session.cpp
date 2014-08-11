@@ -64,7 +64,8 @@ void on_read(void *context, const elliptics::read_result_entry & result)
 {
 	elliptics::data_pointer data(result.file());
 	go_read_result to_go {
-		(char *)data.data(), data.size(), result.io_attribute()
+		result.command(), result.address(),
+		result.io_attribute(), (char *)data.data(), data.size()
 	};
 
 	go_read_callback(&to_go, context);
@@ -84,6 +85,7 @@ void session_read_data(ell_session *session, void *on_chunk_context,
 void on_lookup(void *context, const elliptics::lookup_result_entry & result)
 {
 	go_lookup_result to_go {
+		result.command(), result.address(),
 		result.file_info(), result.storage_address(), result.file_path()
 	};
 
@@ -129,7 +131,7 @@ void session_remove(ell_session *session, void *on_chunk_context,
 /*
  * Find
  */
-void on_find(void *context, const elliptics::find_indexes_result_entry & result)
+void on_find(void *context, const elliptics::find_indexes_result_entry &result)
 {
 	std::vector <c_index_entry> c_index_entries;
 

@@ -31,16 +31,20 @@ typedef void ell_session;
 
 //read_result_entry
 struct go_read_result {
-	char			*file;
-	size_t			size;
-	struct dnet_io_attr	*io_attribute;
+	const struct dnet_cmd		*cmd;
+	const struct dnet_addr		*addr;
+	const struct dnet_io_attr	*io_attribute;
+	char				*file;
+	size_t				size;
 };
 
 //lookup_result_entry
 struct go_lookup_result {
-	struct dnet_file_info	*info;
-	struct dnet_addr	*addr;
-	const char		*path;
+	const struct dnet_cmd		*cmd;
+	const struct dnet_addr		*addr;
+	const struct dnet_file_info	*info;
+	const struct dnet_addr		*storage_addr;
+	const char			*path;
 };
 
 //index_entry
@@ -52,7 +56,7 @@ struct c_index_entry {
 //find_indexes_result_entry
 struct go_find_result {
 	const struct dnet_raw_id	*id;
-	size_t				entries_count;
+	const size_t			entries_count;
 	struct c_index_entry		*entries;
 };
 
