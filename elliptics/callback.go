@@ -18,7 +18,7 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	callback := *(*func(error))(context)
 
 	if (cerr.code < 0) {
-		err := DnetError {
+		err := &DnetError {
 			Code:		int(cerr.code),
 			Flags:		0,
 			Message:	C.GoString(cerr.message),

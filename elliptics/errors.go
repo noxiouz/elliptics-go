@@ -31,12 +31,12 @@ type DnetError struct {
 	Message		string
 }
 
-func (err DnetError) Error() string {
+func (err *DnetError) Error() string {
 	return fmt.Sprintf("elliptics error: %d: %s", err.Code, err.Message)
 }
 
 func ErrorData(err error) string {
-	if ke, ok := err.(DnetError); ok {
+	if ke, ok := err.(*DnetError); ok {
 		return ke.Message
 	}
 
@@ -44,7 +44,7 @@ func ErrorData(err error) string {
 }
 
 func ErrorStatus(err error) int {
-	if ke, ok := err.(DnetError); ok {
+	if ke, ok := err.(*DnetError); ok {
 		return ke.Code
 	}
 
