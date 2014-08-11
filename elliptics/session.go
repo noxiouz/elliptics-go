@@ -137,9 +137,9 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 		responseCh <- &result
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &readResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &readResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -237,9 +237,9 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -258,9 +258,9 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -306,9 +306,9 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	onResult := func() {
 		//It's never called.
 	}
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &removeResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -385,9 +385,9 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 	}
 	onResult = unsafe.Pointer(&_result)
 
-	_finish := func(err int) {
-		if err != 0 {
-			responseCh <- &findResult{err: fmt.Errorf("%d", err)}
+	_finish := func(err error) {
+		if err != nil {
+			responseCh <- &findResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -440,9 +440,9 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
 	}
@@ -488,9 +488,9 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 		responseCh <- *indexentry
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- IndexEntry{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- IndexEntry{err: err}
 		}
 		close(responseCh)
 	}
@@ -519,9 +519,9 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
 	}

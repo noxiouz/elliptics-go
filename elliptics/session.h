@@ -65,6 +65,12 @@ struct go_data_pointer {
 	int size;
 };
 
+struct go_error {
+	int		code;		// elliptics error code, should be negative errno value
+	int		flags;		// this will mainly say whether it is client or server error in 2.26
+	const char	*message;
+};
+
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);

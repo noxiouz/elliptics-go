@@ -29,9 +29,14 @@ struct go_data_pointer new_data_pointer(char *data, int size) {
 	};
 };
 
-void on_finish(void *context, const elliptics::error_info & error)
+void on_finish(void *context, const elliptics::error_info &error)
 {
-	go_final_callback(error.code(), context);
+	go_error err;
+	err.code = error.code();
+	err.flags = 0;
+	err.message = error.message().c_str();
+
+	go_final_callback(&err, context);
 }
 
 ell_session *new_elliptics_session(ell_node *node)

@@ -14,9 +14,20 @@ import (
 var _ = fmt.Println
 
 //export go_final_callback
-func go_final_callback(err int, context unsafe.Pointer) {
-	callback := *(*func(int))(context)
-	callback(err)
+func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
+	callback := *(*func(error))(context)
+
+	if (cerr.code < 0) {
+		err := DnetError {
+			Code:		int(cerr.code),
+			Flags:		0,
+			Message:	C.GoString(cerr.message),
+		}
+
+		callback(err)
+	} else {
+		callback(nil)
+	}
 }
 
 //export go_lookup_callback
