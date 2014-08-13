@@ -62,6 +62,21 @@ void session_set_timeout(ell_session *session, int timeout)
 	session->set_timeout(timeout);
 }
 
+void session_set_cflags(ell_session *session, uint64_t cflags)
+{
+	session->set_cflags(cflags);
+}
+
+void session_set_ioflags(ell_session *session, uint32_t ioflags)
+{
+	session->set_ioflags(ioflags);
+}
+
+void session_set_trace_id(ell_session *session, uint64_t trace_id)
+{
+	session->set_trace_id(trace_id);
+}
+
 /*
  * Read
  */

@@ -74,6 +74,20 @@ func (s *Session) SetTimeout(timeout int) {
 	C.session_set_timeout(s.session, C.int(timeout))
 }
 
+//SetCflags sets command flags (DNET_FLAGS_* in API documentation) like nolock
+func (s *Session) SetCflags(cflags uint64) {
+	C.session_set_cflags(s.session, C.uint64_t(cflags))
+}
+
+//SetIOflags sets IO flags (DNET_IO_FLAGS_* in API documentation), i.e. flags for IO operations like read/write/delete
+func (s *Session) SetIOflags(ioflags uint32) {
+	C.session_set_ioflags(s.session, C.uint32_t(ioflags))
+}
+
+func (s *Session) SetTraceID(trace uint64) {
+	C.session_set_trace_id(s.session, C.uint64_t(trace))
+}
+
 /*SetNamespace sets the namespace for the Session.Default namespace is empty string.
 
 This feature allows you to share a single storage between services.
