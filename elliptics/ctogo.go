@@ -18,6 +18,27 @@ package elliptics
 /*
 #include "session.h"
 #include <stdio.h>
+
+static
+uint64_t dnet_cmd_get_trace_id(struct dnet_cmd* d) {
+	return d->id.trace_id;
+}
+
+static
+uint64_t dnet_cmd_get_flags(struct dnet_cmd* d) {
+	return d->flags;
+}
+
+static
+uint64_t dnet_cmd_get_size(struct dnet_cmd* d) {
+	return d->size;
+}
+
+static
+uint64_t dnet_cmd_get_trans(struct dnet_cmd* d) {
+	return d->trans;
+}
+
 */
 import "C"
 
@@ -47,14 +68,14 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 		ID: DnetID {
 			ID: C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(len(cmd.id.id))),
 			Group: uint32(cmd.id.group_id),
-			Trace: uint64(cmd.id.trace_id),
+			Trace: uint64(C.dnet_cmd_get_trace_id(cmd)),
 		},
 
 		Status:	int32(cmd.status),
 		Cmd:	int32(cmd.cmd),
-		Flags:	uint64(cmd.flags),
-		Trans:	uint64(cmd.trans),
-		Size:	uint64(cmd.size),
+		Flags:	uint64(C.dnet_cmd_get_flags(cmd)),
+		Trans:	uint64(C.dnet_cmd_get_trans(cmd)),
+		Size:	uint64(C.dnet_cmd_get_size(cmd)),
 	}
 }
 

@@ -96,7 +96,7 @@ type ReadResult interface {
 	// server's address
 	Addr() *DnetAddr
 
-	// IO parameters for given 
+	// IO parameters for given
 	IO() *DnetIOAttr
 
 	//Data returns string represntation of read data
@@ -107,11 +107,11 @@ type ReadResult interface {
 }
 
 type readResult struct {
-	cmd	DnetCmd
-	addr	DnetAddr
-	ioattr	DnetIOAttr
-	data	string
-	err	error
+	cmd    DnetCmd
+	addr   DnetAddr
+	ioattr DnetIOAttr
+	data   string
+	err    error
 }
 
 func (r *readResult) Cmd() *DnetCmd {
@@ -133,6 +133,9 @@ func (r *readResult) Error() error {
 //ReadKey performs a read operation by key.
 func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
+
+	keepaliver := make(chan struct{}, 0)
+
 	onResult := func(result readResult) {
 		responseCh <- &result
 	}
@@ -141,8 +144,19 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 		if err != nil {
 			responseCh <- &readResult{err: err}
 		}
+
 		close(responseCh)
+
+		// close keepalive context
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
 	C.session_read_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
 		key.key)
@@ -188,12 +202,12 @@ type Lookuper interface {
 }
 
 type lookupResult struct {
-	cmd		DnetCmd
-	addr		DnetAddr
-	info		DnetFileInfo
-	storage_addr	DnetAddr
-	path		string
-	err		error
+	cmd          DnetCmd
+	addr         DnetAddr
+	info         DnetFileInfo
+	storage_addr DnetAddr
+	path         string
+	err          error
 }
 
 func (l *lookupResult) Cmd() *DnetCmd {
@@ -233,6 +247,8 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 
+	keepaliver := make(chan struct{}, 0)
+
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
 	}
@@ -242,7 +258,15 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_write_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
@@ -253,6 +277,7 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 //Lookup returns an information about given Key.
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
+	keepaliver := make(chan struct{}, 0)
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -263,7 +288,16 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	/* To keep callbacks alive */
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
 	return responseCh
@@ -303,6 +337,8 @@ func (s *Session) Remove(key string) <-chan Remover {
 //RemoveKey performs remove operation by key.
 func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	responseCh := make(chan Remover, defaultVOLUME)
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called.
 	}
@@ -311,7 +347,15 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 			responseCh <- &removeResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
 	return responseCh
@@ -380,6 +424,8 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 		cindexes = append(cindexes, cindex)
 	}
 
+	keepaliver := make(chan struct{})
+
 	_result := func(result *findResult) {
 		responseCh <- result
 	}
@@ -390,7 +436,16 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 			responseCh <- &findResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		_result = nil
+		_finish = nil
+	}()
+
 	onFinish = unsafe.Pointer(&_finish)
 	return
 }
@@ -436,6 +491,8 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		cdatas = append(cdatas, cdata)
 	}
 
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called. For the future.
 	}
@@ -445,7 +502,16 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
 	// TODO: Reimplement this with pointer on functions
 	switch operation {
 	case indexesSet:
@@ -484,6 +550,8 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 	}
 	defer ekey.Free()
 
+	keepaliver := make(chan struct{})
+
 	onResult := func(indexentry *IndexEntry) {
 		responseCh <- *indexentry
 	}
@@ -493,7 +561,15 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 			responseCh <- IndexEntry{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_list_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), ekey.key)
 	return responseCh
@@ -515,6 +591,8 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		cindexes = append(cindexes, cindex)
 	}
 
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called. For the future.
 	}
@@ -524,7 +602,15 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_remove_indexes(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
