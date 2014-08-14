@@ -34,7 +34,7 @@ struct go_read_result {
 	const struct dnet_cmd		*cmd;
 	const struct dnet_addr		*addr;
 	const struct dnet_io_attr	*io_attribute;
-	char				*file;
+	const char			*file;
 	size_t				size;
 };
 

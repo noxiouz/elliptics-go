@@ -114,7 +114,7 @@ type ReadResult interface {
 	IO() *DnetIOAttr
 
 	//Data returns string represntation of read data
-	Data() string
+	Data() []byte
 
 	// read error
 	Error() error
@@ -124,7 +124,7 @@ type readResult struct {
 	cmd    DnetCmd
 	addr   DnetAddr
 	ioattr DnetIOAttr
-	data   string
+	data   []byte
 	err    error
 }
 
@@ -137,7 +137,7 @@ func (r *readResult) Addr() *DnetAddr {
 func (r *readResult) IO() *DnetIOAttr {
 	return &r.ioattr
 }
-func (r *readResult) Data() string {
+func (r *readResult) Data() []byte {
 	return r.data
 }
 func (r *readResult) Error() error {
@@ -244,7 +244,7 @@ func (l *lookupResult) Error() error {
 }
 
 //WriteData writes blob by a given string representation of Key.
-func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
+func (s *Session) WriteData(key string, blob []byte) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -257,9 +257,8 @@ func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 }
 
 //WriteKey writes blob by Key.
-func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
+func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 
 	keepaliver := make(chan struct{}, 0)
 
@@ -278,13 +277,21 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 
 	go func() {
 		<-keepaliver
+		// this is GC magic - goroutine 'grabs' variables from the WriteKey
+		// context, which it used somehow in the code
+		// we need to keep all variables that are not copied but referenced
+		// in c++ code to be alive long enough to be copied into the socket
+		// we keep them referenced until write_data() completes, i.e. onFinish()
+		// is called, which in turn writes into @keepalive channel to wake up
+		// this goroutine and finish it
 		onResult = nil
 		onFinish = nil
+		_ := blob
 	}()
 
 	C.session_write_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		key.key, raw_data, C.size_t(len(blob)))
+		key.key, (*C.char)(unsafe.Pointer(&blob[0])), C.size_t(len(blob)))
 	return responseCh
 }
 

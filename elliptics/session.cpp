@@ -85,7 +85,7 @@ void on_read(void *context, const elliptics::read_result_entry & result)
 	elliptics::data_pointer data(result.file());
 	go_read_result to_go {
 		result.command(), result.address(),
-		result.io_attribute(), (char *)data.data(), data.size()
+		result.io_attribute(), (const char *)data.data(), data.size()
 	};
 
 	go_read_callback(&to_go, context);
@@ -117,7 +117,7 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 {
 	using namespace std::placeholders;
 
-	std::string tmp(data, size);
+	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
 	session->write_data(*key, tmp, 0).connect(std::bind(&on_lookup, on_chunk_context, _1),
 				       std::bind(&on_finish, final_context, _1));
 }
