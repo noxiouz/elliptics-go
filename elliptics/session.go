@@ -286,7 +286,7 @@ func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
 		// this goroutine and finish it
 		onResult = nil
 		onFinish = nil
-		_ := blob
+		_ = blob
 	}()
 
 	C.session_write_data(s.session,
