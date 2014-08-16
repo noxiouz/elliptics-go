@@ -21,7 +21,7 @@ package elliptics
 
 static
 uint64_t dnet_cmd_get_trace_id(struct dnet_cmd* d) {
-	return d->id.trace_id;
+	return d->trace_id;
 }
 
 static

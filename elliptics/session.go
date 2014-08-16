@@ -328,8 +328,17 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 // ParallelLookup returns all information about given Key,
 // it sends multiple lookup requests in parallel to all session groups
 // and returns information about all specified group where given key has been found.
-func (s *Session) ParallelLookup(key *Key) <-chan Lookuper {
+func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
+
+	key, err := NewKey(kstr)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
 	keepaliver := make(chan struct{}, 0)
 
 	onResult := func(lookup *lookupResult) {
