@@ -28,12 +28,12 @@ class go_logger_frontend : public blackhole::base_frontend_t
 		}
 
 		virtual void handle(const blackhole::log::record_t &record) {
-			dnet_log_level level = record.extract<dnet_log_level>(blackhole::keyword::severity<dnet_log_level>().name());
-			printf("level: %d, msg: %s\n", level, m_formatter.format(record).c_str());
+			//dnet_log_level level = record.extract<dnet_log_level>(blackhole::keyword::severity<dnet_log_level>().name());
+			GoLog(m_priv, const_cast<char *>(m_formatter.format(record).c_str()));
 		}
 
 	private:
-		void *m_priv;
+		void *m_priv; // this is go's log.Logger pointer
 		blackhole::formatter::string_t m_formatter;
 };
 
