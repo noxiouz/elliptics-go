@@ -82,7 +82,11 @@ void session_set_cflags(ell_session *session, uint64_t cflags);
 void session_set_ioflags(ell_session *session, uint32_t ioflags);
 void session_set_trace_id(ell_session *session, uint64_t trace_id);
 
+// ->lookup() returns only the first group where given key has been found
 void session_lookup(ell_session *session, void *on_chunk_context,
+		void *final_context, ell_key *key);
+// ->parallel_lookup() sends multiple lookups in parallel and returns all groups where given key has been found
+void session_parallel_lookup(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key);
 
 void session_read_data(ell_session *session, void *on_chunk_context,

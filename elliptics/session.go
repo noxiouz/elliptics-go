@@ -295,7 +295,8 @@ func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
 	return responseCh
 }
 
-//Lookup returns an information about given Key.
+// Lookup returns an information about given Key.
+// It only returns the first group where key has been found.
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	keepaliver := make(chan struct{}, 0)
@@ -321,6 +322,37 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	}()
 
 	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	return responseCh
+}
+
+// ParallelLookup returns all information about given Key,
+// it sends multiple lookup requests in parallel to all session groups
+// and returns information about all specified group where given key has been found.
+func (s *Session) ParallelLookup(key *Key) <-chan Lookuper {
+	responseCh := make(chan Lookuper, defaultVOLUME)
+	keepaliver := make(chan struct{}, 0)
+
+	onResult := func(lookup *lookupResult) {
+		responseCh <- lookup
+	}
+
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+		}
+		close(responseCh)
+
+		close(keepaliver)
+	}
+
+	/* To keep callbacks alive */
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
+	C.session_parallel_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
 	return responseCh
 }
 

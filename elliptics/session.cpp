@@ -130,6 +130,14 @@ void session_lookup(ell_session *session, void *on_chunk_context,
 				      std::bind(&on_finish, final_context, _1));
 }
 
+void session_parallel_lookup(ell_session *session, void *on_chunk_context,
+		    void *final_context, ell_key *key)
+{
+	using namespace std::placeholders;
+	session->parallel_lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1),
+				      std::bind(&on_finish, final_context, _1));
+}
+
 /*
  * Remove
  * Not implemented. Don't know about anything useful informaitopn from result.
