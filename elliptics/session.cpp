@@ -29,9 +29,14 @@ struct go_data_pointer new_data_pointer(char *data, int size) {
 	};
 };
 
-void on_finish(void *context, const elliptics::error_info & error)
+void on_finish(void *context, const elliptics::error_info &error)
 {
-	go_final_callback(error.code(), context);
+	go_error err;
+	err.code = error.code();
+	err.flags = 0;
+	err.message = error.message().c_str();
+
+	go_final_callback(&err, context);
 }
 
 ell_session *new_elliptics_session(ell_node *node)
@@ -57,6 +62,21 @@ void session_set_timeout(ell_session *session, int timeout)
 	session->set_timeout(timeout);
 }
 
+void session_set_cflags(ell_session *session, uint64_t cflags)
+{
+	session->set_cflags(cflags);
+}
+
+void session_set_ioflags(ell_session *session, uint32_t ioflags)
+{
+	session->set_ioflags(ioflags);
+}
+
+void session_set_trace_id(ell_session *session, uint64_t trace_id)
+{
+	session->set_trace_id(trace_id);
+}
+
 /*
  * Read
  */
@@ -65,7 +85,7 @@ void on_read(void *context, const elliptics::read_result_entry & result)
 	elliptics::data_pointer data(result.file());
 	go_read_result to_go {
 		result.command(), result.address(),
-		result.io_attribute(), (char *)data.data(), data.size()
+		result.io_attribute(), (const char *)data.data(), data.size()
 	};
 
 	go_read_callback(&to_go, context);
@@ -97,7 +117,7 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 {
 	using namespace std::placeholders;
 
-	std::string tmp(data, size);
+	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
 	session->write_data(*key, tmp, 0).connect(std::bind(&on_lookup, on_chunk_context, _1),
 				       std::bind(&on_finish, final_context, _1));
 }

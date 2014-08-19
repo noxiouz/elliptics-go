@@ -74,6 +74,20 @@ func (s *Session) SetTimeout(timeout int) {
 	C.session_set_timeout(s.session, C.int(timeout))
 }
 
+//SetCflags sets command flags (DNET_FLAGS_* in API documentation) like nolock
+func (s *Session) SetCflags(cflags uint64) {
+	C.session_set_cflags(s.session, C.uint64_t(cflags))
+}
+
+//SetIOflags sets IO flags (DNET_IO_FLAGS_* in API documentation), i.e. flags for IO operations like read/write/delete
+func (s *Session) SetIOflags(ioflags uint32) {
+	C.session_set_ioflags(s.session, C.uint32_t(ioflags))
+}
+
+func (s *Session) SetTraceID(trace uint64) {
+	C.session_set_trace_id(s.session, C.uint64_t(trace))
+}
+
 /*SetNamespace sets the namespace for the Session.Default namespace is empty string.
 
 This feature allows you to share a single storage between services.
@@ -100,7 +114,7 @@ type ReadResult interface {
 	IO() *DnetIOAttr
 
 	//Data returns string represntation of read data
-	Data() string
+	Data() []byte
 
 	// read error
 	Error() error
@@ -110,7 +124,7 @@ type readResult struct {
 	cmd    DnetCmd
 	addr   DnetAddr
 	ioattr DnetIOAttr
-	data   string
+	data   []byte
 	err    error
 }
 
@@ -123,7 +137,7 @@ func (r *readResult) Addr() *DnetAddr {
 func (r *readResult) IO() *DnetIOAttr {
 	return &r.ioattr
 }
-func (r *readResult) Data() string {
+func (r *readResult) Data() []byte {
 	return r.data
 }
 func (r *readResult) Error() error {
@@ -140,9 +154,9 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 		responseCh <- &result
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &readResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &readResult{err: err}
 		}
 
 		close(responseCh)
@@ -230,7 +244,7 @@ func (l *lookupResult) Error() error {
 }
 
 //WriteData writes blob by a given string representation of Key.
-func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
+func (s *Session) WriteData(key string, blob []byte) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -243,9 +257,8 @@ func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 }
 
 //WriteKey writes blob by Key.
-func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
+func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 
 	keepaliver := make(chan struct{}, 0)
 
@@ -253,9 +266,9 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
 
@@ -264,13 +277,21 @@ func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
 
 	go func() {
 		<-keepaliver
+		// this is GC magic - goroutine 'grabs' variables from the WriteKey
+		// context, which it used somehow in the code
+		// we need to keep all variables that are not copied but referenced
+		// in c++ code to be alive long enough to be copied into the socket
+		// we keep them referenced until write_data() completes, i.e. onFinish()
+		// is called, which in turn writes into @keepalive channel to wake up
+		// this goroutine and finish it
 		onResult = nil
 		onFinish = nil
+		_ = blob
 	}()
 
 	C.session_write_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		key.key, raw_data, C.size_t(len(blob)))
+		key.key, (*C.char)(unsafe.Pointer(&blob[0])), C.size_t(len(blob)))
 	return responseCh
 }
 
@@ -283,9 +304,9 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
 
@@ -342,9 +363,9 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	onResult := func() {
 		//It's never called.
 	}
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &removeResult{err: err}
 		}
 		close(responseCh)
 
@@ -431,9 +452,9 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 	}
 	onResult = unsafe.Pointer(&_result)
 
-	_finish := func(err int) {
-		if err != 0 {
-			responseCh <- &findResult{err: fmt.Errorf("%d", err)}
+	_finish := func(err error) {
+		if err != nil {
+			responseCh <- &findResult{err: err}
 		}
 		close(responseCh)
 
@@ -497,9 +518,9 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
 
@@ -556,9 +577,9 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 		responseCh <- *indexentry
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- IndexEntry{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- IndexEntry{err: err}
 		}
 		close(responseCh)
 
@@ -597,9 +618,9 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
 
