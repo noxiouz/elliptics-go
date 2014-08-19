@@ -94,6 +94,26 @@ void session_read_data(ell_session *session, void *on_chunk_context,
 void session_write_data(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key, char *data, size_t size);
 
+// prepare/write/commit sequence for large objects
+// @offset says on which offset should data go
+// @total_size is a size of contiguous disk area to prepare, i.e. disk_size, data_size (or read record size) can be smaller than that
+// @commit_size means how many bytes to actually commit as record size, if 0 all written data will be used
+//
+// Each of these calls can be accomplished with data chunk
+void session_write_prepare(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset, uint64_t total_size,
+			char *data, size_t size);
+void session_write_plain(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset,
+			char *data, size_t size);
+void session_write_commit(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset,
+			uint64_t commit_size,
+			char *data, size_t size);
+
 void session_remove(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key);
 

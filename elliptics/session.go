@@ -17,6 +17,8 @@ package elliptics
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"unsafe"
 )
 
@@ -244,7 +246,7 @@ func (l *lookupResult) Error() error {
 }
 
 //WriteData writes blob by a given string representation of Key.
-func (s *Session) WriteData(key string, blob []byte) <-chan Lookuper {
+func (s *Session) WriteData(key string, input io.Reader, total_size uint64) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -253,26 +255,64 @@ func (s *Session) WriteData(key string, blob []byte) <-chan Lookuper {
 		return responseCh
 	}
 	defer ekey.Free()
-	return s.WriteKey(ekey, blob)
+	return s.WriteKey(ekey, input, total_size)
 }
 
-//WriteKey writes blob by Key.
-func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
+const max_chunk_size uint64 = 10 * 1024 * 1024
+
+func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 
 	keepaliver := make(chan struct{}, 0)
 
-	onResult := func(lookup *lookupResult) {
+	chunk := make([]byte, max_chunk_size, max_chunk_size)
+
+	var offset uint64 = 0
+	var n64 uint64
+
+	onChunkResult := func(lookup *lookupResult) {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err error) {
+	var onChunkFinish func(err error)
+
+	onChunkFinish = func(err error) {
 		if err != nil {
 			responseCh <- &lookupResult{err: err}
+			close(responseCh)
+			close(keepaliver)
+			return
 		}
-		close(responseCh)
 
-		close(keepaliver)
+		if total_size == 0 {
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+
+		n, err := input.Read(chunk)
+		if n <= 0 && err != nil {
+			responseCh <- &lookupResult{err: err}
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+
+		n64 = uint64(n)
+		total_size -= n64
+		offset += n64
+
+		if total_size != 0 {
+			C.session_write_plain(s.session,
+				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+				key.key, C.uint64_t(offset - n64),
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+		} else {
+			C.session_write_commit(s.session,
+				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+				key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+		}
 	}
 
 	go func() {
@@ -284,14 +324,84 @@ func (s *Session) WriteKey(key *Key, blob []byte) <-chan Lookuper {
 		// we keep them referenced until write_data() completes, i.e. onFinish()
 		// is called, which in turn writes into @keepalive channel to wake up
 		// this goroutine and finish it
-		onResult = nil
-		onFinish = nil
-		_ = blob
+		onChunkResult = nil
+		onChunkFinish = nil
+		_ = chunk
+	}()
+
+	rest := total_size
+	if rest > max_chunk_size {
+		rest = max_chunk_size
+	}
+
+	n, err := input.Read(chunk)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	n64 = uint64(n)
+	total_size -= n64
+	offset += n64
+
+	C.session_write_prepare(s.session,
+		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+		key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+
+	return responseCh
+}
+
+//WriteKey writes blob by Key.
+func (s *Session) WriteKey(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
+	if total_size > max_chunk_size {
+		return s.WriteChunk(key, input, total_size)
+	}
+
+	responseCh := make(chan Lookuper, defaultVOLUME)
+
+	keepaliver := make(chan struct{}, 0)
+
+	onWriteResult := func(lookup *lookupResult) {
+		responseCh <- lookup
+	}
+
+	onWriteFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+		}
+		close(responseCh)
+		close(keepaliver)
+	}
+
+	chunk, err := ioutil.ReadAll(input)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	go func() {
+		<-keepaliver
+		// this is GC magic - goroutine 'grabs' variables from the WriteKey
+		// context, which it used somehow in the code
+		// we need to keep all variables that are not copied but referenced
+		// in c++ code to be alive long enough to be copied into the socket
+		// we keep them referenced until write_data() completes, i.e. onFinish()
+		// is called, which in turn writes into @keepalive channel to wake up
+		// this goroutine and finish it
+		onWriteResult = nil
+		onWriteFinish = nil
+		_ = chunk
 	}()
 
 	C.session_write_data(s.session,
-		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		key.key, (*C.char)(unsafe.Pointer(&blob[0])), C.size_t(len(blob)))
+		unsafe.Pointer(&onWriteResult), unsafe.Pointer(&onWriteFinish),
+		key.key, (*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(len(chunk)))
+
 	return responseCh
 }
 

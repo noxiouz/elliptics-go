@@ -122,6 +122,43 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 				       std::bind(&on_finish, final_context, _1));
 }
 
+void session_write_prepare(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset, uint64_t total_size,
+			char *data, size_t size)
+{
+	using namespace std::placeholders;
+
+	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
+	session->write_prepare(*key, tmp, offset, total_size).connect(std::bind(&on_lookup, on_chunk_context, _1),
+				       std::bind(&on_finish, final_context, _1));
+}
+
+void session_write_plain(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset,
+			char *data, size_t size)
+{
+	using namespace std::placeholders;
+
+	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
+	session->write_plain(*key, tmp, offset).connect(std::bind(&on_lookup, on_chunk_context, _1),
+				       std::bind(&on_finish, final_context, _1));
+}
+
+void session_write_commit(ell_session *session, void *on_chunk_context,
+			void *final_context, ell_key *key,
+			uint64_t offset,
+			uint64_t commit_size,
+			char *data, size_t size)
+{
+	using namespace std::placeholders;
+
+	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
+	session->write_commit(*key, tmp, offset, commit_size).connect(std::bind(&on_lookup, on_chunk_context, _1),
+				       std::bind(&on_finish, final_context, _1));
+}
+
 void session_lookup(ell_session *session, void *on_chunk_context,
 		    void *final_context, ell_key *key)
 {
