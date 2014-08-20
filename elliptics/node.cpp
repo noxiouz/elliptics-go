@@ -24,7 +24,7 @@ extern "C" {
 class go_logger_frontend : public blackhole::base_frontend_t
 {
 	public:
-		go_logger_frontend(void *priv) : m_priv(priv), m_formatter("%(message)s %(...L)s") {
+		go_logger_frontend(void *priv) : m_priv(priv), m_formatter("%(timestamp)s %(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s") {
 		}
 
 		virtual void handle(const blackhole::log::record_t &record) {
