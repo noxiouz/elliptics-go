@@ -66,7 +66,7 @@ ell_node *new_node(void *priv, const char *level)
 
 		return new ell_node(base, cfg);
 	} catch (const std::exception &e) {
-		printf("exception: %s\n", e.what());
+		fprintf(stderr, "could not create new node: exception: %s\n", e.what());
 		return NULL;
 	}
 }
