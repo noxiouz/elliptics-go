@@ -31,8 +31,14 @@ public:
 
 class ell_node : public ioremap::elliptics::node {
 public:
-	ell_node(std::shared_ptr<go_logger_base> &base) :
-		::ioremap::elliptics::node(ioremap::elliptics::logger(*base, blackhole::log::attributes_t())),
+	ell_node(std::shared_ptr<go_logger_base> &base, dnet_config &cfg) :
+		::ioremap::elliptics::node(
+			ioremap::elliptics::logger(*base,
+				blackhole::log::attributes_t({
+					ioremap::elliptics::keyword::request_id() = 0
+				})
+			),
+		cfg),
 		m_log(base) {
 	}
 

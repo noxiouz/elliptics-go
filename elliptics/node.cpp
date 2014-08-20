@@ -21,10 +21,12 @@ using namespace ioremap;
 extern "C" {
 #include "_cgo_export.h"
 
+const std::string go_format = "%(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s";
+
 class go_logger_frontend : public blackhole::base_frontend_t
 {
 	public:
-		go_logger_frontend(void *priv) : m_priv(priv), m_formatter("%(timestamp)s %(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s") {
+		go_logger_frontend(void *priv) : m_priv(priv), m_formatter(go_format) {
 		}
 
 		virtual void handle(const blackhole::log::record_t &record) {
@@ -46,7 +48,7 @@ go_logger_base::go_logger_base(void *priv, const char *level)
 
 std::string go_logger_base::format()
 {
-	return "%(timestamp)s %(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s, attrs: [%(...L)s]";
+	return go_format;
 }
 
 ell_node *new_node(void *priv, const char *level)
@@ -54,8 +56,17 @@ ell_node *new_node(void *priv, const char *level)
 	try {
 		std::shared_ptr<go_logger_base> base = std::make_shared<go_logger_base>(priv, level);
 
-		return new ell_node(base);
-	} catch (...) {
+		dnet_config cfg;
+		memset(&cfg, 0, sizeof(dnet_config));
+		cfg.io_thread_num = 8;
+		cfg.nonblocking_io_thread_num = 4;
+		cfg.net_thread_num = 4;
+		cfg.wait_timeout = 5;
+		cfg.check_timeout = 20;
+
+		return new ell_node(base, cfg);
+	} catch (const std::exception &e) {
+		printf("exception: %s\n", e.what());
 		return NULL;
 	}
 }
