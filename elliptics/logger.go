@@ -15,68 +15,9 @@
 
 package elliptics
 
-// #include "logger.h"
-// #include <stdlib.h>
-import "C"
-
-import (
-	"fmt"
-	"unsafe"
-)
+import "unsafe"
 
 //Logger provides file logger for Elliptics Node.
 type Logger struct {
 	logger unsafe.Pointer
-}
-
-//Constants for log level of Logger.
-const (
-	//Log very important data. Practically nothing is written
-	DATA = iota
-	//Log critical errors that materially affect the work
-	ERROR
-	//Log messages about the time of the various operations
-	INFO
-	//It's a first level of debugging
-	NOTICE
-	//Logs all sort of information about errors and work
-	DEBUG
-)
-
-/*NewFileLogger returns new Logger.
-
-"file" is path to logfile.
-"level" is a verbosity level.
-*/
-func NewFileLogger(file string, level int) (logger *Logger, err error) {
-	cfile := C.CString(file)
-	defer C.free(unsafe.Pointer(cfile))
-
-	ellLogger, err := C.new_file_logger(cfile, C.int(level))
-	if err != nil {
-		return
-	}
-	logger = &Logger{ellLogger}
-	return
-}
-
-//Despose current Logger.
-//Do dispose Logger, if it is being used by any Node.
-func (logger *Logger) Free() {
-	C.delete_file_logger(logger.logger)
-}
-
-//Log writes args as formated string with given loglevel.
-func (logger *Logger) Log(level int, format string, args ...interface{}) {
-
-	str := fmt.Sprintf(format, args...)
-	cstr := C.CString(str)
-	defer C.free(unsafe.Pointer(cstr))
-
-	C.file_logger_log(logger.logger, C.int(level), cstr)
-}
-
-//GetLevel returns current level of verbosity.
-func (logger *Logger) GetLevel() (lvl int) {
-	return int(C.file_logger_get_level(logger.logger))
 }

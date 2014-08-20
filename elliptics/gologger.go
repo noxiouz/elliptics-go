@@ -1,21 +1,14 @@
 package elliptics
 
-//#include "gologger.h"
-import "C"
-import "unsafe"
+import (
+	"C"
+	"log"
+	"unsafe"
+)
 
 //export GoLog
-func GoLog(fptr, priv unsafe.Pointer, level int, msg *C.char) {
-	f := *(*func(unsafe.Pointer, int, *C.char))(fptr)
-	f(priv, level, msg)
-}
-
-func NewNodeLog(logf, priv unsafe.Pointer, level int) (node *Node, err error) {
-	cnode, err := C.gologger_create(logf, priv, C.int(level))
-	if err != nil {
-		return
-	}
-
-	node = &Node{node: cnode}
-	return
+func GoLog(priv unsafe.Pointer, msg *C.char) {
+	var l *log.Logger = (*log.Logger)(priv)
+	str := C.GoString(msg)
+	l.Output(2, str)
 }
