@@ -1,6 +1,6 @@
-package elliptics
-
 //+build linux,cgo
+
+package elliptics
 
 /*
 #cgo LDFLAGS: -lelliptics_cpp -lpthread

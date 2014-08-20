@@ -14,31 +14,46 @@ import (
 var _ = fmt.Println
 
 //export go_final_callback
-func go_final_callback(err int, context unsafe.Pointer) {
-	callback := *(*func(int))(context)
-	callback(err)
+func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
+	callback := *(*func(error))(context)
+
+	if (cerr.code < 0) {
+		err := &DnetError {
+			Code:		int(cerr.code),
+			Flags:		0,
+			Message:	C.GoString(cerr.message),
+		}
+
+		callback(err)
+	} else {
+		callback(nil)
+	}
 }
 
 //export go_lookup_callback
 func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointer) {
 	callback := *(*func(*lookupResult))(context)
-	Result := lookupResult{
-		info: *result.info,
-		addr: *result.addr,
-		path: C.GoString(result.path),
-		err:  nil,
+	Result := lookupResult {
+		cmd:	NewDnetCmd(result.cmd),
+		addr:	NewDnetAddr(result.addr),
+		info:	NewDnetFileInfo(result.info),
+		storage_addr:	NewDnetAddr(result.storage_addr),
+		path:	C.GoString(result.path),
+		err:	nil,
 	}
 	callback(&Result)
 }
 
 //export go_read_callback
-func go_read_callback(item *C.struct_go_read_result, context unsafe.Pointer) {
+func go_read_callback(result *C.struct_go_read_result, context unsafe.Pointer) {
 	callback := *(*func(readResult))(context)
 
-	Result := readResult{
-		data:   C.GoStringN(item.file, C.int(item.size)),
-		ioAttr: *item.io_attribute,
-		err:    nil,
+	Result := readResult {
+		cmd:	NewDnetCmd(result.cmd),
+		addr:	NewDnetAddr(result.addr),
+		ioattr:	NewDnetIOAttr(result.io_attribute),
+		data:	C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
+		err:	nil,
 	}
 	// All data from C++ has been copied here.
 	callback(Result)

@@ -17,6 +17,8 @@ package elliptics
 
 
 /*
+#cgo LDFLAGS: -lelliptics_client -lelliptics_cpp -lboost_thread
+
 #include "node.h"
 #include <stdlib.h>
 
@@ -38,6 +40,7 @@ static void freeCharArray(char **a, int size) {
 import "C"
 
 import (
+	"log"
 	"syscall"
 	"unsafe"
 )
@@ -46,7 +49,7 @@ import (
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
-	logger *Logger
+	logger *log.Logger
 	node   unsafe.Pointer
 }
 
@@ -58,8 +61,11 @@ func isError(errno syscall.Errno) bool {
 }
 
 // NewNode returns new Node given Logger.
-func NewNode(log *Logger) (node *Node, err error) {
-	cnode, err := C.new_node(log.logger)
+func NewNode(log *log.Logger, level string) (node *Node, err error) {
+	clevel := C.CString(level)
+	defer C.free(unsafe.Pointer(clevel))
+
+	cnode, err := C.new_node(unsafe.Pointer(log), clevel)
 	if err != nil {
 		return
 	}

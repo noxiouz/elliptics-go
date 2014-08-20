@@ -1,22 +1,24 @@
 /*
-* 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
-* All rights reserved.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
+ * 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 package elliptics
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"unsafe"
 )
 
@@ -74,6 +76,20 @@ func (s *Session) SetTimeout(timeout int) {
 	C.session_set_timeout(s.session, C.int(timeout))
 }
 
+//SetCflags sets command flags (DNET_FLAGS_* in API documentation) like nolock
+func (s *Session) SetCflags(cflags uint64) {
+	C.session_set_cflags(s.session, C.uint64_t(cflags))
+}
+
+//SetIOflags sets IO flags (DNET_IO_FLAGS_* in API documentation), i.e. flags for IO operations like read/write/delete
+func (s *Session) SetIOflags(ioflags uint32) {
+	C.session_set_ioflags(s.session, C.uint32_t(ioflags))
+}
+
+func (s *Session) SetTraceID(trace uint64) {
+	C.session_set_trace_id(s.session, C.uint64_t(trace))
+}
+
 /*SetNamespace sets the namespace for the Session.Default namespace is empty string.
 
 This feature allows you to share a single storage between services.
@@ -90,24 +106,42 @@ func (s *Session) SetNamespace(namespace string) {
 
 //ReadResult wraps one result of read operation.
 type ReadResult interface {
-	//Data returns string represntation of readed data.
-	Data() string
-	//Error returns representation of error, which could occur.
+	// server's reply
+	Cmd() *DnetCmd
+
+	// server's address
+	Addr() *DnetAddr
+
+	// IO parameters for given
+	IO() *DnetIOAttr
+
+	//Data returns string represntation of read data
+	Data() []byte
+
+	// read error
 	Error() error
 }
 
 type readResult struct {
-	ioAttr C.struct_dnet_io_attr
-	data   string
+	cmd    DnetCmd
+	addr   DnetAddr
+	ioattr DnetIOAttr
+	data   []byte
 	err    error
 }
 
-//Data returns a string represntation of readed data.
-func (r *readResult) Data() string {
+func (r *readResult) Cmd() *DnetCmd {
+	return &r.cmd
+}
+func (r *readResult) Addr() *DnetAddr {
+	return &r.addr
+}
+func (r *readResult) IO() *DnetIOAttr {
+	return &r.ioattr
+}
+func (r *readResult) Data() []byte {
 	return r.data
 }
-
-//Error returns representation of error, which could occur.
 func (r *readResult) Error() error {
 	return r.err
 }
@@ -115,16 +149,30 @@ func (r *readResult) Error() error {
 //ReadKey performs a read operation by key.
 func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
+
+	keepaliver := make(chan struct{}, 0)
+
 	onResult := func(result readResult) {
 		responseCh <- &result
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &readResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &readResult{err: err}
 		}
+
 		close(responseCh)
+
+		// close keepalive context
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
 	C.session_read_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
 		key.key)
@@ -150,40 +198,55 @@ func (s *Session) ReadData(key string) <-chan ReadResult {
 
 //Lookuper represents one result of Write and Lookup operations.
 type Lookuper interface {
-	//Path returns a path to lookuped key.
+	// server's reply
+	Cmd() *DnetCmd
+
+	// server's address
+	Addr() *DnetAddr
+
+	// dnet_file_info structure contains basic information about key location
+	Info() *DnetFileInfo
+
+	// address of the node which hosts given key
+	StorageAddr() *DnetAddr
+
+	//Path returns a path to file hosting given key on the storage.
 	Path() string
-	//Addr returns dnet_addr for a lookuped key.
-	Addr() C.struct_dnet_addr
-	Info() C.struct_dnet_file_info
+
 	//Error returns string respresentation of error.
 	Error() error
 }
 
 type lookupResult struct {
-	info C.struct_dnet_file_info //dnet_file_info
-	addr C.struct_dnet_addr
-	path string //file_path
-	err  error
+	cmd          DnetCmd
+	addr         DnetAddr
+	info         DnetFileInfo
+	storage_addr DnetAddr
+	path         string
+	err          error
 }
 
+func (l *lookupResult) Cmd() *DnetCmd {
+	return &l.cmd
+}
+func (l *lookupResult) Addr() *DnetAddr {
+	return &l.addr
+}
+func (l *lookupResult) Info() *DnetFileInfo {
+	return &l.info
+}
+func (l *lookupResult) StorageAddr() *DnetAddr {
+	return &l.storage_addr
+}
 func (l *lookupResult) Path() string {
 	return l.path
 }
-
-func (l *lookupResult) Addr() C.struct_dnet_addr {
-	return l.addr
-}
-
-func (l *lookupResult) Info() C.struct_dnet_file_info {
-	return l.info
-}
-
 func (l *lookupResult) Error() error {
 	return l.err
 }
 
 //WriteData writes blob by a given string representation of Key.
-func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
+func (s *Session) WriteData(key string, input io.Reader, total_size uint64) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -192,47 +255,225 @@ func (s *Session) WriteData(key string, blob string) <-chan Lookuper {
 		return responseCh
 	}
 	defer ekey.Free()
-	return s.WriteKey(ekey, blob)
+	return s.WriteKey(ekey, input, total_size)
 }
 
-//WriteKey writes blob by Key.
-func (s *Session) WriteKey(key *Key, blob string) <-chan Lookuper {
+const max_chunk_size uint64 = 10 * 1024 * 1024
+
+func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-	raw_data := C.CString(blob) // Mustn't call free. Elliptics does it.
 
-	onResult := func(lookup *lookupResult) {
-		responseCh <- lookup
-	}
+	keepaliver := make(chan struct{}, 0)
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	chunk := make([]byte, max_chunk_size, max_chunk_size)
+
+	var offset uint64 = 0
+	var n64 uint64
+
+	onChunkResult := func(lookup *lookupResult) {
+		if total_size == 0 {
+			responseCh <- lookup
 		}
-		close(responseCh)
 	}
 
-	C.session_write_data(s.session,
-		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		key.key, raw_data, C.size_t(len(blob)))
+	var onChunkFinish func(err error)
+
+	onChunkFinish = func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+
+		if total_size == 0 {
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+
+		n, err := input.Read(chunk)
+		if n <= 0 && err != nil {
+			responseCh <- &lookupResult{err: err}
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+
+		n64 = uint64(n)
+		total_size -= n64
+		offset += n64
+
+		if total_size != 0 {
+			C.session_write_plain(s.session,
+				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+				key.key, C.uint64_t(offset - n64),
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+		} else {
+			C.session_write_commit(s.session,
+				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+				key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+		}
+	}
+
+	go func() {
+		<-keepaliver
+		// this is GC magic - goroutine 'grabs' variables from the WriteKey
+		// context, which it used somehow in the code
+		// we need to keep all variables that are not copied but referenced
+		// in c++ code to be alive long enough to be copied into the socket
+		// we keep them referenced until write_data() completes, i.e. onFinish()
+		// is called, which in turn writes into @keepalive channel to wake up
+		// this goroutine and finish it
+		onChunkResult = nil
+		onChunkFinish = nil
+		_ = chunk
+	}()
+
+	rest := total_size
+	if rest > max_chunk_size {
+		rest = max_chunk_size
+	}
+
+	n, err := input.Read(chunk)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	n64 = uint64(n)
+	total_size -= n64
+	offset += n64
+
+	C.session_write_prepare(s.session,
+		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
+		key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+
 	return responseCh
 }
 
-//Lookup returns an information about given Key.
+//WriteKey writes blob by Key.
+func (s *Session) WriteKey(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
+	if total_size > max_chunk_size {
+		return s.WriteChunk(key, input, total_size)
+	}
+
+	responseCh := make(chan Lookuper, defaultVOLUME)
+
+	keepaliver := make(chan struct{}, 0)
+
+	onWriteResult := func(lookup *lookupResult) {
+		responseCh <- lookup
+	}
+
+	onWriteFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+		}
+		close(responseCh)
+		close(keepaliver)
+	}
+
+	chunk, err := ioutil.ReadAll(input)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	go func() {
+		<-keepaliver
+		// this is GC magic - goroutine 'grabs' variables from the WriteKey
+		// context, which it used somehow in the code
+		// we need to keep all variables that are not copied but referenced
+		// in c++ code to be alive long enough to be copied into the socket
+		// we keep them referenced until write_data() completes, i.e. onFinish()
+		// is called, which in turn writes into @keepalive channel to wake up
+		// this goroutine and finish it
+		onWriteResult = nil
+		onWriteFinish = nil
+		_ = chunk
+	}()
+
+	C.session_write_data(s.session,
+		unsafe.Pointer(&onWriteResult), unsafe.Pointer(&onWriteFinish),
+		key.key, (*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(len(chunk)))
+
+	return responseCh
+}
+
+// Lookup returns an information about given Key.
+// It only returns the first group where key has been found.
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
+	keepaliver := make(chan struct{}, 0)
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &lookupResult{err: fmt.Errorf("%d", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
 
+	/* To keep callbacks alive */
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
 	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	return responseCh
+}
+
+// ParallelLookup returns all information about given Key,
+// it sends multiple lookup requests in parallel to all session groups
+// and returns information about all specified group where given key has been found.
+func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
+	responseCh := make(chan Lookuper, defaultVOLUME)
+
+	key, err := NewKey(kstr)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
+	keepaliver := make(chan struct{}, 0)
+
+	onResult := func(lookup *lookupResult) {
+		responseCh <- lookup
+	}
+
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+		}
+		close(responseCh)
+
+		close(keepaliver)
+	}
+
+	/* To keep callbacks alive */
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
+	C.session_parallel_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
 	return responseCh
 }
 
@@ -270,15 +511,25 @@ func (s *Session) Remove(key string) <-chan Remover {
 //RemoveKey performs remove operation by key.
 func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	responseCh := make(chan Remover, defaultVOLUME)
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called.
 	}
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &removeResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &removeResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
 	return responseCh
@@ -347,17 +598,28 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 		cindexes = append(cindexes, cindex)
 	}
 
+	keepaliver := make(chan struct{})
+
 	_result := func(result *findResult) {
 		responseCh <- result
 	}
 	onResult = unsafe.Pointer(&_result)
 
-	_finish := func(err int) {
-		if err != 0 {
-			responseCh <- &findResult{err: fmt.Errorf("%d", err)}
+	_finish := func(err error) {
+		if err != nil {
+			responseCh <- &findResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		_result = nil
+		_finish = nil
+	}()
+
 	onFinish = unsafe.Pointer(&_finish)
 	return
 }
@@ -403,16 +665,27 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		cdatas = append(cdatas, cdata)
 	}
 
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
 	// TODO: Reimplement this with pointer on functions
 	switch operation {
 	case indexesSet:
@@ -451,16 +724,26 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 	}
 	defer ekey.Free()
 
+	keepaliver := make(chan struct{})
+
 	onResult := func(indexentry *IndexEntry) {
 		responseCh <- *indexentry
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- IndexEntry{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- IndexEntry{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_list_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), ekey.key)
 	return responseCh
@@ -482,16 +765,26 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		cindexes = append(cindexes, cindex)
 	}
 
+	keepaliver := make(chan struct{})
+
 	onResult := func() {
 		//It's never called. For the future.
 	}
 
-	onFinish := func(err int) {
-		if err != 0 {
-			responseCh <- &indexResult{err: fmt.Errorf("%v", err)}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
+
+		close(keepaliver)
 	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
 
 	C.session_remove_indexes(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
