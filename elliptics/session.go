@@ -271,7 +271,9 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-cha
 	var n64 uint64
 
 	onChunkResult := func(lookup *lookupResult) {
-		responseCh <- lookup
+		if total_size == 0 {
+			responseCh <- lookup
+		}
 	}
 
 	var onChunkFinish func(err error)
