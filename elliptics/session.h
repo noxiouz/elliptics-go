@@ -35,7 +35,7 @@ struct go_read_result {
 	const struct dnet_addr		*addr;
 	const struct dnet_io_attr	*io_attribute;
 	const char			*file;
-	size_t				size;
+	uint64_t				size;
 };
 
 //lookup_result_entry
@@ -50,13 +50,13 @@ struct go_lookup_result {
 //index_entry
 struct c_index_entry {
 	const char		*data;
-	size_t			size;
+	uint64_t		size;
 };
 
 //find_indexes_result_entry
 struct go_find_result {
 	const struct dnet_raw_id	*id;
-	const size_t			entries_count;
+	const uint64_t			entries_count;
 	struct c_index_entry		*entries;
 };
 
@@ -90,9 +90,9 @@ void session_parallel_lookup(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key);
 
 void session_read_data(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key);
+		void *final_context, ell_key *key, uint64_t offset, uint64_t size);
 void session_write_data(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key, char *data, size_t size);
+		void *final_context, ell_key *key, uint64_t offset, char *data, uint64_t size);
 
 // prepare/write/commit sequence for large objects
 // @offset says on which offset should data go
@@ -103,36 +103,36 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 void session_write_prepare(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset, uint64_t total_size,
-			char *data, size_t size);
+			char *data, uint64_t size);
 void session_write_plain(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset,
-			char *data, size_t size);
+			char *data, uint64_t size);
 void session_write_commit(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset,
 			uint64_t commit_size,
-			char *data, size_t size);
+			char *data, uint64_t size);
 
 void session_remove(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key);
 
 void session_find_all_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, char *indexes[], size_t nsize);
+		void *final_context, char *indexes[], uint64_t nsize);
 void session_find_any_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, char *indexes[], size_t nsize);
+		void *final_context, char *indexes[], uint64_t nsize);
 
 void session_set_indexes(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key, char *indexes[],
-		struct go_data_pointer *data, size_t count);
+		struct go_data_pointer *data, uint64_t count);
 
 void session_update_indexes(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key,
-		char *indexes[], struct go_data_pointer *data, size_t count);
+		char *indexes[], struct go_data_pointer *data, uint64_t count);
 
 void session_remove_indexes(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key,
-		char *indexes[], size_t nsize);
+		char *indexes[], uint64_t nsize);
 
 void session_list_indexes(ell_session *sesion, void *on_chunk_context,
 		void *final_context, ell_key *key);

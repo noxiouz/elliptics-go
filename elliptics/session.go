@@ -147,7 +147,7 @@ func (r *readResult) Error() error {
 }
 
 //ReadKey performs a read operation by key.
-func (s *Session) ReadKey(key *Key) <-chan ReadResult {
+func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
 
 	keepaliver := make(chan struct{}, 0)
@@ -175,12 +175,12 @@ func (s *Session) ReadKey(key *Key) <-chan ReadResult {
 
 	C.session_read_data(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		key.key)
+		key.key, C.uint64_t(offset), C.uint64_t(size))
 	return responseCh
 }
 
 //ReadKey performs a read operation by string representation of key.
-func (s *Session) ReadData(key string) <-chan ReadResult {
+func (s *Session) ReadData(key string, offset, size uint64) <-chan ReadResult {
 	ekey, err := NewKey(key)
 	if err != nil {
 		errCh := make(chan ReadResult, 1)
@@ -189,7 +189,7 @@ func (s *Session) ReadData(key string) <-chan ReadResult {
 		return errCh
 	}
 	defer ekey.Free()
-	return s.ReadKey(ekey)
+	return s.ReadKey(ekey, offset, size)
 }
 
 /*
@@ -246,7 +246,7 @@ func (l *lookupResult) Error() error {
 }
 
 //WriteData writes blob by a given string representation of Key.
-func (s *Session) WriteData(key string, input io.Reader, total_size uint64) <-chan Lookuper {
+func (s *Session) WriteData(key string, input io.Reader, offset, total_size uint64) <-chan Lookuper {
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -255,19 +255,19 @@ func (s *Session) WriteData(key string, input io.Reader, total_size uint64) <-ch
 		return responseCh
 	}
 	defer ekey.Free()
-	return s.WriteKey(ekey, input, total_size)
+	return s.WriteKey(ekey, input, offset, total_size)
 }
 
 const max_chunk_size uint64 = 10 * 1024 * 1024
 
-func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
+func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 
 	keepaliver := make(chan struct{}, 0)
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
 
-	var offset uint64 = 0
+	var offset uint64 = initial_offset
 	var n64 uint64
 
 	onChunkResult := func(lookup *lookupResult) {
@@ -308,12 +308,12 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-cha
 			C.session_write_plain(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
 				key.key, C.uint64_t(offset - n64),
-				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		} else {
 			C.session_write_commit(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
 				key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
-				(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		}
 	}
 
@@ -351,15 +351,15 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, total_size uint64) <-cha
 	C.session_write_prepare(s.session,
 		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
 		key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
-		(*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(n))
+		(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 
 	return responseCh
 }
 
 //WriteKey writes blob by Key.
-func (s *Session) WriteKey(key *Key, input io.Reader, total_size uint64) <-chan Lookuper {
+func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64) <-chan Lookuper {
 	if total_size > max_chunk_size {
-		return s.WriteChunk(key, input, total_size)
+		return s.WriteChunk(key, input, offset, total_size)
 	}
 
 	responseCh := make(chan Lookuper, defaultVOLUME)
@@ -402,7 +402,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, total_size uint64) <-chan 
 
 	C.session_write_data(s.session,
 		unsafe.Pointer(&onWriteResult), unsafe.Pointer(&onWriteFinish),
-		key.key, (*C.char)(unsafe.Pointer(&chunk[0])), C.size_t(len(chunk)))
+		key.key, C.uint64_t(offset), (*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(len(chunk)))
 
 	return responseCh
 }
@@ -571,7 +571,7 @@ func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_all_indexes(s.session, onResult, onFinish,
-		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+		(**C.char)(&cindexes[0]), C.uint64_t(len(indexes)))
 	//Free cindexes
 	for _, item := range cindexes {
 		C.free(unsafe.Pointer(item))
@@ -584,7 +584,7 @@ func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
 	C.session_find_any_indexes(s.session, onResult, onFinish,
-		(**C.char)(&cindexes[0]), C.size_t(len(indexes)))
+		(**C.char)(&cindexes[0]), C.uint64_t(len(indexes)))
 	//Free cindexes
 	for _, item := range cindexes {
 		C.free(unsafe.Pointer(item))
@@ -693,14 +693,14 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 			ekey.key,
 			(**C.char)(&cindexes[0]),
 			(*C.struct_go_data_pointer)(&cdatas[0]),
-			C.size_t(len(cindexes)))
+			C.uint64_t(len(cindexes)))
 
 	case indexesUpdate:
 		C.session_update_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
 			ekey.key,
 			(**C.char)(&cindexes[0]),
 			(*C.struct_go_data_pointer)(&cdatas[0]),
-			C.size_t(len(cindexes)))
+			C.uint64_t(len(cindexes)))
 	}
 	return responseCh
 }
@@ -788,6 +788,6 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 
 	C.session_remove_indexes(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-		ekey.key, (**C.char)(&cindexes[0]), C.size_t(len(cindexes)))
+		ekey.key, (**C.char)(&cindexes[0]), C.uint64_t(len(cindexes)))
 	return responseCh
 }

@@ -92,10 +92,10 @@ void on_read(void *context, const elliptics::read_result_entry & result)
 }
 
 void session_read_data(ell_session *session, void *on_chunk_context,
-		       void *final_context, ell_key *key)
+		       void *final_context, ell_key *key, uint64_t offset, uint64_t size)
 {
 	using namespace std::placeholders;
-	session->read_data(*key, 0, 0).connect(std::bind(&on_read, on_chunk_context, _1),
+	session->read_data(*key, offset, size).connect(std::bind(&on_read, on_chunk_context, _1),
 				      std::bind(&on_finish, final_context, _1));
 }
 
@@ -113,19 +113,20 @@ void on_lookup(void *context, const elliptics::lookup_result_entry & result)
 }
 
 void session_write_data(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key, char *data, size_t size)
+			void *final_context, ell_key *key, uint64_t offset,
+			char *data, uint64_t size)
 {
 	using namespace std::placeholders;
 
 	elliptics::data_pointer tmp = elliptics::data_pointer::from_raw(data, size);
-	session->write_data(*key, tmp, 0).connect(std::bind(&on_lookup, on_chunk_context, _1),
+	session->write_data(*key, tmp, offset).connect(std::bind(&on_lookup, on_chunk_context, _1),
 				       std::bind(&on_finish, final_context, _1));
 }
 
 void session_write_prepare(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset, uint64_t total_size,
-			char *data, size_t size)
+			char *data, uint64_t size)
 {
 	using namespace std::placeholders;
 
@@ -137,7 +138,7 @@ void session_write_prepare(ell_session *session, void *on_chunk_context,
 void session_write_plain(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset,
-			char *data, size_t size)
+			char *data, uint64_t size)
 {
 	using namespace std::placeholders;
 
@@ -150,7 +151,7 @@ void session_write_commit(ell_session *session, void *on_chunk_context,
 			void *final_context, ell_key *key,
 			uint64_t offset,
 			uint64_t commit_size,
-			char *data, size_t size)
+			char *data, uint64_t size)
 {
 	using namespace std::placeholders;
 
@@ -200,7 +201,7 @@ void on_find(void *context, const elliptics::find_indexes_result_entry &result)
 {
 	std::vector <c_index_entry> c_index_entries;
 
-	for (size_t i = 0; i < result.indexes.size(); i++) {
+	for (uint64_t i = 0; i < result.indexes.size(); i++) {
 		c_index_entries.push_back(c_index_entry {
 						(const char *)
 						result.indexes[i].data.data(),
@@ -217,7 +218,7 @@ void on_find(void *context, const elliptics::find_indexes_result_entry &result)
 
 void session_find_all_indexes(ell_session *session,
 			      void *on_chunk_context,
-			      void *final_context, char *indexes[], size_t nsize)
+			      void *final_context, char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
 	std::vector <std::string> index_names(indexes, indexes + nsize);
@@ -227,7 +228,7 @@ void session_find_all_indexes(ell_session *session,
 
 void session_find_any_indexes(ell_session *session,
 			      void *on_chunk_context,
-			      void *final_context, char *indexes[], size_t nsize)
+			      void *final_context, char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
 	std::vector <std::string> index_names(indexes, indexes + nsize);
@@ -265,7 +266,7 @@ void session_list_indexes(ell_session *session,
 
 void session_set_indexes(ell_session *session, void *on_chunk_context,
 			 void *final_context, ell_key *key,
-			 char *indexes[], struct go_data_pointer *data, size_t count)
+			 char *indexes[], struct go_data_pointer *data, uint64_t count)
 {
 	/*Move to util function */
 	using namespace std::placeholders;
@@ -273,7 +274,7 @@ void session_set_indexes(ell_session *session, void *on_chunk_context,
 	std::vector<elliptics::data_pointer> index_datas;
 
 	index_datas.reserve(count);
-	for (size_t i = 0; i < count; i++) {
+	for (uint64_t i = 0; i < count; i++) {
 		elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
 		index_datas.push_back(dp);
 	}
@@ -286,7 +287,7 @@ void session_set_indexes(ell_session *session, void *on_chunk_context,
 void session_update_indexes(ell_session *session,
 			    void *on_chunk_context,
 			    void *final_context, ell_key *key,
-			    char *indexes[], struct go_data_pointer *data, size_t count)
+			    char *indexes[], struct go_data_pointer *data, uint64_t count)
 {
 	/*Move to util function */
 	using namespace std::placeholders;
@@ -294,7 +295,7 @@ void session_update_indexes(ell_session *session,
 	std::vector<elliptics::data_pointer> index_datas;
 
 	index_datas.reserve(count);
-	for (size_t i = 0; i < count; i++) {
+	for (uint64_t i = 0; i < count; i++) {
 		elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
 		index_datas.push_back(dp);
 	}
@@ -307,7 +308,7 @@ void session_update_indexes(ell_session *session,
 void session_remove_indexes(ell_session *session,
 			    void *on_chunk_context,
 			    void *final_context, ell_key *key,
-			    char *indexes[], size_t nsize)
+			    char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
 	std::vector<std::string> index_names(indexes, indexes + nsize);
