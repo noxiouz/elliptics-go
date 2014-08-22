@@ -40,6 +40,7 @@ static void freeCharArray(char **a, int size) {
 import "C"
 
 import (
+	"fmt"
 	"log"
 	"syscall"
 	"unsafe"
@@ -65,8 +66,9 @@ func NewNode(log *log.Logger, level string) (node *Node, err error) {
 	clevel := C.CString(level)
 	defer C.free(unsafe.Pointer(clevel))
 
-	cnode, err := C.new_node(unsafe.Pointer(log), clevel)
-	if err != nil {
+	cnode := C.new_node(unsafe.Pointer(log), clevel)
+	if cnode == nil {
+		err = fmt.Errorf("could not create node, please check stderr output")
 		return
 	}
 	node = &Node{log, cnode}
