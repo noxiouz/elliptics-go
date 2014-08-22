@@ -84,21 +84,38 @@ func (s *Session) GetGroups() []int32 {
 
 //SetTimeout sets wait timeout in seconds (time to wait for operation to complete) for all subsequent session operations
 func (s *Session) SetTimeout(timeout int) {
+	// replace C.int to C.long as soon as fix is done in elliptics
 	C.session_set_timeout(s.session, C.int(timeout))
 }
 
+func (s *Session) GetTimeout() int {
+	return int(C.session_get_timeout(s.session))
+}
+
 //SetCflags sets command flags (DNET_FLAGS_* in API documentation) like nolock
-func (s *Session) SetCflags(cflags uint64) {
-	C.session_set_cflags(s.session, C.uint64_t(cflags))
+func (s *Session) SetCflags(cflags Cflag) {
+	C.session_set_cflags(s.session, C.cflags_t(cflags))
+}
+
+func (s *Session) GetCflags() Cflag {
+	return Cflag(C.session_get_cflags(s.session))
 }
 
 //SetIOflags sets IO flags (DNET_IO_FLAGS_* in API documentation), i.e. flags for IO operations like read/write/delete
-func (s *Session) SetIOflags(ioflags uint32) {
-	C.session_set_ioflags(s.session, C.uint32_t(ioflags))
+func (s *Session) SetIOflags(ioflags IOflag) {
+	C.session_set_ioflags(s.session, C.ioflags_t(ioflags))
 }
 
-func (s *Session) SetTraceID(trace uint64) {
-	C.session_set_trace_id(s.session, C.uint64_t(trace))
+func (s *Session) GetIOflags() IOflag {
+	return IOflag(C.session_get_ioflags(s.session))
+}
+
+func (s *Session) SetTraceID(trace TraceID) {
+	C.session_set_trace_id(s.session, C.trace_id_t(trace))
+}
+
+func (s *Session) GetTraceID() TraceID {
+	return TraceID(C.session_get_trace_id(s.session))
 }
 
 /*SetNamespace sets the namespace for the Session.Default namespace is empty string.

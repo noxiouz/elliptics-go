@@ -62,7 +62,7 @@ void session_set_timeout(ell_session *session, int timeout)
 	session->set_timeout(timeout);
 }
 
-void session_set_cflags(ell_session *session, uint64_t cflags)
+void session_set_cflags(ell_session *session, cflags_t cflags)
 {
 	session->set_cflags(cflags);
 }
@@ -72,10 +72,31 @@ void session_set_ioflags(ell_session *session, uint32_t ioflags)
 	session->set_ioflags(ioflags);
 }
 
-void session_set_trace_id(ell_session *session, uint64_t trace_id)
+void session_set_trace_id(ell_session *session, trace_id_t trace_id)
 {
 	session->set_trace_id(trace_id);
 }
+
+trace_id_t session_get_trace_id(ell_session *session)
+{
+	return session->get_trace_id();
+}
+
+long session_get_timeout(ell_session *session)
+{
+	return session->get_timeout();
+}
+
+cflags_t session_get_cflags(ell_session *session)
+{
+	return session->get_cflags();
+}
+
+ioflags_t session_get_ioflags(ell_session *session)
+{
+	return session->get_ioflags();
+}
+
 
 /*
  * Read

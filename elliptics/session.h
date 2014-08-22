@@ -75,12 +75,23 @@ struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
 
+
 void session_set_groups(ell_session *session, int32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);
+
 void session_set_timeout (ell_session *session, int timeout);
-void session_set_cflags(ell_session *session, uint64_t cflags);
-void session_set_ioflags(ell_session *session, uint32_t ioflags);
-void session_set_trace_id(ell_session *session, uint64_t trace_id);
+long session_get_timeout(ell_session *session);
+
+typedef uint64_t cflags_t;
+void session_set_cflags(ell_session *session, cflags_t cflags);
+cflags_t session_get_cflags(ell_session *session);
+
+typedef uint32_t ioflags_t;
+void session_set_ioflags(ell_session *session, ioflags_t ioflags);
+ioflags_t session_get_ioflags(ell_session *session);
+
+void session_set_trace_id(ell_session *session, trace_id_t trace_id);
+trace_id_t session_get_trace_id(ell_session *session);
 
 // ->lookup() returns only the first group where given key has been found
 void session_lookup(ell_session *session, void *on_chunk_context,
