@@ -49,45 +49,45 @@ import (
 )
 
 type DnetID struct {
-	ID	[]byte
-	Group	uint32
-	Trace	uint64
+	ID    []byte
+	Group uint32
+	Trace uint64
 }
 
 type DnetCmd struct {
-	ID	DnetID
-	Status	int32
-	Cmd	int32
-	Flags	uint64
-	Trans	uint64
-	Size	uint64
+	ID     DnetID
+	Status int32
+	Cmd    int32
+	Flags  uint64
+	Trans  uint64
+	Size   uint64
 }
 
 func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
-	return DnetCmd {
-		ID: DnetID {
-			ID: C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(len(cmd.id.id))),
+	return DnetCmd{
+		ID: DnetID{
+			ID:    C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(len(cmd.id.id))),
 			Group: uint32(cmd.id.group_id),
 			Trace: uint64(C.dnet_cmd_get_trace_id(cmd)),
 		},
 
-		Status:	int32(cmd.status),
-		Cmd:	int32(cmd.cmd),
-		Flags:	uint64(C.dnet_cmd_get_flags(cmd)),
-		Trans:	uint64(C.dnet_cmd_get_trans(cmd)),
-		Size:	uint64(C.dnet_cmd_get_size(cmd)),
+		Status: int32(cmd.status),
+		Cmd:    int32(cmd.cmd),
+		Flags:  uint64(C.dnet_cmd_get_flags(cmd)),
+		Trans:  uint64(C.dnet_cmd_get_trans(cmd)),
+		Size:   uint64(C.dnet_cmd_get_size(cmd)),
 	}
 }
 
 type DnetAddr struct {
-	Addr	[]byte
-	Family	uint16
+	Addr   []byte
+	Family uint16
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	return DnetAddr {
-		Addr:	C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
-		Family:	uint16(addr.family),
+	return DnetAddr{
+		Addr:   C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+		Family: uint16(addr.family),
 	}
 }
 
@@ -106,50 +106,50 @@ func (a *DnetAddr) String() string {
 }
 
 type DnetIOAttr struct {
-	Parent		[]byte
-	ID		[]byte
+	Parent []byte
+	ID     []byte
 
-	Start		uint64
-	Num		uint64
+	Start uint64
+	Num   uint64
 
-	Timestamp	time.Time
-	UserFlags	uint64
+	Timestamp time.Time
+	UserFlags uint64
 
-	TotalSize	uint64
+	TotalSize uint64
 
-	Flags		uint32
+	Flags uint32
 
-	Offset		uint64
-	Size		uint64
+	Offset uint64
+	Size   uint64
 }
 
 func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {
-	return DnetIOAttr {
-		Parent:		C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
-		ID:		C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
-		Start:		uint64(io.start),
-		Num:		uint64(io.num),
-		Timestamp:	time.Unix(int64(io.timestamp.tsec), int64(io.timestamp.tnsec)),
-		UserFlags:	uint64(io.user_flags),
-		TotalSize:	uint64(io.total_size),
-		Flags:		uint32(io.flags),
-		Offset:		uint64(io.offset),
-		Size:		uint64(io.size),
+	return DnetIOAttr{
+		Parent:    C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
+		ID:        C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
+		Start:     uint64(io.start),
+		Num:       uint64(io.num),
+		Timestamp: time.Unix(int64(io.timestamp.tsec), int64(io.timestamp.tnsec)),
+		UserFlags: uint64(io.user_flags),
+		TotalSize: uint64(io.total_size),
+		Flags:     uint32(io.flags),
+		Offset:    uint64(io.offset),
+		Size:      uint64(io.size),
 	}
 }
 
 type DnetFileInfo struct {
-	Csum		[]byte
-	Offset		uint64
-	Size		uint64
-	Mtime		time.Time
+	Csum   []byte
+	Offset uint64
+	Size   uint64
+	Mtime  time.Time
 }
 
 func NewDnetFileInfo(info *C.struct_dnet_file_info) DnetFileInfo {
-	return DnetFileInfo {
-		Csum:	C.GoBytes(unsafe.Pointer(&info.checksum[0]), C.int(C.DNET_ID_SIZE)),
-		Offset:		uint64(info.offset),
-		Size:		uint64(info.size),
-		Mtime:		time.Unix(int64(info.mtime.tsec), int64(info.mtime.tnsec)),
+	return DnetFileInfo{
+		Csum:   C.GoBytes(unsafe.Pointer(&info.checksum[0]), C.int(C.DNET_ID_SIZE)),
+		Offset: uint64(info.offset),
+		Size:   uint64(info.size),
+		Mtime:  time.Unix(int64(info.mtime.tsec), int64(info.mtime.tnsec)),
 	}
 }

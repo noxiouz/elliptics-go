@@ -26,9 +26,9 @@ import (
 )
 
 type DnetError struct {
-	Code		int
-	Flags		int
-	Message		string
+	Code    int
+	Flags   int
+	Message string
 }
 
 func (err *DnetError) Error() string {

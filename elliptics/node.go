@@ -15,7 +15,6 @@
 
 package elliptics
 
-
 /*
 #cgo LDFLAGS: -lelliptics_client -lelliptics_cpp -lboost_thread
 
@@ -46,7 +45,7 @@ import (
 	"unsafe"
 )
 
-// A Node is responsible for the connection with the server part.
+// A Node is responsible for the connection with a server side.
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
@@ -54,14 +53,7 @@ type Node struct {
 	node   unsafe.Pointer
 }
 
-func isError(errno syscall.Errno) bool {
-	return errno != syscall.EINPROGRESS &&
-		errno != syscall.EAGAIN &&
-		errno != syscall.EALREADY &&
-		errno != syscall.EISCONN
-}
-
-// NewNode returns new Node given Logger.
+// NewNode returns new Node with a given Logger.
 func NewNode(log *log.Logger, level string) (node *Node, err error) {
 	clevel := C.CString(level)
 	defer C.free(unsafe.Pointer(clevel))
@@ -122,6 +114,10 @@ func (node *Node) AddRemote(addr string) (err error) {
  */
 
 func (node *Node) AddRemotes(addrs []string) (err error) {
+	if len(addrs) == 0 {
+		return fmt.Errorf("list of remotes is empty")
+	}
+
 	cargs := C.makeCharArray(C.int(len(addrs)))
 	defer C.freeCharArray(cargs, C.int(len(addrs)))
 	for i, s := range addrs {

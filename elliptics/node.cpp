@@ -42,7 +42,6 @@ class go_logger_frontend : public blackhole::base_frontend_t
 go_logger_base::go_logger_base(void *priv, const char *level)
 {
 	verbosity(elliptics::file_logger::parse_level(level));
-
 	add_frontend(blackhole::utils::make_unique<go_logger_frontend>(priv));
 }
 

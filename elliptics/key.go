@@ -22,7 +22,12 @@ package elliptics
 import "C"
 
 import (
+	"errors"
 	"unsafe"
+)
+
+var (
+	InvalidKeyArgument = errors.New("InvalidKeyArgument")
 )
 
 type Key struct {
@@ -36,6 +41,8 @@ func NewKey(args ...interface{}) (key *Key, err error) {
 			_cRemote := C.CString(remote)
 			defer C.free(unsafe.Pointer(_cRemote))
 			ckey, err = C.new_key_remote(_cRemote)
+		} else {
+			return nil, InvalidKeyArgument
 		}
 	} else {
 		ckey, err = C.new_key()

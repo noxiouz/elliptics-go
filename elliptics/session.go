@@ -46,17 +46,17 @@ from Error method.
 
 For example Remove:
 
-	if rm, ok := <-session.Remove(KEY); !ok {
-		//Remove normally doesn't return any value, so chanel was closed.
-		log.Println("Remove successfully")
-	} else {
-		//We's received value from channel. It should be error message.
-		log.Println("Error occured: ", rm.Error())
-	}
+    if rm, ok := <-session.Remove(KEY); !ok {
+        //Remove normally doesn't return any value, so chanel was closed.
+        log.Println("Remove successfully")
+    } else {
+        //We's received value from channel. It should be error message.
+        log.Println("Error occured: ", rm.Error())
+    }
 */
 type Session struct {
-	groups		[]int32
-	session		unsafe.Pointer
+	groups  []int32
+	session unsafe.Pointer
 }
 
 //NewSession returns Session connected with given Node.
@@ -67,7 +67,7 @@ func NewSession(node *Node) (*Session, error) {
 	}
 	return &Session{
 		session: session,
-		groups: make([]int32, 0, 0),
+		groups:  make([]int32, 0, 0),
 	}, err
 }
 
@@ -76,6 +76,7 @@ func (s *Session) SetGroups(groups []int32) {
 	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
 	s.groups = groups
 }
+
 //GetGroups returns array of groups this session holds
 func (s *Session) GetGroups() []int32 {
 	return s.groups
@@ -111,7 +112,7 @@ func (s *Session) SetNamespace(namespace string) {
 }
 
 /*
-	Read
+   Read
 */
 
 //ReadResult wraps one result of read operation.
@@ -175,9 +176,8 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 
 		C.session_read_data(s.session,
 			unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-			key.key, C.uint64_t(offset - chunk_size), C.uint64_t(chunk_size))
+			key.key, C.uint64_t(offset-chunk_size), C.uint64_t(chunk_size))
 	}
-
 
 	onResult = func(result readResult) {
 		responseCh <- &result
@@ -191,7 +191,7 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 			return
 		}
 
-		if (size == 0) {
+		if size == 0 {
 			close(responseCh)
 			close(keepaliver)
 			return
@@ -231,9 +231,9 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			chunk_size = max_chunk_size
 		}
 
-		err = &DnetError {
-			Code: -6,
-			Flags: 0,
+		err = &DnetError{
+			Code:    -6,
+			Flags:   0,
 			Message: fmt.Sprintf("could not read anything at all"),
 		}
 
@@ -244,7 +244,7 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			}
 
 			if offset == orig_offset {
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", rd.IO().TotalSize - offset))
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", rd.IO().TotalSize-offset))
 				size = rd.IO().TotalSize - offset
 
 				w.WriteHeader(http.StatusOK)
@@ -260,8 +260,8 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 		}
 
 		if err != nil {
-			return &DnetError {
-				Code: ErrorStatus(err),
+			return &DnetError{
+				Code:  ErrorStatus(err),
 				Flags: 0,
 				Message: fmt.Sprintf("could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d: %v",
 					orig_offset, offset, chunk_size, orig_size, size, err),
@@ -322,7 +322,7 @@ func (s *Session) ReadData(key string, offset, size uint64) <-chan ReadResult {
 }
 
 /*
-	Write and Lookup
+   Write and Lookup
 */
 
 //Lookuper represents one result of Write and Lookup operations.
@@ -434,12 +434,12 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		if total_size != 0 {
 			C.session_write_plain(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				key.key, C.uint64_t(offset - n64),
+				key.key, C.uint64_t(offset-n64),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		} else {
 			C.session_write_commit(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				key.key, C.uint64_t(offset-n64), C.uint64_t(offset),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		}
 	}
@@ -477,9 +477,8 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 
 	C.session_write_prepare(s.session,
 		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-		key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		key.key, C.uint64_t(offset-n64), C.uint64_t(total_size+n64),
 		(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
-
 	return responseCh
 }
 
@@ -605,7 +604,7 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 }
 
 /*
-	Remove
+   Remove
 */
 
 //Remover wraps information about remove operation.
@@ -663,7 +662,7 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 }
 
 /*
-	Find
+   Find
 */
 
 //Finder is interface to result of find operations with Indexes.
@@ -752,7 +751,7 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 }
 
 /*
-	Indexes
+   Indexes
 */
 
 //Indexer is an interface to result of any CRUD operations with indexes.

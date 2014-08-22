@@ -1,40 +1,46 @@
 package elliptics
 
 import (
+	"log"
 	"os"
 	"testing"
-
-	"time"
 )
 
 const REMOTE_ENV_PARAM = `ELLIPTICS_REMOTE`
 
 var REMOTE string = os.Getenv(REMOTE_ENV_PARAM)
 
-func TestLoggerAndNode(t *testing.T) {
-	// Test creation
-	EllLog, err := NewFileLogger("/tmp/elliptics.log", DEBUG)
+func TestSession(t *testing.T) {
+	var (
+		sessionGroups  = []int32{1, 2, 100, 505}
+		sessionTraceID = uint64(99999)
+	)
+
+	const (
+		sessionNamespace = "sessionNamespace"
+		sessionTimeout   = 5
+	)
+
+	l := log.New(os.Stderr, "TEST", log.Ltime)
+
+	node, err := NewNode(l, "info")
 	if err != nil {
-		t.Fatalf("Unable to create logger %s", err)
+		t.Fatalf("NewNode: unexpected error %s", err)
 	}
-	defer EllLog.Free()
-	if EllLog.GetLevel() != DEBUG {
-		t.Error("Wrong loglevel")
-	}
-	EllLog.Log(INFO, "started: %v, level: %d", time.Now(), INFO)
 
-	if len(REMOTE) == 0 {
-		t.Skipf("Skip this test. Set %s env variable", REMOTE_ENV_PARAM)
-	}
-	node, err := NewNode(EllLog)
+	session, err := NewSession(node)
 	if err != nil {
-		t.Fatalf("Can't create node: %s", err)
+		t.Fatalf("NewSession: unexpected error %s", err)
 	}
-	defer node.Free()
 
-	node.SetTimeouts(100, 1000)
+	session.SetGroups(sessionGroups)
 
-	if err = node.AddRemote(REMOTE); err != nil {
-		t.Fatalf("Failed to add remote %s: %s", REMOTE, err)
+	if gotGroups := session.GetGroups(); len(gotGroups) != len(sessionGroups) {
+		t.Errorf("SetGroups & GetGroups: invalid groups number. expected %d, got %d",
+			len(sessionGroups), len(gotGroups))
 	}
+
+	session.SetNamespace(sessionNamespace)
+	session.SetTimeout(sessionTimeout)
+	session.SetTraceID(sessionTraceID)
 }

@@ -9,8 +9,10 @@ before_install:
   - sudo apt-get install elliptics-dev elliptics-client --force-yes
 
 script:
-  - go test github.com/noxiouz/elliptics-go/elliptics
+  - go test -v -coverprofile=coverage.out github.com/noxiouz/elliptics-go/elliptics
+  - go tool cover -func=coverage.out
 
 branches:
   only:
-  - master
+  - "master"
+  - "2.26"
