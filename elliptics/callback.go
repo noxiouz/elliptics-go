@@ -17,11 +17,11 @@ var _ = fmt.Println
 func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	callback := *(*func(error))(context)
 
-	if (cerr.code < 0) {
-		err := &DnetError {
-			Code:		int(cerr.code),
-			Flags:		0,
-			Message:	C.GoString(cerr.message),
+	if cerr.code < 0 {
+		err := &DnetError{
+			Code:    int(cerr.code),
+			Flags:   0,
+			Message: C.GoString(cerr.message),
 		}
 
 		callback(err)
@@ -33,13 +33,13 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 //export go_lookup_callback
 func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointer) {
 	callback := *(*func(*lookupResult))(context)
-	Result := lookupResult {
-		cmd:	NewDnetCmd(result.cmd),
-		addr:	NewDnetAddr(result.addr),
-		info:	NewDnetFileInfo(result.info),
-		storage_addr:	NewDnetAddr(result.storage_addr),
-		path:	C.GoString(result.path),
-		err:	nil,
+	Result := lookupResult{
+		cmd:          NewDnetCmd(result.cmd),
+		addr:         NewDnetAddr(result.addr),
+		info:         NewDnetFileInfo(result.info),
+		storage_addr: NewDnetAddr(result.storage_addr),
+		path:         C.GoString(result.path),
+		err:          nil,
 	}
 	callback(&Result)
 }
@@ -48,12 +48,12 @@ func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointe
 func go_read_callback(result *C.struct_go_read_result, context unsafe.Pointer) {
 	callback := *(*func(readResult))(context)
 
-	Result := readResult {
-		cmd:	NewDnetCmd(result.cmd),
-		addr:	NewDnetAddr(result.addr),
-		ioattr:	NewDnetIOAttr(result.io_attribute),
-		data:	C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
-		err:	nil,
+	Result := readResult{
+		cmd:    NewDnetCmd(result.cmd),
+		addr:   NewDnetAddr(result.addr),
+		ioattr: NewDnetIOAttr(result.io_attribute),
+		data:   C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
+		err:    nil,
 	}
 	// All data from C++ has been copied here.
 	callback(Result)
