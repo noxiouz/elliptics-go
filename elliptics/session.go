@@ -701,6 +701,10 @@ type IndexEntry struct {
 	err  error
 }
 
+func (i *IndexEntry) Error() error {
+	return i.err
+}
+
 func (f *findResult) Data() []IndexEntry {
 	return f.data
 }
