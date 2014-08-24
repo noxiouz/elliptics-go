@@ -244,11 +244,11 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			}
 
 			if offset == orig_offset {
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", rd.IO().TotalSize - offset))
 				if size == 0 || size > rd.IO().TotalSize - offset {
 					size = rd.IO().TotalSize - offset
 				}
 
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", size))
 				w.WriteHeader(http.StatusOK)
 			}
 
