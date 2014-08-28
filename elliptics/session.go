@@ -612,14 +612,28 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 
 //Remover wraps information about remove operation.
 type Remover interface {
+	// server's reply
+	Cmd() *DnetCmd
+
+	// key to be removed, only set for error results
+	Key() string
+
 	//Error of remove operation.
 	Error() error
 }
 
 type removeResult struct {
-	err error
+	cmd	DnetCmd
+	key	string
+	err	error
 }
 
+func (r *removeResult) Cmd() *DnetCmd {
+	return &r.cmd
+}
+func (r *removeResult) Key() string {
+	return r.key
+}
 func (r *removeResult) Error() error {
 	return r.err
 }
@@ -642,8 +656,8 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	responseCh := make(chan Remover, defaultVOLUME)
 	keepaliver := make(chan struct{})
 
-	onResult := func() {
-		//It's never called.
+	onResult := func(r *removeResult) {
+		responseCh <- r
 	}
 	onFinish := func(err error) {
 		if err != nil {
@@ -661,6 +675,67 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	}()
 
 	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	return responseCh
+}
+
+//BulkRemove removes keys from array. It returns error for every key it could not delete.
+func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
+	responseCh := make(chan Remover, defaultVOLUME)
+
+	keys, err := NewKeys(keys_str)
+	if err != nil {
+		responseCh <- &removeResult {
+			key: "new keys allocation failed",
+			err: err,
+		}
+		close(responseCh)
+		return responseCh
+	}
+
+	keepaliver := make(chan struct{})
+
+	onResult := func(r *removeResult) {
+		if r.err != nil {
+			responseCh <- r
+		} else if r.cmd.Status != 0 {
+
+			key, err := keys.Find(r.Cmd().ID.ID)
+			if err != nil {
+				responseCh <- &removeResult {
+					key: "could not find key for replied ID",
+					err: err,
+				}
+				return
+			}
+
+			r.err = fmt.Errorf("remove status: %d", r.cmd.Status)
+			r.key = key
+			responseCh <- r
+		}
+	}
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &removeResult {
+				key: "overall operation result",
+				err: err,
+			}
+		}
+
+		close(responseCh)
+		close(keepaliver)
+	}
+
+	C.session_bulk_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), keys.keys)
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+		_ = keys
+
+		defer keys.Free()
+	}()
+
 	return responseCh
 }
 

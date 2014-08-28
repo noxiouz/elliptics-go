@@ -178,12 +178,15 @@ void session_parallel_lookup(ell_session *session, void *on_chunk_context,
 
 /*
  * Remove
- * Not implemented. Don't know about anything useful informaitopn from result.
+ * @on_remove() callback converts returned command into golang DnetCmd
  */
 void on_remove(void *context, const elliptics::remove_result_entry &result)
 {
-	(void)result;
-	(void)context;
+	go_remove_result res {
+		result.command()
+	};
+
+	go_remove_callback(&res, context);
 }
 
 void session_remove(ell_session *session, void *on_chunk_context,
@@ -191,6 +194,21 @@ void session_remove(ell_session *session, void *on_chunk_context,
 {
 	using namespace std::placeholders;
 	session->remove(*key).connect(std::bind(&on_remove, on_chunk_context, _1),
+				      std::bind(&on_finish, final_context, _1));
+}
+
+void session_bulk_remove(ell_session *session, void *on_chunk_context, void *final_context, void *ekeys)
+{
+	using namespace std::placeholders;
+
+	ell_keys *keys = (ell_keys *)ekeys;
+
+	for (auto it = keys->kk.begin(); it != keys->kk.end(); ++it) {
+		it->transform(*session);
+	}
+
+	session->set_filter(elliptics::filters::all_with_ack);
+	session->bulk_remove(keys->kk).connect(std::bind(&on_remove, on_chunk_context, _1),
 				      std::bind(&on_finish, final_context, _1));
 }
 
