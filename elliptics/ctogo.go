@@ -19,24 +19,36 @@ package elliptics
 #include "session.h"
 #include <stdio.h>
 
-static
-uint64_t dnet_cmd_get_trace_id(struct dnet_cmd* d) {
+static uint64_t dnet_cmd_get_trace_id(struct dnet_cmd* d) {
 	return d->trace_id;
 }
 
-static
-uint64_t dnet_cmd_get_flags(struct dnet_cmd* d) {
+static uint64_t dnet_cmd_get_flags(struct dnet_cmd* d) {
 	return d->flags;
 }
 
-static
-uint64_t dnet_cmd_get_size(struct dnet_cmd* d) {
+static uint64_t dnet_cmd_get_size(struct dnet_cmd* d) {
 	return d->size;
 }
 
-static
-uint64_t dnet_cmd_get_trans(struct dnet_cmd* d) {
+static uint64_t dnet_cmd_get_trans(struct dnet_cmd* d) {
 	return d->trans;
+}
+
+static uint32_t dnet_cmd_get_group(struct dnet_cmd* d) {
+	return d->id.group_id;
+}
+
+static int dnet_cmd_get_status(struct dnet_cmd* d) {
+	return d->status;
+}
+
+static int dnet_cmd_get_cmd(struct dnet_cmd* d) {
+	return d->cmd;
+}
+
+static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
+	return d->backend_id;
 }
 
 */
@@ -49,33 +61,35 @@ import (
 )
 
 type DnetID struct {
-	ID    []byte
-	Group uint32
-	Trace uint64
+	ID	[]byte
+	Group	uint32
 }
 
 type DnetCmd struct {
-	ID     DnetID
-	Status int32
-	Cmd    int32
-	Flags  uint64
-	Trans  uint64
-	Size   uint64
+	ID	DnetID
+	Status	int32
+	Cmd	int32
+	Backend	int32
+	Trace	uint64
+	Flags	uint64
+	Trans	uint64
+	Size	uint64
 }
 
 func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
-	return DnetCmd{
-		ID: DnetID{
-			ID:    C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(len(cmd.id.id))),
-			Group: uint32(cmd.id.group_id),
-			Trace: uint64(C.dnet_cmd_get_trace_id(cmd)),
+	return DnetCmd {
+		ID: DnetID {
+			ID: C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(C.DNET_ID_SIZE)),
+			Group: uint32(C.dnet_cmd_get_group(cmd)),
 		},
 
-		Status: int32(cmd.status),
-		Cmd:    int32(cmd.cmd),
-		Flags:  uint64(C.dnet_cmd_get_flags(cmd)),
-		Trans:  uint64(C.dnet_cmd_get_trans(cmd)),
-		Size:   uint64(C.dnet_cmd_get_size(cmd)),
+		Status:	int32(C.dnet_cmd_get_status(cmd)),
+		Cmd:	int32(C.dnet_cmd_get_cmd(cmd)),
+		Backend:	int32(C.dnet_cmd_get_backend_id(cmd)),
+		Trace:	uint64(C.dnet_cmd_get_trace_id(cmd)),
+		Flags:	uint64(C.dnet_cmd_get_flags(cmd)),
+		Trans:	uint64(C.dnet_cmd_get_trans(cmd)),
+		Size:	uint64(C.dnet_cmd_get_size(cmd)),
 	}
 }
 

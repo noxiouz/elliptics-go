@@ -21,12 +21,20 @@ extern "C" {
 
 ell_key *new_key()
 {
-	return new elliptics::key();
+	try {
+		return new elliptics::key();
+	} catch (...) {
+		return NULL;
+	}
 }
 
 ell_key *new_key_remote(const char *remote)
 {
-	return new elliptics::key(std::string(remote));
+	try {
+		return new elliptics::key(std::string(remote));
+	} catch (...) {
+		return NULL;
+	}
 }
 
 const char *key_remote(ell_key *key)
@@ -45,9 +53,55 @@ void key_set_id(ell_key *key, const struct dnet_id *id)
 	key->set_id(*id);
 }
 
+int key_id_cmp(ell_key *key, const void *id) {
+	printf("cmp: %s vs %s\n", dnet_dump_id(&key->id()), dnet_dump_id_str((const unsigned char *)id));
+	return memcmp(key->raw_id().id, id, DNET_ID_SIZE);
+}
+
 void delete_key(ell_key *key)
 {
 	delete key;
+}
+
+ell_keys *ell_keys_new()
+{
+	try {
+		return new ell_keys;
+	} catch (...) {
+		return NULL;
+	}
+}
+
+int ell_keys_insert(ell_keys *keys, const char *str, int len)
+{
+	try {
+		keys->insert(str, len);
+		return 0;
+	} catch (...) {
+		return -ENOMEM;
+	}
+}
+
+char *ell_keys_find(ell_keys *keys, void *id)
+{
+	try {
+		dnet_raw_id raw;
+		memcpy(raw.id, id, DNET_ID_SIZE);
+		elliptics::key tmp(raw);
+		std::string res = keys->find(tmp);
+		if (res.size() == 0) {
+			return NULL;
+		}
+
+		return strdup(res.c_str());
+	} catch (...) {
+		return NULL;
+	}
+}
+
+void ell_keys_free(ell_keys *keys)
+{
+	delete keys;
 }
 
 } // extern "C"

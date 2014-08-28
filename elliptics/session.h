@@ -47,6 +47,11 @@ struct go_lookup_result {
 	const char			*path;
 };
 
+//remove_result_entry
+struct go_remove_result {
+	const struct dnet_cmd		*cmd;
+};
+
 //index_entry
 struct c_index_entry {
 	const char		*data;
@@ -127,6 +132,7 @@ void session_write_commit(ell_session *session, void *on_chunk_context,
 
 void session_remove(ell_session *session, void *on_chunk_context,
 		void *final_context, ell_key *key);
+void session_bulk_remove(ell_session *session, void *on_chunk_context, void *final_context, void *ekeys);
 
 void session_find_all_indexes(ell_session *session, void *on_chunk_context,
 		void *final_context, char *indexes[], uint64_t nsize);
