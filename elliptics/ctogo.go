@@ -60,6 +60,10 @@ import (
 	"unsafe"
 )
 
+type DnetRawID struct {
+	ID	[]byte
+}
+
 type DnetID struct {
 	ID	[]byte
 	Group	uint32
@@ -93,16 +97,19 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 	}
 }
 
+const DnetAddrSize int = 32
 type DnetAddr struct {
-	Addr	[]byte
+	Addr	[DnetAddrSize]byte
 	Family	uint16
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	return DnetAddr {
-		Addr:	C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+	a := DnetAddr {
 		Family:	uint16(addr.family),
 	}
+
+	copy(a.Addr[:], C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)))
+	return a
 }
 
 func (a *DnetAddr) String() string {
