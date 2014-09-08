@@ -60,6 +60,36 @@ import (
 	"unsafe"
 )
 
+const DnetAddrSize int = 32
+type DnetAddr struct {
+	Addr	[DnetAddrSize]byte
+	Family	uint16
+}
+
+func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
+	a := DnetAddr {
+		Family:	uint16(addr.family),
+	}
+
+	copy(a.Addr[:], C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)))
+	return a
+}
+
+func (a *DnetAddr) String() string {
+	var tmp C.struct_dnet_addr
+	var arrayptr = uintptr(unsafe.Pointer(&tmp.addr[0]))
+	for i := 0; i < len(a.Addr); i++ {
+		*(*C.uint8_t)(unsafe.Pointer(arrayptr)) = C.uint8_t(a.Addr[i])
+		arrayptr++
+	}
+
+	tmp.addr_len = C.uint16_t(len(a.Addr))
+	tmp.family = C.uint16_t(a.Family)
+
+	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_server_convert_dnet_addr(&tmp)), a.Family)
+}
+
+
 type DnetRawID struct {
 	ID	[]byte
 }
@@ -95,35 +125,6 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 		Trans:	uint64(C.dnet_cmd_get_trans(cmd)),
 		Size:	uint64(C.dnet_cmd_get_size(cmd)),
 	}
-}
-
-const DnetAddrSize int = 32
-type DnetAddr struct {
-	Addr	[DnetAddrSize]byte
-	Family	uint16
-}
-
-func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	a := DnetAddr {
-		Family:	uint16(addr.family),
-	}
-
-	copy(a.Addr[:], C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)))
-	return a
-}
-
-func (a *DnetAddr) String() string {
-	var tmp C.struct_dnet_addr
-	var arrayptr = uintptr(unsafe.Pointer(&tmp.addr[0]))
-	for i := 0; i < len(a.Addr); i++ {
-		*(*C.uint8_t)(unsafe.Pointer(arrayptr)) = C.uint8_t(a.Addr[i])
-		arrayptr++
-	}
-
-	tmp.addr_len = C.uint16_t(len(a.Addr))
-	tmp.family = C.uint16_t(a.Family)
-
-	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_server_convert_dnet_addr(&tmp)), a.Family)
 }
 
 type DnetIOAttr struct {
