@@ -16,29 +16,44 @@
 package elliptics
 
 import (
+	"encoding/json"
 	"encoding/hex"
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strings"
-	//"unsafe"
+	"unsafe"
 )
 
 /*
-//#include "stat.h"
-#include <stdio.h>
+#include "stat.h"
 */
 import "C"
 
+const (
+	StatCategoryCache	int64 =		1 << 0
+	StatCategoryIO		int64 =		1 << 0
+	StatCategoryCommands	int64 =		1 << 2
+	StatCategoryBackend	int64 =		1 << 4
+	StatCategoryProcFS	int64 =		1 << 6
+)
 
 type AddressBackend struct {
 	Addr		DnetAddr
-	Backend		uint32
+	Backend		int32
 }
 
 func (ab *AddressBackend) String() string {
 	return fmt.Sprintf("ab: address: %s, backend: %d", ab.Addr.String(), ab.Backend)
+}
+
+type VFS struct {
+	// space in bytes for given backend
+	Total, Avail		uint64
+	BackendRemovedSize	uint64
+	BackendUsedSize		uint64
 }
 
 type StatBackend struct {
@@ -52,6 +67,9 @@ type StatBackend struct {
 	// percentage of the whole IDs ring currently occupied by given ids
 	// and thus node (address + backend)
 	Percentage	float64
+
+
+	VFS		VFS
 }
 func NewStatBackend() *StatBackend {
 	return &StatBackend {
@@ -65,6 +83,7 @@ func (backend *StatBackend) StatBackendData() (reply map[string]interface{}) {
 	reply = make(map[string]interface{})
 
 	reply["percentage"] = backend.Percentage
+	reply["vfs"] = backend.VFS
 	return reply
 }
 
@@ -106,7 +125,7 @@ func (sg *StatGroup) StatGroupData() (reply []interface{}) {
 	for ab, backend := range sg.Ab {
 		tmp := struct {
 			Address		string
-			Backend		uint32
+			Backend		int32
 			Stat		interface{}
 		} {
 			Address:	ab.Addr.String(),
@@ -188,30 +207,93 @@ type DnetStat struct {
 	Group	map[uint32]*StatGroup
 }
 
-func (session *Session) DnetStat() *DnetStat {
+type StatEntry struct {
+	cmd		DnetCmd
+	addr		DnetAddr
+	stat		[]byte
+	err		error
+}
+
+func (entry *StatEntry) Group() uint32 {
+	return entry.cmd.ID.Group
+}
+func (entry *StatEntry) AddressBackend() AddressBackend {
+	return AddressBackend {
+		Addr:		entry.addr,
+		Backend:	entry.cmd.Backend,
+	}
+}
+
+//export go_stat_callback
+func go_stat_callback(result *C.struct_go_stat_result, context unsafe.Pointer) {
+	callback := *(*func(* StatEntry))(context)
+
+	res := &StatEntry {
+		cmd:	NewDnetCmd(result.cmd),
+		addr:	NewDnetAddr(result.addr),
+		stat:	C.GoBytes(unsafe.Pointer(result.stat_data), C.int(result.stat_size)),
+		err:	nil,
+	}
+
+	callback(res)
+}
+
+func (s *Session) DnetStat() *DnetStat {
+	response := make(chan *StatEntry, 10)
+	keepaliver := make(chan struct{}, 0)
+
+	onResult := func(result *StatEntry) {
+		response <- result
+	}
+
+	onFinish := func(err error) {
+		if err != nil {
+			response <- &StatEntry {
+				err: err,
+			}
+		}
+
+		close(response)
+		close(keepaliver)
+	}
+
+	go func() {
+		<-keepaliver
+		onResult = nil
+		onFinish = nil
+	}()
+
+	categories := StatCategoryBackend | StatCategoryProcFS
+
+	C.session_get_stats(s.session,
+		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.uint64_t(categories))
+
 	st := &DnetStat {
 		Group:		make(map[uint32]*StatGroup),
 	}
 
-	session.GetRoutes(st)
+	s.GetRoutes(st)
+
+	// read stat results from the channel and update DnetStat
+	for se := range response {
+		st.AddStatEntry(se)
+	}
+
 	return st
 }
 
-func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
-	sg, ok := stat.Group[entry.Group]
+func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
+	sg, ok := stat.Group[group]
 	if !ok {
 		nsg := NewStatGroup()
 		sg = &nsg
-		stat.Group[entry.Group] = sg
+		stat.Group[group] = sg
 	}
 
 	ab := AddressBackend {
-		Addr:		entry.Addr,
-		Backend:	entry.Backend,
-	}
-
-	raw := DnetRawID {
-		ID: entry.ID,
+		Addr:		*addr,
+		Backend:	backend_id,
 	}
 
 	backend, ok := sg.Ab[ab]
@@ -220,7 +302,136 @@ func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
 		sg.Ab[ab] = backend
 	}
 
-	backend.ID = append(backend.ID, raw)
+	return backend
+}
+
+func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Shitty json: %v\n", r)
+        }
+	}()
+
+	const (
+		BackendStateDisabled		int	= 0
+		BackendStateEnabled		int	= 1
+		BackendStateActivating		int	= 2
+		BackendStateDeactivating	int	= 3
+
+		DefragStateNotStarted		int	= 0
+		DefragStateInProgress		int	= 1
+	)
+
+	var (
+		backend_state = map[int]string {
+			BackendStateDisabled:		"disabled",
+			BackendStateEnabled:		"enabled",
+			BackendStateActivating:		"activating",
+			BackendStateDeactivating:	"deactivating",
+		}
+		defrag_state = map[int]string {
+			DefragStateNotStarted:		"not-started",
+			DefragStateInProgress:		"in-progress",
+		}
+		_ = defrag_state
+	)
+
+
+	type Time struct {
+		Sec		uint64		`json:"tv_sec"`
+		USec		uint64		`json:"tv_usec"`
+	}
+	type Status struct {
+		State		int	`json:"state"`
+		DefragState	int	`json:"defrag_state"`
+		LastStart	Time	`json:"last_start"`
+		LastStartErr	int	`json:"last_start_err"`
+		RO		int	`json:"read_only"`
+	}
+
+	type Config struct {
+		Group	uint32	`json:"group"`
+		Data	string	`json:"data"`
+	}
+	type GlobalStats struct {
+		DataSortStartTime		uint64		`json:"datasort_start_time"`
+		DataSortCompletionTime		uint64		`json:"datasort_completion_time"`
+		DataSortCompletionStatus	int		`json:"datasort_completion_status"`
+	}
+	type BlobStats struct {
+		RecordsTotal		uint64		`json:"records_total"`
+		RecordsRemoved		uint64		`json:"records_removed"`
+		RecordsRemovedSize	uint64		`json:"records_removed_size"`
+		RecordsCorrupted	uint64		`json:"records_corrupted"`
+		BaseSize		uint64		`json:"base_size"`
+		WantDefrag		int		`json:"want_defrag"`
+		IsSorted		int		`json:"is_sorted"`
+	}
+	type VFS struct {
+		BSize			uint64		`json:"bsize"`
+		FrSize			uint64		`json:"frsize"`
+		Blocks			uint64		`json:"blocks"`
+		BFree			uint64		`json:"bfree"`
+		BAvail			uint64		`json:"bavail"`
+	}
+	type DStat struct {
+		ReadIOs			uint64		`json:"read_ios"`
+		ReadMerges		uint64		`json:"read_merges"`
+		ReadSectors		uint64		`json:"read_sectors"`
+		ReadTicks		uint64		`json:"read_ticks"`
+		WriteIOs		uint64		`json:"write_ios"`
+		WriteMerges		uint64		`json:"write_merges"`
+		WriteSectors		uint64		`json:"write_sectors"`
+		WriteTicks		uint64		`json:"write_ticks"`
+		InFlight		uint64		`json:"in_flight"`
+		IOTicks			uint64		`json:"io_ticks"`
+		TimeInQueue		uint64		`json:"time_in_queue"`
+	}
+	type Backend struct {
+		Config	Config				`json:"config"`
+		GlobalStats GlobalStats			`json:"global_stats"`
+		SummaryStats BlobStats			`json:"summary_stats"`
+		BaseStats map[string]BlobStats		`json:"base_stats"`
+		VFS VFS					`json:"vfs"`
+		DStat DStat				`json:"dstat"`
+	}
+	type VNode struct {
+		BackendID	int		`json:"backend_id"`
+		Status		Status		`json:"status"`
+		Backend		Backend		`json:"backend"`
+	}
+	type Response struct {
+		MonitorStatus	string			`json:"monitor_status"`
+		Backends	map[string]VNode	`json:"backends"`
+	}
+
+	var r Response
+
+	err := json.Unmarshal(entry.stat, &r)
+	if err != nil {
+		log.Printf("%s: could not parse stat entry reply: %v\n", entry.addr.String(), err)
+	}
+
+	if r.MonitorStatus != "enabled" {
+		log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
+		return
+	}
+
+	for _, vnode := range r.Backends {
+		status, ok := backend_state[vnode.Status.State]
+		if !ok {
+			status = fmt.Sprintf("invalid backend status '%d'", vnode.Status)
+		}
+		log.Printf("%s: backend: %d: status: %s", entry.addr.String(), vnode.BackendID, status)
+
+		if vnode.Status.State == BackendStateEnabled {
+			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
+			backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
+			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.Blocks
+			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
+			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+		}
+	}
 
 	return
 }
@@ -234,25 +445,6 @@ func (stat *DnetStat) Finalize() {
 			fmt.Printf("%s: ids: %d: %f\n", ab.String(), len(ids.ID), ids.Percentage)
 		}
 	}
-}
-
-func (stat *DnetStat) StatBackend(group uint32, addr DnetAddr, backend_id uint32) *StatBackend {
-	sg, ok := stat.Group[group]
-	if !ok {
-		return nil
-	}
-
-	ab := AddressBackend {
-		Addr:		addr,
-		Backend:	backend_id,
-	}
-
-	backend, ok := sg.Ab[ab]
-	if !ok {
-		return nil
-	}
-
-	return backend
 }
 
 func (stat *DnetStat) StatData() (reply map[string]interface{}) {
