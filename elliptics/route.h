@@ -17,9 +17,15 @@
 #define __ELLIPTICS_ROUTE_H
 
 #include "session.h"
-#include "node.h"
-#include "key.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void session_get_routes(ell_session *session, void *result_array_context);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __ELLIPTICS_ROUTE_H

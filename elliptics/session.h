@@ -1,5 +1,6 @@
 /*
  * 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+ * 2014+ Copyright (c) Evgeniy Polyakov <zbr@ioremap.net>
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,6 +25,7 @@
 #include <iostream>
 #include <elliptics/session.hpp>
 typedef ioremap::elliptics::session ell_session;
+
 extern "C" {
 #else
 typedef void ell_session;

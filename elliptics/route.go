@@ -23,29 +23,44 @@ import (
 
 /*
 #include "route.h"
-#include <stdio.h>
 */
 import "C"
 
 type RouteEntry struct {
-	ID		[]byte
-	Addr		DnetAddr
-	Group		uint32
-	Backend		uint32
+	id		[]byte
+	addr		DnetAddr
+	group		uint32
+	backend		int32
+}
+
+func (entry *RouteEntry) ID() []byte {
+	return entry.id
 }
 
 func (r *RouteEntry) String() string {
 	return fmt.Sprintf("route entry: %s: group: %d, addr: %s: backend: %d",
-		hex.EncodeToString(r.ID), r.Group, r.Addr.String(), r.Backend)
+		hex.EncodeToString(r.id), r.group, r.addr.String(), r.backend)
 }
 
 func NewRouteEntry(entry *C.struct_dnet_route_entry) *RouteEntry {
+	// @dnet_route_entry is not packed, so its fields can be accessed directly
+	// compare it to @DnetCmd creation which uses special C wrappers to access fields of the packed structure
 	return  &RouteEntry {
-		ID:		C.GoBytes(unsafe.Pointer(&entry.id.id[0]), C.int(C.DNET_ID_SIZE)),
-		Addr:		NewDnetAddr(&entry.addr),
-		Group:		uint32(entry.group_id),
-		Backend:	uint32(entry.backend_id),
+		id:		C.GoBytes(unsafe.Pointer(&entry.id.id[0]), C.int(C.DNET_ID_SIZE)),
+		addr:		NewDnetAddr(&entry.addr),
+		group:		uint32(entry.group_id),
+		backend:	int32(entry.backend_id),
 	}
+}
+
+func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
+	backend := stat.FindBackend(entry.group, &entry.addr, entry.backend)
+
+	backend.ID = append(backend.ID,
+		DnetRawID {
+			ID: entry.ID(),
+		})
+	return
 }
 
 //export go_route_callback
