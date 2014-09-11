@@ -11,8 +11,8 @@ Use [Elliptics](https://github.com/reverbrain/elliptics) from **Go** language.
 
 Branch  | Build status | Coverage
 ------------- | ------------- | -------
-master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) | [![Coverage Status](https://img.shields.io/coveralls/noxiouz/elliptics-go.svg)](https://coveralls.io/r/noxiouz/elliptics-go)
-2.26    |  [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.svg?branch=2.26)](https://travis-ci.org/noxiouz/elliptics-go?branch=2.26) | [![Coverage Status](https://img.shields.io/coveralls/noxiouz/elliptics-go.svg)](https://coveralls.io/r/noxiouz/elliptics-go?branch=2.26)
+master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) | [![Coverage Status](https://coveralls.io/repos/noxiouz/elliptics-go/badge.png)](https://coveralls.io/r/noxiouz/elliptics-go)
+2.26    |  [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.svg?branch=2.26)](https://travis-ci.org/noxiouz/elliptics-go?branch=2.26) | [![Coverage Status](https://coveralls.io/repos/noxiouz/elliptics-go/badge.png?branch=2.26)](https://coveralls.io/r/noxiouz/elliptics-go?branch=2.26)
 
 
 ## Example
