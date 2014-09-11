@@ -47,6 +47,9 @@ func NewKey(args ...interface{}) (key *Key, err error) {
 				err = fmt.Errorf("could not create new key")
 				return
 			}
+		} else {
+			err = InvalidKeyArgument
+			return
 		}
 	} else {
 		ckey = C.new_key()
