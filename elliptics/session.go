@@ -261,7 +261,7 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			}
 
 			if offset == orig_offset {
-				if size == 0 || size > rd.IO().TotalSize - offset {
+				if size == 0 || size > rd.IO().TotalSize-offset {
 					size = rd.IO().TotalSize - offset
 				}
 
@@ -639,9 +639,9 @@ type Remover interface {
 }
 
 type removeResult struct {
-	cmd	DnetCmd
-	key	string
-	err	error
+	cmd DnetCmd
+	key string
+	err error
 }
 
 func (r *removeResult) Cmd() *DnetCmd {
@@ -700,7 +700,7 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 
 	keys, err := NewKeys(keys_str)
 	if err != nil {
-		responseCh <- &removeResult {
+		responseCh <- &removeResult{
 			key: "new keys allocation failed",
 			err: err,
 		}
@@ -717,7 +717,7 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 
 			key, err := keys.Find(r.Cmd().ID.ID)
 			if err != nil {
-				responseCh <- &removeResult {
+				responseCh <- &removeResult{
 					key: "could not find key for replied ID",
 					err: err,
 				}
@@ -731,7 +731,7 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 	}
 	onFinish := func(err error) {
 		if err != nil {
-			responseCh <- &removeResult {
+			responseCh <- &removeResult{
 				key: "overall operation result",
 				err: err,
 			}

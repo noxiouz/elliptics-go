@@ -47,8 +47,8 @@ func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointe
 //export go_remove_callback
 func go_remove_callback(result *C.struct_go_remove_result, context unsafe.Pointer) {
 	callback := *(*func(*removeResult))(context)
-	Result := removeResult {
-		cmd:	NewDnetCmd(result.cmd),
+	Result := removeResult{
+		cmd: NewDnetCmd(result.cmd),
 	}
 	callback(&Result)
 }

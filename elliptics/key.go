@@ -22,6 +22,7 @@ package elliptics
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"unsafe"
@@ -71,7 +72,7 @@ func (k *Key) Free() {
 }
 
 func (k *Key) CmpID(id []uint8) int {
-	return int(C.key_id_cmp(k.key, unsafe.Pointer(&id[0])));
+	return int(C.key_id_cmp(k.key, unsafe.Pointer(&id[0])))
 }
 
 type Keys struct {
@@ -94,7 +95,7 @@ func NewKeys(keys []string) (ret Keys, err error) {
 	}
 
 	err = nil
-	ret = Keys {
+	ret = Keys{
 		keys: ckeys,
 	}
 
