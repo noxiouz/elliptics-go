@@ -1,7 +1,22 @@
-# elliptics-go [![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics) [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go) [![Build Status](https://drone.io/github.com/noxiouz/elliptics-go/status.png)](https://drone.io/github.com/noxiouz/elliptics-go/latest)
+# Go binding for Elliptics
+
+[Elliptics](https://github.com/reverbrain/elliptics) is an amazing, distributed, fault tolerant, key-value storage.
+Use [Elliptics](https://github.com/reverbrain/elliptics) from **Go** language.
+
+### Documentation
+
+[![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics)
+
+### CI status
+
+Branch  | Build status | Coverage
+------------- | ------------- | -------
+master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) |
+2.26    |  [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.svg?branch=2.26)](https://travis-ci.org/noxiouz/elliptics-go?branch=2.26) | [![Coverage Status](https://img.shields.io/coveralls/noxiouz/elliptics-go.svg)](https://coveralls.io/r/noxiouz/elliptics-go)
 
 
-Go binding for [Elliptics](https://github.com/reverbrain/elliptics) key-value storage.
+
+
 
 ## Example
 

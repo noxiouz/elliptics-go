@@ -8,10 +8,13 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install elliptics-dev elliptics-client --force-yes
   - go get code.google.com/p/go.tools/cmd/cover
+  - go get github.com/mattn/goveralls
 
 script:
   - go test -v -coverprofile=coverage.out github.com/noxiouz/elliptics-go/elliptics
   - go tool cover -func=coverage.out
+  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken d6Fnx2wcqx7Bk302wLSoeYbaDcxn3POKW
+
 
 branches:
   only:
