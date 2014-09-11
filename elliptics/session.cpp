@@ -101,7 +101,7 @@ ioflags_t session_get_ioflags(ell_session *session)
 /*
  * Read
  */
-void on_read(void *context, const elliptics::read_result_entry & result)
+static void on_read(void *context, const elliptics::read_result_entry & result)
 {
 	elliptics::data_pointer data(result.file());
 	go_read_result to_go {
@@ -123,7 +123,7 @@ void session_read_data(ell_session *session, void *on_chunk_context,
 /*
  * Write and Lookup
  */
-void on_lookup(void *context, const elliptics::lookup_result_entry & result)
+static void on_lookup(void *context, const elliptics::lookup_result_entry & result)
 {
 	go_lookup_result to_go {
 		result.command(), result.address(),
@@ -201,7 +201,7 @@ void session_parallel_lookup(ell_session *session, void *on_chunk_context,
  * Remove
  * @on_remove() callback converts returned command into golang DnetCmd
  */
-void on_remove(void *context, const elliptics::remove_result_entry &result)
+static void on_remove(void *context, const elliptics::remove_result_entry &result)
 {
 	go_remove_result res {
 		result.command()
@@ -236,7 +236,7 @@ void session_bulk_remove(ell_session *session, void *on_chunk_context, void *fin
 /*
  * Find
  */
-void on_find(void *context, const elliptics::find_indexes_result_entry &result)
+static void on_find(void *context, const elliptics::find_indexes_result_entry &result)
 {
 	std::vector <c_index_entry> c_index_entries;
 
@@ -280,13 +280,13 @@ void session_find_any_indexes(ell_session *session,
  * Indexes
  * Not implemented. Don't know about anything usefull informaitopn from result.
  */
-void on_set_indexes(void *context, const elliptics::callback_result_entry &result)
+static void on_set_indexes(void *context, const elliptics::callback_result_entry &result)
 {
 	(void)context;
 	(void)result;
 }
 
-void on_list_indexes(void *context, const elliptics::index_entry &result)
+static void on_list_indexes(void *context, const elliptics::index_entry &result)
 {
 	c_index_entry to_go {
 		(const char *)result.data.data(), result.data.size()
