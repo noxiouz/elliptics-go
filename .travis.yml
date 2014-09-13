@@ -9,7 +9,7 @@ before_install:
   - sudo apt-get install elliptics-dev elliptics-client elliptics --force-yes
   - go get code.google.com/p/go.tools/cmd/cover
   - go get github.com/mattn/goveralls
-  - cd fixtures && sudo ./start.sh && cd -
+  - cd fixtures && sudo ./start.sh && cd - && sleep 10
   - export FULL_TEST_REMOTES="localhost:1025:2" && export FULL_TEST_GROUPS="2"
 
 script:
