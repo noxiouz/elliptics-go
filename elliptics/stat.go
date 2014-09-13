@@ -20,10 +20,12 @@ import (
 	"encoding/hex"
 	"bytes"
 	"fmt"
+	//"io/ioutil"
 	"log"
 	"math"
 	"sort"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -34,7 +36,7 @@ import "C"
 
 const (
 	StatCategoryCache	int64 =		1 << 0
-	StatCategoryIO		int64 =		1 << 0
+	StatCategoryIO		int64 =		1 << 1
 	StatCategoryCommands	int64 =		1 << 2
 	StatCategoryBackend	int64 =		1 << 4
 	StatCategoryProcFS	int64 =		1 << 6
@@ -56,6 +58,11 @@ type VFS struct {
 	BackendUsedSize		uint64
 }
 
+type CStat struct {
+	Requests		uint64
+	Bytes			uint64
+}
+
 type StatBackend struct {
 	// All range starts (IDs) for given node (server address + backend)
 	ID		[]DnetRawID
@@ -69,13 +76,19 @@ type StatBackend struct {
 	Percentage	float64
 
 
+	// VFS statistics: available, used and total space
 	VFS		VFS
+
+	// per-command size/number counters
+	// difference between the two divided by the time difference equals to RPS/BPS
+	Commands	map[string]CStat
 }
 func NewStatBackend() *StatBackend {
 	return &StatBackend {
 		ID:		make([]DnetRawID, 0),
 		Percentage:	0,
 		sum:		0,
+		Commands:	make(map[string]CStat),
 	}
 }
 
@@ -204,7 +217,8 @@ func (rg *StatGroup) Finalize() {
 }
 
 type DnetStat struct {
-	Group	map[uint32]*StatGroup
+	Time		time.Time
+	Group		map[uint32]*StatGroup
 }
 
 type StatEntry struct {
@@ -263,7 +277,7 @@ func (s *Session) DnetStat() *DnetStat {
 		onFinish = nil
 	}()
 
-	categories := StatCategoryBackend | StatCategoryProcFS
+	categories := StatCategoryBackend | StatCategoryProcFS | StatCategoryCommands
 
 	C.session_get_stats(s.session,
 		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
@@ -336,75 +350,6 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		_ = defrag_state
 	)
 
-
-	type Time struct {
-		Sec		uint64		`json:"tv_sec"`
-		USec		uint64		`json:"tv_usec"`
-	}
-	type Status struct {
-		State		int	`json:"state"`
-		DefragState	int	`json:"defrag_state"`
-		LastStart	Time	`json:"last_start"`
-		LastStartErr	int	`json:"last_start_err"`
-		RO		int	`json:"read_only"`
-	}
-
-	type Config struct {
-		Group	uint32	`json:"group"`
-		Data	string	`json:"data"`
-	}
-	type GlobalStats struct {
-		DataSortStartTime		uint64		`json:"datasort_start_time"`
-		DataSortCompletionTime		uint64		`json:"datasort_completion_time"`
-		DataSortCompletionStatus	int		`json:"datasort_completion_status"`
-	}
-	type BlobStats struct {
-		RecordsTotal		uint64		`json:"records_total"`
-		RecordsRemoved		uint64		`json:"records_removed"`
-		RecordsRemovedSize	uint64		`json:"records_removed_size"`
-		RecordsCorrupted	uint64		`json:"records_corrupted"`
-		BaseSize		uint64		`json:"base_size"`
-		WantDefrag		int		`json:"want_defrag"`
-		IsSorted		int		`json:"is_sorted"`
-	}
-	type VFS struct {
-		BSize			uint64		`json:"bsize"`
-		FrSize			uint64		`json:"frsize"`
-		Blocks			uint64		`json:"blocks"`
-		BFree			uint64		`json:"bfree"`
-		BAvail			uint64		`json:"bavail"`
-	}
-	type DStat struct {
-		ReadIOs			uint64		`json:"read_ios"`
-		ReadMerges		uint64		`json:"read_merges"`
-		ReadSectors		uint64		`json:"read_sectors"`
-		ReadTicks		uint64		`json:"read_ticks"`
-		WriteIOs		uint64		`json:"write_ios"`
-		WriteMerges		uint64		`json:"write_merges"`
-		WriteSectors		uint64		`json:"write_sectors"`
-		WriteTicks		uint64		`json:"write_ticks"`
-		InFlight		uint64		`json:"in_flight"`
-		IOTicks			uint64		`json:"io_ticks"`
-		TimeInQueue		uint64		`json:"time_in_queue"`
-	}
-	type Backend struct {
-		Config	Config				`json:"config"`
-		GlobalStats GlobalStats			`json:"global_stats"`
-		SummaryStats BlobStats			`json:"summary_stats"`
-		BaseStats map[string]BlobStats		`json:"base_stats"`
-		VFS VFS					`json:"vfs"`
-		DStat DStat				`json:"dstat"`
-	}
-	type VNode struct {
-		BackendID	int		`json:"backend_id"`
-		Status		Status		`json:"status"`
-		Backend		Backend		`json:"backend"`
-	}
-	type Response struct {
-		MonitorStatus	string			`json:"monitor_status"`
-		Backends	map[string]VNode	`json:"backends"`
-	}
-
 	var r Response
 
 	err := json.Unmarshal(entry.stat, &r)
@@ -417,6 +362,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		return
 	}
 
+	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
 	for _, vnode := range r.Backends {
 		status, ok := backend_state[vnode.Status.State]
 		if !ok {
@@ -430,6 +376,16 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.Blocks
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+
+			for cname, cstat := range vnode.Commands {
+				backend.Commands[cname] = CStat{
+					Requests:	cstat.Requests(),
+					Bytes:		cstat.Bytes(),
+				}
+
+				fmt.Printf("%s: backend: %d: %s: requests: %d, bytes: %d\n",
+					entry.addr.String(), vnode.BackendID, cname, cstat.Requests(), cstat.Bytes())
+			}
 		}
 	}
 
@@ -437,13 +393,8 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 }
 
 func (stat *DnetStat) Finalize() {
-	for group, sg := range stat.Group {
+	for _, sg := range stat.Group {
 		sg.Finalize()
-
-		fmt.Printf("group: %d:\n", group)
-		for ab, ids := range sg.Ab {
-			fmt.Printf("%s: ids: %d: %f\n", ab.String(), len(ids.ID), ids.Percentage)
-		}
 	}
 }
 
