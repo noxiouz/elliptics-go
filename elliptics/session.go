@@ -396,7 +396,8 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
 
-	var offset uint64 = initial_offset
+	orig_total_size := total_size
+	offset := initial_offset
 	var n64 uint64
 
 	onChunkResult := func(lookup *lookupResult) {
@@ -473,6 +474,17 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		return responseCh
 	}
 
+	if n == 0 {
+		responseCh <- &lookupResult {
+			err: &DnetError {
+				Code:		-22,
+				Flags:		0,
+				Message:	fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
+					initial_offset, offset, total_size, orig_total_size),
+			},
+		}
+	}
+
 	n64 = uint64(n)
 	total_size -= n64
 	offset += n64
@@ -510,6 +522,19 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 	chunk, err := ioutil.ReadAll(input)
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	if len(chunk) == 0 {
+		responseCh <- &lookupResult {
+			err: &DnetError {
+				Code:		-22,
+				Flags:		0,
+				Message:	"Invalid zero-length write request",
+			},
+		}
 		close(responseCh)
 		close(keepaliver)
 		return responseCh
