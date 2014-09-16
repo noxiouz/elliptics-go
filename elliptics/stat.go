@@ -59,7 +59,8 @@ type VFS struct {
 }
 
 type CStat struct {
-	Requests		uint64
+	RequestsSuccess		uint64
+	RequestsFailures	uint64
 	Bytes			uint64
 }
 
@@ -97,6 +98,7 @@ func (backend *StatBackend) StatBackendData() (reply map[string]interface{}) {
 
 	reply["percentage"] = backend.Percentage
 	reply["vfs"] = backend.VFS
+	reply["commands"] = backend.Commands
 	return reply
 }
 
@@ -297,6 +299,9 @@ func (s *Session) DnetStat() *DnetStat {
 	return st
 }
 
+func (stat *DnetStat) Diff(prev *DnetStat) {
+}
+
 func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
 	sg, ok := stat.Group[group]
 	if !ok {
@@ -348,6 +353,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			DefragStateInProgress:		"in-progress",
 		}
 		_ = defrag_state
+		_ = backend_state
 	)
 
 	var r Response
@@ -357,19 +363,14 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		log.Printf("%s: could not parse stat entry reply: %v\n", entry.addr.String(), err)
 	}
 
+	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
+
 	if r.MonitorStatus != "enabled" {
-		log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
+		//log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
 		return
 	}
 
-	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
 	for _, vnode := range r.Backends {
-		status, ok := backend_state[vnode.Status.State]
-		if !ok {
-			status = fmt.Sprintf("invalid backend status '%d'", vnode.Status)
-		}
-		log.Printf("%s: backend: %d: status: %s", entry.addr.String(), vnode.BackendID, status)
-
 		if vnode.Status.State == BackendStateEnabled {
 			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
 			backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
@@ -378,13 +379,11 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
 
 			for cname, cstat := range vnode.Commands {
-				backend.Commands[cname] = CStat{
-					Requests:	cstat.Requests(),
-					Bytes:		cstat.Bytes(),
+				backend.Commands[cname] = CStat {
+					RequestsSuccess:	cstat.RequestsSuccess(),
+					RequestsFailures:	cstat.RequestsFailures(),
+					Bytes:			cstat.Bytes(),
 				}
-
-				fmt.Printf("%s: backend: %d: %s: requests: %d, bytes: %d\n",
-					entry.addr.String(), vnode.BackendID, cname, cstat.Requests(), cstat.Bytes())
 			}
 		}
 	}
