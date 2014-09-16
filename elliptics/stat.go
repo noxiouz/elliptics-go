@@ -62,6 +62,10 @@ type CStat struct {
 	RequestsSuccess		uint64
 	RequestsFailures	uint64
 	Bytes			uint64
+
+	RPSFailures		float64
+	RPSSuccess		float64
+	BPS			float64
 }
 
 type StatBackend struct {
@@ -82,14 +86,14 @@ type StatBackend struct {
 
 	// per-command size/number counters
 	// difference between the two divided by the time difference equals to RPS/BPS
-	Commands	map[string]CStat
+	Commands	map[string]*CStat
 }
 func NewStatBackend() *StatBackend {
 	return &StatBackend {
 		ID:		make([]DnetRawID, 0),
 		Percentage:	0,
 		sum:		0,
-		Commands:	make(map[string]CStat),
+		Commands:	make(map[string]*CStat),
 	}
 }
 
@@ -300,6 +304,36 @@ func (s *Session) DnetStat() *DnetStat {
 }
 
 func (stat *DnetStat) Diff(prev *DnetStat) {
+	if prev == nil {
+		return
+	}
+
+	duration := stat.Time.Sub(prev.Time).Seconds()
+
+	for group, sg := range stat.Group {
+		psg, ok := prev.Group[group]
+		if !ok {
+			continue
+		}
+
+		for ab, sb := range sg.Ab {
+			psb, ok := psg.Ab[ab]
+			if !ok {
+				continue
+			}
+
+			for cmd, cstat := range sb.Commands {
+				pcstat, ok := psb.Commands[cmd]
+				if !ok {
+					continue
+				}
+
+				cstat.RPSSuccess = float64(cstat.RequestsSuccess - pcstat.RequestsSuccess) / duration
+				cstat.RPSFailures = float64(cstat.RequestsFailures - pcstat.RequestsFailures) / duration
+				cstat.BPS = float64(cstat.Bytes - pcstat.Bytes) / duration
+			}
+		}
+	}
 }
 
 func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
@@ -379,7 +413,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
 
 			for cname, cstat := range vnode.Commands {
-				backend.Commands[cname] = CStat {
+				backend.Commands[cname] = &CStat {
 					RequestsSuccess:	cstat.RequestsSuccess(),
 					RequestsFailures:	cstat.RequestsFailures(),
 					Bytes:			cstat.Bytes(),
