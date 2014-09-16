@@ -109,7 +109,7 @@ func (l *LayerStat) Bytes() uint64 {
 }
 
 type PacketOnlyCommandStat struct {
-	Success		uint64			`json:"success"`
+	Success		uint64			`json:"successes"`
 	Failures	uint64			`json:"failures"`
 }
 type DstStat struct {
