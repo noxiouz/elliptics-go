@@ -477,9 +477,9 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 	if n == 0 {
 		responseCh <- &lookupResult {
 			err: &DnetError {
-				Code:		-22,
-				Flags:		0,
-				Message:	fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
+				Code: -22,
+				Flags: 0,
+				Message: fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
 					initial_offset, offset, total_size, orig_total_size),
 			},
 		}
@@ -530,9 +530,9 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 	if len(chunk) == 0 {
 		responseCh <- &lookupResult {
 			err: &DnetError {
-				Code:		-22,
-				Flags:		0,
-				Message:	"Invalid zero-length write request",
+				Code: -22,
+				Flags: 0,
+				Message: "Invalid zero-length write request",
 			},
 		}
 		close(responseCh)
