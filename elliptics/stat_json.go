@@ -84,8 +84,11 @@ type CommandStat struct {
 	Size		uint64			`json:"size"`
 	Time		uint64			`json:"time"`
 }
-func (c *CommandStat) Requests() uint64 {
-	return c.Success + c.Failures
+func (c *CommandStat) RequestsSuccess() uint64 {
+	return c.Success
+}
+func (c *CommandStat) RequestsFailures() uint64 {
+	return c.Failures
 }
 func (c *CommandStat) Bytes() uint64 {
 	return c.Size
@@ -95,8 +98,11 @@ type LayerStat struct {
 	Outside		CommandStat		`json:"outside"`
 	Internal	CommandStat		`json:"internal"`
 }
-func (l *LayerStat) Requests() uint64 {
-	return l.Outside.Requests() + l.Internal.Requests()
+func (l *LayerStat) RequestsSuccess() uint64 {
+	return l.Outside.RequestsSuccess() + l.Internal.RequestsSuccess()
+}
+func (l *LayerStat) RequestsFailures() uint64 {
+	return l.Outside.RequestsFailures() + l.Internal.RequestsFailures()
 }
 func (l *LayerStat) Bytes() uint64 {
 	return l.Outside.Bytes() + l.Internal.Bytes()
@@ -115,8 +121,11 @@ type Command struct {
 	Disk		LayerStat		`json:"disk"`
 	Total		DstStat			`json:"total"`
 }
-func (c *Command) Requests() uint64 {
-	return c.Cache.Requests() + c.Disk.Requests()
+func (c *Command) RequestsSuccess() uint64 {
+	return c.Cache.RequestsSuccess() + c.Disk.RequestsSuccess()
+}
+func (c *Command) RequestsFailures() uint64 {
+	return c.Cache.RequestsFailures() + c.Disk.RequestsFailures()
 }
 func (c *Command) Bytes() uint64 {
 	return c.Cache.Bytes() + c.Disk.Bytes()
