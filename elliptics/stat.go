@@ -303,6 +303,8 @@ func (s *Session) DnetStat() *DnetStat {
 	return st
 }
 
+// @Diff() updates differential counters like success/failure RPS and BPS
+// i.e. those counters which require difference measured for some time
 func (stat *DnetStat) Diff(prev *DnetStat) {
 	if prev == nil {
 		return
