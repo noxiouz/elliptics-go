@@ -76,6 +76,11 @@ func TestSession(t *testing.T) {
 		t.Errorf("Set/GetIOflags: invalid timeout value. Expected %d, got %d",
 			sessionIOflags, gotIOflags)
 	}
+
+	dnetStat := session.DnetStat()
+	t.Log(dnetStat)
+	defer session.GetRoutes(dnetStat)
+	t.Log(dnetStat.StatData())
 }
 
 func TestFull(t *testing.T) {

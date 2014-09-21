@@ -1,6 +1,7 @@
 package elliptics
 
 import (
+	"crypto/sha512"
 	"errors"
 	"testing"
 )
@@ -20,6 +21,8 @@ func TestKeyDefaultCreationAndFree(t *testing.T) {
 		t.Errorf("%v", key)
 	}
 
+	// t.Log(key.CmpID([]uint8{1, 2, 3, 4, 5}))
+
 	if key.ById() {
 		t.Errorf("%s", "Create key without ID")
 	}
@@ -38,6 +41,31 @@ func TestKeyCreationAndFree(t *testing.T) {
 		t.Fatalf("Error in a key creation, got %v", err)
 	}
 	key.Free()
+}
+
+/*
+	Keys
+*/
+
+func TestKeysCreationAndFree(t *testing.T) {
+	keys, err := NewKeys([]string{"A", "B", "C"})
+	if err != nil {
+		t.Fatalf("NewKeys: Unexpected error %s", err)
+	}
+	defer keys.Free()
+
+	var hash []uint8
+	for _, v := range sha512.Sum512([]byte("A")) {
+		hash = append(hash, v)
+	}
+	name, err := keys.Find(hash)
+	if err != nil {
+		t.Errorf("Find: Unexpected error %s", err)
+	}
+
+	if name != "A" {
+		t.Errorf("Unexpected `name` value %s", name)
+	}
 }
 
 /*
