@@ -17,7 +17,7 @@ package elliptics
 
 
 /*
-#cgo LDFLAGS: -lelliptics_client -lelliptics_cpp -lboost_thread
+#cgo LDFLAGS: -lelliptics_client -lelliptics_cpp -lboost_thread -lboost_system
 
 #include "node.h"
 #include <stdlib.h>
