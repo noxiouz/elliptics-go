@@ -49,7 +49,7 @@ ell_session *new_elliptics_session(ell_node *node)
 	return session;
 }
 
-void session_set_groups(ell_session *session, int32_t *groups, int count)
+void session_set_groups(ell_session *session, uint32_t *groups, int count)
 {
 	std::vector<int>g(groups, groups + count);
 	session->set_groups(g);

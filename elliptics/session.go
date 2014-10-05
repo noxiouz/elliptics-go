@@ -55,7 +55,7 @@ For example Remove:
 	}
 */
 type Session struct {
-	groups		[]int32
+	groups		[]uint32
 	session		unsafe.Pointer
 }
 
@@ -67,17 +67,17 @@ func NewSession(node *Node) (*Session, error) {
 	}
 	return &Session{
 		session: session,
-		groups: make([]int32, 0, 0),
+		groups: make([]uint32, 0, 0),
 	}, err
 }
 
 //SetGroups points groups Session should work with.
-func (s *Session) SetGroups(groups []int32) {
-	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
+func (s *Session) SetGroups(groups []uint32) {
+	C.session_set_groups(s.session, (*C.uint32_t)(&groups[0]), C.int(len(groups)))
 	s.groups = groups
 }
 //GetGroups returns array of groups this session holds
-func (s *Session) GetGroups() []int32 {
+func (s *Session) GetGroups() []uint32 {
 	return s.groups
 }
 
