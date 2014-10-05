@@ -402,7 +402,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
 
 	if r.MonitorStatus != "enabled" {
-		//log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
+		log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
 		return
 	}
 
@@ -410,7 +410,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		if vnode.Status.State == BackendStateEnabled {
 			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
 			backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
-			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.Blocks
+			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
 
