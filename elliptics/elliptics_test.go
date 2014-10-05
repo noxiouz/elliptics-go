@@ -15,7 +15,7 @@ import (
 
 func TestSession(t *testing.T) {
 	var (
-		sessionGroups  = []int32{1, 2, 100, 505}
+		sessionGroups  = []uint32{1, 2, 100, 505}
 		sessionTraceID = TraceID(99999)
 
 		sessionCflags  = DNET_FLAGS_NOCACHE
@@ -111,13 +111,13 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 	Remotes := strings.Split(testRemotes, ",")
 
 	raw_groups := strings.Split(testGroups, ",")
-	Groups := make([]int32, len(raw_groups))
+	Groups := make([]uint32, len(raw_groups))
 	for i, groups := range raw_groups {
 		gr, err := strconv.Atoi(groups)
 		if err != nil {
 			t.Fatalf("TestFull: invalid group number %s", err)
 		} else {
-			Groups[i] = int32(gr)
+			Groups[i] = uint32(gr)
 		}
 	}
 
