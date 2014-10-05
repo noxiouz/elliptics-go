@@ -82,8 +82,7 @@ struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
 
-
-void session_set_groups(ell_session *session, int32_t *groups, int count);
+void session_set_groups(ell_session *session, uint32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);
 
 void session_set_timeout (ell_session *session, int timeout);

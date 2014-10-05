@@ -55,8 +55,8 @@ For example Remove:
     }
 */
 type Session struct {
-	groups  []int32
-	session unsafe.Pointer
+	groups		[]uint32
+	session		unsafe.Pointer
 }
 
 //NewSession returns Session connected with given Node.
@@ -67,18 +67,18 @@ func NewSession(node *Node) (*Session, error) {
 	}
 	return &Session{
 		session: session,
-		groups:  make([]int32, 0, 0),
+		groups: make([]uint32, 0, 0),
 	}, err
 }
 
 //SetGroups points groups Session should work with.
-func (s *Session) SetGroups(groups []int32) {
-	C.session_set_groups(s.session, (*C.int32_t)(&groups[0]), C.int(len(groups)))
+func (s *Session) SetGroups(groups []uint32) {
+	C.session_set_groups(s.session, (*C.uint32_t)(&groups[0]), C.int(len(groups)))
 	s.groups = groups
 }
 
 //GetGroups returns array of groups this session holds
-func (s *Session) GetGroups() []int32 {
+func (s *Session) GetGroups() []uint32 {
 	return s.groups
 }
 
@@ -413,7 +413,8 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
 
-	var offset uint64 = initial_offset
+	orig_total_size := total_size
+	offset := initial_offset
 	var n64 uint64
 
 	onChunkResult := func(lookup *lookupResult) {
@@ -490,6 +491,17 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		return responseCh
 	}
 
+	if n == 0 {
+		responseCh <- &lookupResult {
+			err: &DnetError {
+				Code: -22,
+				Flags: 0,
+				Message: fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
+					initial_offset, offset, total_size, orig_total_size),
+			},
+		}
+	}
+
 	n64 = uint64(n)
 	total_size -= n64
 	offset += n64
@@ -526,6 +538,19 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 	chunk, err := ioutil.ReadAll(input)
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+
+	if len(chunk) == 0 {
+		responseCh <- &lookupResult {
+			err: &DnetError {
+				Code: -22,
+				Flags: 0,
+				Message: "Invalid zero-length write request",
+			},
+		}
 		close(responseCh)
 		close(keepaliver)
 		return responseCh
