@@ -28,7 +28,7 @@ type Status struct {
 	DefragState	int		`json:"defrag_state"`
 	LastStart	Time		`json:"last_start"`
 	LastStartErr	int		`json:"last_start_err"`
-	RO		int		`json:"read_only"`
+	RO		bool		`json:"read_only"`
 }
 
 type Config struct {
@@ -79,7 +79,7 @@ type Backend struct {
 }
 
 type CommandStat struct {
-	Success		uint64			`json:"success"`
+	Success		uint64			`json:"successes"`
 	Failures	uint64			`json:"failures"`
 	Size		uint64			`json:"size"`
 	Time		uint64			`json:"time"`
