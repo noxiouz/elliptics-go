@@ -396,7 +396,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 
 	err := json.Unmarshal(entry.stat, &r)
 	if err != nil {
-		log.Printf("%s: could not parse stat entry reply: %v\n", entry.addr.String(), err)
+		log.Printf("%s: could not parse stat entry '%s' reply: %v\n", entry.addr.String(), string(entry.stat), err)
 	}
 
 	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
