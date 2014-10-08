@@ -81,7 +81,7 @@ type DStat struct {
 
 type StatBackend struct {
 	// All range starts (IDs) for given node (server address + backend)
-	ID		[]DnetRawID
+	ID		[]DnetRawID			`json:"-"`
 
 	// @sum hosts total sum of uint64 ids created frm DnetRawID
 	// after it is devided by math.MaxUint64 it becomes @Percentage
@@ -110,14 +110,8 @@ func NewStatBackend() *StatBackend {
 	}
 }
 
-func (backend *StatBackend) StatBackendData() (reply map[string]interface{}) {
-	reply = make(map[string]interface{})
-
-	reply["percentage"] = backend.Percentage
-	reply["vfs"] = backend.VFS
-	reply["dstat"] = backend.DStat
-	reply["commands"] = backend.Commands
-	return reply
+func (backend *StatBackend) StatBackendData() (reply interface{}) {
+	return backend
 }
 
 
