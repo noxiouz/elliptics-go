@@ -27,7 +27,7 @@ import (
 
 type DnetError struct {
 	Code		int
-	Flags		int
+	Flags		uint64
 	Message		string
 }
 

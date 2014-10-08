@@ -49,6 +49,15 @@ ell_session *new_elliptics_session(ell_node *node)
 	return session;
 }
 
+void session_set_filter_all(ell_session *session)
+{
+	session->set_filter(elliptics::filters::all);
+}
+void session_set_filter_positive(ell_session *session)
+{
+	session->set_filter(elliptics::filters::positive);
+}
+
 void session_set_groups(ell_session *session, uint32_t *groups, int count)
 {
 	std::vector<int>g(groups, groups + count);
@@ -107,12 +116,22 @@ void session_read_data(ell_session *session, void *on_chunk_context,
  */
 static void on_lookup(void *context, const elliptics::lookup_result_entry & result)
 {
-	go_lookup_result to_go {
-		result.command(), result.address(),
-		result.file_info(), result.storage_address(), result.file_path()
-	};
+	if (result.error()) {
+		go_error err {
+			result.error().code(),
+			result.command()->flags,
+			result.error().message().c_str()
+		};
 
-	go_lookup_callback(&to_go, context);
+		go_lookup_error(result.command(), result.address(), &err, context);
+	} else {
+		go_lookup_result to_go {
+			result.command(), result.address(),
+			result.file_info(), result.storage_address(), result.file_path()
+		};
+
+		go_lookup_callback(&to_go, context);
+	}
 }
 
 void session_write_data(ell_session *session, void *on_chunk_context,

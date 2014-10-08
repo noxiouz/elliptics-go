@@ -100,14 +100,35 @@ func (s *Session) SetTraceID(trace uint64) {
 	C.session_set_trace_id(s.session, C.uint64_t(trace))
 }
 
-/*SetNamespace sets the namespace for the Session.Default namespace is empty string.
-
-This feature allows you to share a single storage between services.
-And each service which uses own namespace will have own independent space of keys.*/
+/*
+ * @SetNamespace sets the namespace for the Session. Default namespace is empty string.
+ *
+ * This feature allows you to share a single storage between services.
+ * And each service which uses own namespace will have own independent space of keys.
+ */
 func (s *Session) SetNamespace(namespace string) {
 	cnamespace := C.CString(namespace)
 	defer C.free(unsafe.Pointer(cnamespace))
 	C.session_set_namespace(s.session, cnamespace, C.int(len(namespace)))
+}
+
+const (
+	SessionFilterAll		= iota
+	SessionFilterPositive		= iota
+	SessionFilterMax		= iota
+)
+
+func (s *Session) SetFilter(filter int) {
+	if filter >= SessionFilterMax {
+		return
+	}
+
+	switch filter {
+	case SessionFilterAll:
+		C.session_set_filter_all(s.session)
+	case SessionFilterPositive:
+		C.session_set_filter_positive(s.session)
+	}
 }
 
 /*

@@ -74,13 +74,16 @@ struct go_data_pointer {
 
 struct go_error {
 	int		code;		// elliptics error code, should be negative errno value
-	int		flags;		// this will mainly say whether it is client or server error in 2.26
+	uint64_t	flags;		// dnet_cmd.flags
 	const char	*message;
 };
 
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
+
+void session_set_filter_all(ell_session *session);
+void session_set_filter_positive(ell_session *session);
 
 void session_set_groups(ell_session *session, uint32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);

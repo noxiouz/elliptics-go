@@ -20,7 +20,7 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	if (cerr.code < 0) {
 		err := &DnetError {
 			Code:		int(cerr.code),
-			Flags:		0,
+			Flags:		uint64(cerr.flags),
 			Message:	C.GoString(cerr.message),
 		}
 
@@ -28,6 +28,21 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	} else {
 		callback(nil)
 	}
+}
+
+//export go_lookup_error
+func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, context unsafe.Pointer) {
+	callback := *(*func(*lookupResult))(context)
+	Result := lookupResult {
+		cmd:	NewDnetCmd(cmd),
+		addr:	NewDnetAddr(addr),
+		err:	&DnetError {
+				Code:		int(cerr.code),
+				Flags:		uint64(cerr.flags),
+				Message:	C.GoString(cerr.message),
+			},
+	}
+	callback(&Result)
 }
 
 //export go_lookup_callback
