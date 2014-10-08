@@ -40,6 +40,7 @@ const (
 	StatCategoryCommands	int64 =		1 << 2
 	StatCategoryBackend	int64 =		1 << 4
 	StatCategoryProcFS	int64 =		1 << 6
+	StatSectorSize		uint64 =	512
 )
 
 type AddressBackend struct {
@@ -68,6 +69,16 @@ type CStat struct {
 	BPS			float64
 }
 
+type DStat struct {
+	WSectors		uint64
+	RSectors		uint64
+	IOTicks			uint64
+
+	WBS			float64
+	RBS			float64
+	Util			float64
+}
+
 type StatBackend struct {
 	// All range starts (IDs) for given node (server address + backend)
 	ID		[]DnetRawID
@@ -83,6 +94,8 @@ type StatBackend struct {
 
 	// VFS statistics: available, used and total space
 	VFS		VFS
+
+	DStat		DStat
 
 	// per-command size/number counters
 	// difference between the two divided by the time difference equals to RPS/BPS
@@ -102,6 +115,7 @@ func (backend *StatBackend) StatBackendData() (reply map[string]interface{}) {
 
 	reply["percentage"] = backend.Percentage
 	reply["vfs"] = backend.VFS
+	reply["dstat"] = backend.DStat
 	reply["commands"] = backend.Commands
 	return reply
 }
@@ -306,7 +320,7 @@ func (s *Session) DnetStat() *DnetStat {
 // @Diff() updates differential counters like success/failure RPS and BPS
 // i.e. those counters which require difference measured for some time
 func (stat *DnetStat) Diff(prev *DnetStat) {
-	if prev == nil {
+	if prev == nil || prev == stat {
 		return
 	}
 
@@ -323,6 +337,10 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 			if !ok {
 				continue
 			}
+
+			sb.DStat.WBS = float64((sb.DStat.WSectors - psb.DStat.WSectors) * StatSectorSize) / duration
+			sb.DStat.RBS = float64((sb.DStat.RSectors - psb.DStat.RSectors) * StatSectorSize) / duration
+			sb.DStat.Util = float64(sb.DStat.IOTicks - psb.DStat.IOTicks) / 1000.0 / duration * 100.0
 
 			for cmd, cstat := range sb.Commands {
 				pcstat, ok := psb.Commands[cmd]
@@ -413,6 +431,10 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+
+			backend.DStat.RSectors = vnode.Backend.DStat.ReadSectors
+			backend.DStat.WSectors = vnode.Backend.DStat.WriteSectors
+			backend.DStat.IOTicks = vnode.Backend.DStat.IOTicks
 
 			for cname, cstat := range vnode.Commands {
 				backend.Commands[cname] = &CStat {

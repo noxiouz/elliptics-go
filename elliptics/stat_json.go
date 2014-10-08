@@ -56,7 +56,7 @@ type VStat struct {
 	BFree			uint64		`json:"bfree"`
 	BAvail			uint64		`json:"bavail"`
 }
-type DStat struct {
+type DStatRaw struct {
 	ReadIOs			uint64		`json:"read_ios"`
 	ReadMerges		uint64		`json:"read_merges"`
 	ReadSectors		uint64		`json:"read_sectors"`
@@ -75,7 +75,7 @@ type Backend struct {
 	SummaryStats BlobStats			`json:"summary_stats"`
 	BaseStats map[string]BlobStats		`json:"base_stats"`
 	VFS VStat				`json:"vfs"`
-	DStat DStat				`json:"dstat"`
+	DStat DStatRaw				`json:"dstat"`
 }
 
 type CommandStat struct {
