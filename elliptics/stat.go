@@ -91,10 +91,25 @@ type StatBackend struct {
 	// and thus node (address + backend)
 	Percentage	float64
 
+	// defragmentation status: 0 - not started, 1 - in progress
+	DefragState	int
+	DefragStateStr	string
+
+	// backend is in read-only mode
+	RO		bool
+
+	// backend has delay of @Delay ms for every operation
+	Delay		uint32
+
+	// logical size limitation for backends which support it
+	// blob backend may set this (configuration must allow blob size checks, bit-4 must be zero)
+	// for all others this field equals to @VFS.Total
+	SizeLimit	uint64
 
 	// VFS statistics: available, used and total space
 	VFS		VFS
 
+	// dsat (disk utilization, read/write per second)
 	DStat		DStat
 
 	// per-command size/number counters
@@ -425,6 +440,18 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+
+			backend.DefragState = vnode.Status.DefragState
+			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
+			backend.RO = vnode.Status.RO
+			backend.Delay = vnode.Status.Delay
+
+			backend.SizeLimit = backend.VFS.Total
+
+			// check blob flags, if bit 4 is set, blob will not perform size checks at all
+			if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags & (1<<4) == 0){
+				backend.SizeLimit = vnode.Backend.Config.BlobSizeLimit
+			}
 
 			backend.DStat.RSectors = vnode.Backend.DStat.ReadSectors
 			backend.DStat.WSectors = vnode.Backend.DStat.WriteSectors

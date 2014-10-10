@@ -29,11 +29,21 @@ type Status struct {
 	LastStart	Time		`json:"last_start"`
 	LastStartErr	int		`json:"last_start_err"`
 	RO		bool		`json:"read_only"`
+	Delay		uint32		`json:"delay"`
 }
 
 type Config struct {
-	Group	uint32	`json:"group"`
-	Data	string	`json:"data"`
+	Group		uint32		`json:"group"`
+	Data		string		`json:"data"`
+	Sync		int		`json:"sync"`
+	BlobFlags	uint64		`json:"blob_flags"`
+	BlobSize	uint64		`json:"blob_size"`
+	BlobSizeLimit	uint64		`json:"blob_size_limit"`
+	MaxRecords	uint64		`json:"records_in_blob"`
+	DefragPercentage	uint64	`json:"defrag_percentage"`
+	DefragTimeout	uint64		`json:"defrag_timeout"`
+	DefragTime	uint64		`json:"defrag_time"`
+	DefragSplay	uint64		`json:"defrag_splay"`
 }
 type GlobalStats struct {
 	DataSortStartTime		uint64		`json:"datasort_start_time"`
