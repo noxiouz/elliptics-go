@@ -148,6 +148,19 @@ void session_remove_indexes(ell_session *session, void *on_chunk_context,
 void session_list_indexes(ell_session *sesion, void *on_chunk_context,
 		void *final_context, ell_key *key);
 
+struct go_backends_status {
+	struct dnet_backend_status_list		*list;
+	struct go_error				error;
+};
+
+void session_backends_status(ell_session *session, const struct dnet_addr *addr, void *context);
+void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context);
+
 #ifdef __cplusplus
 }
 #endif
