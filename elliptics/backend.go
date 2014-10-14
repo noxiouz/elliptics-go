@@ -16,7 +16,6 @@
 package elliptics
 
 import (
-	"fmt"
 	"time"
 	"unsafe"
 )
@@ -24,6 +23,38 @@ import (
 /*
 #include "session.h"
 #include <stdio.h>
+
+struct dnet_backend_status_unpacked {
+	uint32_t		backend_id;
+	int32_t			state;
+	uint32_t		defrag_state;
+	struct dnet_time	last_start;
+	int32_t			last_start_err;
+	int			read_only;
+	uint32_t		delay;
+};
+
+static inline int dnet_backend_status_from_list(struct dnet_backend_status_list *list,
+	uint32_t idx, struct dnet_backend_status_unpacked *ret)
+{
+	struct dnet_backend_status *st;
+
+	if (idx >= list->backends_count) {
+		return -1;
+	}
+
+	st = &list->backends[idx];
+
+	ret->backend_id = st->backend_id;
+	ret->state = st->state;
+	ret->defrag_state = st->defrag_state;
+	ret->last_start = st->last_start;
+	ret->last_start_err = st->last_start_err;
+	ret->read_only = (st->read_only != 0);
+	ret->delay = st->delay;
+
+	return 0;
+}
 */
 import "C"
 
@@ -38,21 +69,32 @@ type DnetBackendStatus struct {
 }
 
 type DnetBackendsStatus struct {
-	backends	[]DnetBackendStatus
-	err		error
+	Backends	[]DnetBackendStatus
+	Error		error
 }
 
 //export go_backend_status_callback
-func go_backend_status_callback(context unsafe.Pointer, elements *C.struct_dnet_backend_status_list) {
-	num := elements.backends_count
-	cback := &elements.backends
-
-	fmt.Printf("status: %d vs %d backends\n", num, len(cback))
-
+func go_backend_status_callback(context unsafe.Pointer, list *C.struct_dnet_backend_status_list) {
 	res := &DnetBackendsStatus {
-		backends: make([]DnetBackendStatus, 0, num),
+		Backends: make([]DnetBackendStatus, 0, list.backends_count),
 	}
 
+	for i := 0; i < int(list.backends_count); i++ {
+		var st C.struct_dnet_backend_status_unpacked
+		if (C.dnet_backend_status_from_list(list, C.uint32_t(i), &st) == 0) {
+			bst := DnetBackendStatus {
+				Backend:		int32(st.backend_id),
+				State:			int32(st.state),
+				DefragState:		uint32(st.defrag_state),
+				LastStart:		time.Unix(int64(st.last_start.tsec), int64(st.last_start.tnsec)),
+				LastStartErr:		int32(st.last_start_err),
+				RO:			st.read_only != 0,
+				Delay:			uint32(st.delay),
+			}
+
+			res.Backends = append(res.Backends, bst)
+		}
+	}
 
 	ch := *(*chan *DnetBackendsStatus)(context)
 	ch <- res
@@ -62,7 +104,7 @@ func go_backend_status_callback(context unsafe.Pointer, elements *C.struct_dnet_
 //export go_backend_status_error
 func go_backend_status_error(context unsafe.Pointer, cerr *C.struct_go_error) {
 	res := &DnetBackendsStatus {
-		err: &DnetError {
+		Error: &DnetError {
 			Code:		int(cerr.code),
 			Flags:		uint64(cerr.flags),
 			Message:	C.GoString(cerr.message),
