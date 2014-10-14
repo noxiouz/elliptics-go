@@ -43,8 +43,20 @@ const (
 	StatSectorSize		uint64 =	512
 )
 
+type RawAddr struct {
+	Addr		[32]byte
+	Family		uint16
+}
+func (a *RawAddr) String() string {
+	tmp := DnetAddr {
+		Addr: a.Addr[:],
+		Family: a.Family,
+	}
+
+	return tmp.String()
+}
 type AddressBackend struct {
-	Addr		DnetAddr
+	Addr		RawAddr
 	Backend		int32
 }
 
@@ -260,11 +272,21 @@ type StatEntry struct {
 func (entry *StatEntry) Group() uint32 {
 	return entry.cmd.ID.Group
 }
-func (entry *StatEntry) AddressBackend() AddressBackend {
-	return AddressBackend {
-		Addr:		entry.addr,
-		Backend:	entry.cmd.Backend,
+
+func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
+	raw := RawAddr {
+		Family: addr.Family,
 	}
+	copy(raw.Addr[:], addr.Addr)
+
+	return AddressBackend {
+		Addr:		raw,
+		Backend:	backend,
+	}
+}
+
+func (entry *StatEntry) AddressBackend() AddressBackend {
+	return NewAddressBackend(&entry.addr, entry.cmd.Backend)
 }
 
 //export go_stat_callback
@@ -373,10 +395,7 @@ func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32
 		stat.Group[group] = sg
 	}
 
-	ab := AddressBackend {
-		Addr:		*addr,
-		Backend:	backend_id,
-	}
+	ab := NewAddressBackend(addr, backend_id)
 
 	backend, ok := sg.Ab[ab]
 	if !ok {

@@ -60,19 +60,16 @@ import (
 	"unsafe"
 )
 
-const DnetAddrSize int = 32
 type DnetAddr struct {
-	Addr	[DnetAddrSize]byte
+	Addr	[]byte
 	Family	uint16
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	a := DnetAddr {
+	return DnetAddr {
 		Family:	uint16(addr.family),
+		Addr: C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
 	}
-
-	copy(a.Addr[:], C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)))
-	return a
 }
 
 func NewDnetAddrStr(addr_str string) (DnetAddr, error) {
