@@ -100,7 +100,14 @@ func (a *DnetAddr) String() string {
 	var tmp C.struct_dnet_addr
 
 	a.CAddr(&tmp)
-	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_server_convert_dnet_addr(&tmp)), a.Family)
+	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_addr_string(&tmp)), a.Family)
+}
+
+func (a *DnetAddr) HostString() string {
+	var tmp C.struct_dnet_addr
+
+	a.CAddr(&tmp)
+	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(&tmp)))
 }
 
 
