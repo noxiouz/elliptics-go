@@ -1041,3 +1041,33 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		ekey.key, (**C.char)(&cindexes[0]), C.uint64_t(len(cindexes)))
 	return responseCh
 }
+
+func (s *Session) LookupBackend(key string, group_id uint32)  (addr *DnetAddr, backend_id int32, err error) {
+	var caddr C.struct_dnet_addr
+	var cbackend_id C.int
+
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+
+	addr = nil
+	backend_id = -1
+
+	cerr := C.session_lookup_addr(s.session, ckey, C.int(len(key)), C.int(group_id), &caddr, &cbackend_id)
+	if cerr < 0 {
+		err = &DnetError {
+			Code:		int(cerr),
+			Flags:		0,
+			Message:	fmt.Sprintf("could not lookup backend: key '%s', group: %d: %d",
+						key, group_id, int(cerr)),
+		}
+
+		return
+	}
+
+	new_addr := NewDnetAddr(&caddr)
+
+	addr = &new_addr
+	backend_id = int32(cbackend_id)
+
+	return
+}

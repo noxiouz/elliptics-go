@@ -412,4 +412,9 @@ void session_backend_set_delay(ell_session *session, const struct dnet_addr *add
 				std::placeholders::_1, std::placeholders::_2));
 }
 
+int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id)
+{
+	return dnet_lookup_addr(session->get_native(), key, len, NULL, group_id, addr, backend_id);
+}
+
 } // extern "C"

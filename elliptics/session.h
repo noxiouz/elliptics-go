@@ -161,6 +161,8 @@ void session_backend_make_writable(ell_session *session, const struct dnet_addr 
 void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
 void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context);
 
+int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id);
+
 #ifdef __cplusplus
 }
 #endif
