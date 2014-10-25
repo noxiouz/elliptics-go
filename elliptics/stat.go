@@ -45,11 +45,12 @@ const (
 
 type RawAddr struct {
 	Addr		[32]byte
+	Len		int
 	Family		uint16
 }
 func (a *RawAddr) String() string {
 	tmp := DnetAddr {
-		Addr: a.Addr[:],
+		Addr: a.Addr[:a.Len],
 		Family: a.Family,
 	}
 
@@ -276,6 +277,7 @@ func (entry *StatEntry) Group() uint32 {
 
 func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
 	raw := RawAddr {
+		Len: len(addr.Addr),
 		Family: addr.Family,
 	}
 	copy(raw.Addr[:], addr.Addr)
