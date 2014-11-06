@@ -98,6 +98,25 @@ type DStat struct {
 	Util			float64
 }
 
+type PID struct {
+	Error			float64
+	IntegralError		float64
+	ErrorTime		time.Time
+	Pain			float64
+}
+
+func NewPIDController() PID {
+	return PID {
+		ErrorTime:		time.Now(),
+	}
+}
+
+const (
+	PIDKe float64			= 1.0
+	PIDKi float64			= 1.0
+	PIDKd float64			= 0.3
+)
+
 type StatBackend struct {
 	// All range starts (IDs) for given node (server address + backend)
 	ID		[]DnetRawID			`json:"-"`
@@ -126,6 +145,9 @@ type StatBackend struct {
 	// dsat (disk utilization, read/write per second)
 	DStat		DStat
 
+	// PID-controller used for data writing
+	PID		PID
+
 	// per-command size/number counters
 	// difference between the two divided by the time difference equals to RPS/BPS
 	Commands	map[string]*CStat
@@ -136,7 +158,23 @@ func NewStatBackend() *StatBackend {
 		Percentage:	0,
 		sum:		0,
 		Commands:	make(map[string]*CStat),
+		PID:		NewPIDController(),
 	}
+}
+
+func (backend *StatBackend) PIDUpdate(e float64) {
+	p := &backend.PID
+
+	delta_T := time.Since(p.ErrorTime).Seconds()
+	integral_new := e * delta_T + p.IntegralError
+	diff := (e - p.Error) / delta_T
+
+	u := e * PIDKe + integral_new * PIDKi + diff * PIDKd
+
+	p.IntegralError = integral_new
+	p.Error = e
+	p.ErrorTime = time.Now()
+	p.Pain = u
 }
 
 func (backend *StatBackend) StatBackendData() (reply interface{}) {
@@ -173,6 +211,31 @@ func NewStatGroup() StatGroup {
 	return StatGroup {
 		Ab:	make(map[AddressBackend]*StatBackend),
 	}
+}
+
+func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*StatBackend, error) {
+	addr, backend_id, err := s.LookupBackend(key, group_id)
+	if err != nil {
+		return nil, &DnetError {
+			Code:		-2, // -ENOENT
+			Flags:		0,
+			Message:	fmt.Sprintf("could not find backend for key: %s, group: %d: %v", key, group_id, err),
+		}
+	}
+
+	ab := NewAddressBackend(addr, backend_id)
+
+	st, ok := sg.Ab[ab]
+	if !ok {
+		return nil, &DnetError {
+			Code:		-2, // -ENOENT
+			Flags:		0,
+			Message:	fmt.Sprintf("could not find statistics for key: %s, group: %d -> addr: %s, backend: %d",
+						key, group_id, addr.String(), backend_id),
+		}
+	}
+
+	return st, nil
 }
 
 func (sg *StatGroup) StatGroupData() (reply []interface{}) {
