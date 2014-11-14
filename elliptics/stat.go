@@ -435,6 +435,8 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 				continue
 			}
 
+			sb.PID = psb.PID
+
 			sb.DStat.WBS = float64((sb.DStat.WSectors - psb.DStat.WSectors) * StatSectorSize) / duration
 			sb.DStat.RBS = float64((sb.DStat.RSectors - psb.DStat.RSectors) * StatSectorSize) / duration
 			sb.DStat.Util = float64(sb.DStat.IOTicks - psb.DStat.IOTicks) / 1000.0 / duration
