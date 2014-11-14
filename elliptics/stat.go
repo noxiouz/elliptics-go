@@ -118,6 +118,8 @@ const (
 )
 
 type StatBackend struct {
+	Error		BackendError			`json:"error"`
+
 	// All range starts (IDs) for given node (server address + backend)
 	ID		[]DnetRawID			`json:"-"`
 
@@ -523,6 +525,14 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 	for _, vnode := range r.Backends {
 		if vnode.Status.State == BackendStateEnabled {
 			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
+
+			backend.Error = vnode.Backend.Error
+
+			if vnode.Backend.Error.Code != 0 {
+				// do not update backend statistics
+				continue
+			}
+
 			backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
 			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize

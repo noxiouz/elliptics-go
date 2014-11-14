@@ -79,6 +79,9 @@ type DStatRaw struct {
 	IOTicks			uint64		`json:"io_ticks"`
 	TimeInQueue		uint64		`json:"time_in_queue"`
 }
+type BackendError struct {
+	Code			int		`json:"code"`
+}
 type Backend struct {
 	Config	Config				`json:"config"`
 	GlobalStats GlobalStats			`json:"global_stats"`
@@ -86,6 +89,7 @@ type Backend struct {
 	BaseStats map[string]BlobStats		`json:"base_stats"`
 	VFS VStat				`json:"vfs"`
 	DStat DStatRaw				`json:"dstat"`
+	Error BackendError			`json:"error"`
 }
 
 type CommandStat struct {
