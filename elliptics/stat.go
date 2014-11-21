@@ -48,12 +48,14 @@ type RawAddr struct {
 	Len		int
 	Family		uint16
 }
-func (a *RawAddr) String() string {
-	tmp := DnetAddr {
+func (a *RawAddr) DnetAddr() *DnetAddr {
+	return &DnetAddr {
 		Addr: a.Addr[:a.Len],
 		Family: a.Family,
 	}
-
+}
+func (a *RawAddr) String() string {
+	tmp := a.DnetAddr()
 	return tmp.String()
 }
 type AddressBackend struct {
