@@ -78,6 +78,10 @@ type VFS struct {
 
 	BackendRemovedSize	uint64
 	BackendUsedSize		uint64
+
+	RecordsTotal		uint64
+	RecordsRemoved		uint64
+	RecordsCorrupted	uint64
 }
 
 type CStat struct {
@@ -181,11 +185,6 @@ func (backend *StatBackend) PIDUpdate(e float64) {
 	p.Pain = u
 }
 
-func (backend *StatBackend) StatBackendData() (reply interface{}) {
-	return backend
-}
-
-
 func (sb *StatBackend) Len() int {
 	return len(sb.ID)
 }
@@ -242,19 +241,22 @@ func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*
 	return st, nil
 }
 
-func (sg *StatGroup) StatGroupData() (reply []interface{}) {
-	reply = make([]interface{}, 0, len(sg.Ab))
+type StatGroupData struct {
+	Address		string
+	Backend		int32
+	Stat		*StatBackend
+}
+
+func (sg *StatGroup) StatGroupData() (reply []*StatGroupData) {
+	reply = make([]*StatGroupData, 0, len(sg.Ab))
 
 	for ab, backend := range sg.Ab {
-		tmp := struct {
-			Address		string
-			Backend		int32
-			Stat		interface{}
-		} {
+		tmp := &StatGroupData {
 			Address:	ab.Addr.String(),
 			Backend:	ab.Backend,
-			Stat:		backend.StatBackendData(),
+			Stat:		backend,
 		}
+
 		reply = append(reply, tmp)
 	}
 
@@ -539,6 +541,9 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
 			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
 			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+			backend.VFS.RecordsTotal = vnode.Backend.SummaryStats.RecordsTotal
+			backend.VFS.RecordsRemoved = vnode.Backend.SummaryStats.RecordsRemoved
+			backend.VFS.RecordsCorrupted = vnode.Backend.SummaryStats.RecordsCorrupted
 
 			backend.VFS.TotalSizeLimit = backend.VFS.Total
 			// check blob flags, if bit 4 is set, blob will not perform size checks at all
@@ -550,7 +555,6 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
 			backend.RO = vnode.Status.RO
 			backend.Delay = vnode.Status.Delay
-
 
 			backend.DStat.RSectors = vnode.Backend.DStat.ReadSectors
 			backend.DStat.WSectors = vnode.Backend.DStat.WriteSectors
