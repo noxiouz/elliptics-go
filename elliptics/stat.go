@@ -241,23 +241,36 @@ func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*
 	return st, nil
 }
 
-type StatGroupData struct {
+type StatBackendData struct {
 	Address		string
 	Backend		int32
 	Stat		*StatBackend
 }
 
-func (sg *StatGroup) StatGroupData() (reply []*StatGroupData) {
-	reply = make([]*StatGroupData, 0, len(sg.Ab))
+type StatGroupData struct {
+	Backends		[]*StatBackendData
 
+	RecordsTotal		uint64
+	RecordsRemoved		uint64
+	RecordsCorrupted	uint64
+}
+
+func (sg *StatGroup) StatGroupData() (reply *StatGroupData) {
+
+	reply = &StatGroupData {
+		Backends: make([]*StatBackendData, 0, len(sg.Ab)),
+	}
 	for ab, backend := range sg.Ab {
-		tmp := &StatGroupData {
+		tmp := &StatBackendData {
 			Address:	ab.Addr.String(),
 			Backend:	ab.Backend,
 			Stat:		backend,
 		}
 
-		reply = append(reply, tmp)
+		reply.Backends = append(reply.Backends, tmp)
+		reply.RecordsTotal += backend.VFS.RecordsTotal
+		reply.RecordsRemoved += backend.VFS.RecordsRemoved
+		reply.RecordsCorrupted += backend.VFS.RecordsCorrupted
 	}
 
 	return reply
