@@ -119,7 +119,16 @@ func NewPIDController() PID {
 
 const (
 	PIDKe float64			= 1.0
-	PIDKi float64			= 1.0
+
+	// Integral part has to be zero in this case
+	// since there is no continuous 'force' to check/change in our case
+	// we can not infinitely increase integral part in attempt to compensate
+	// for difference of the error from zero (or no-matter-what like 100 MB/s)
+	// integral part has to compensate speed of wind when we are trying to achieve
+	// desired velocity, but in our case there is no engine controller which
+	// can output continuous power to driver the vehicle, instead we have to
+	// determine which of the backends is currently the fastest
+	PIDKi float64			= 0
 	PIDKd float64			= 0.3
 )
 
@@ -178,6 +187,14 @@ func (backend *StatBackend) PIDUpdate(e float64) {
 	diff := (e - p.Error) / delta_T
 
 	u := e * PIDKe + integral_new * PIDKi + diff * PIDKd
+	if u <= 0 {
+		// negative 'force' means we have to decrease/to hold down current attempts
+		// to achieve desired performance, but we do not have engine to tune its power,
+		// instead we have to select the fastest backend
+		// thus, let's just reduce the pain of the current backend when its performance
+		// is higher than desired one
+		u = p.Pain / 2.0 + 1.0
+	}
 
 	p.IntegralError = integral_new
 	p.Error = e
