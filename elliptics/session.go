@@ -421,6 +421,8 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 	offset := initial_offset
 	var n64 uint64
 
+	local_key := *key
+
 	onChunkResult := func(lookup *lookupResult) {
 		if total_size == 0 {
 			responseCh <- lookup
@@ -458,12 +460,12 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		if total_size != 0 {
 			C.session_write_plain(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				key.key, C.uint64_t(offset - n64),
+				local_key.key, C.uint64_t(offset - n64),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		} else {
 			C.session_write_commit(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				local_key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		}
 	}
@@ -479,7 +481,7 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		// this goroutine and finish it
 		onChunkResult = nil
 		onChunkFinish = nil
-		_ = key
+		_ = local_key
 		_ = chunk
 	}()
 
@@ -513,7 +515,7 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 
 	C.session_write_prepare(s.session,
 		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-		key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		local_key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
 		(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 
 	return responseCh
