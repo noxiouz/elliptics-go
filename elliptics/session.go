@@ -479,6 +479,7 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		// this goroutine and finish it
 		onChunkResult = nil
 		onChunkFinish = nil
+		_ = key
 		_ = chunk
 	}()
 
