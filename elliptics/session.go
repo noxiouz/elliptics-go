@@ -399,6 +399,10 @@ func (l *lookupResult) Error() error {
 
 //WriteData writes blob by a given string representation of Key.
 func (s *Session) WriteData(key string, input io.Reader, offset, total_size uint64) <-chan Lookuper {
+	if total_size > max_chunk_size {
+		return s.WriteChunk(key, input, offset, total_size)
+	}
+
 	ekey, err := NewKey(key)
 	if err != nil {
 		responseCh := make(chan Lookuper, defaultVOLUME)
@@ -410,9 +414,8 @@ func (s *Session) WriteData(key string, input io.Reader, offset, total_size uint
 	return s.WriteKey(ekey, input, offset, total_size)
 }
 
-func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_size uint64) <-chan Lookuper {
+func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-
 	keepaliver := make(chan struct{}, 0)
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
@@ -420,8 +423,6 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 	orig_total_size := total_size
 	offset := initial_offset
 	var n64 uint64
-
-	local_key := *key
 
 	onChunkResult := func(lookup *lookupResult) {
 		if total_size == 0 {
@@ -457,15 +458,24 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		total_size -= n64
 		offset += n64
 
+		ekey, err := NewKey(key)
+		if err != nil {
+			responseCh <- &lookupResult{err: err}
+			close(responseCh)
+			close(keepaliver)
+			return
+		}
+		defer ekey.Free()
+
 		if total_size != 0 {
 			C.session_write_plain(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				local_key.key, C.uint64_t(offset - n64),
+				ekey.key, C.uint64_t(offset - n64),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		} else {
 			C.session_write_commit(s.session,
 				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				local_key.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				ekey.key, C.uint64_t(offset - n64), C.uint64_t(offset),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		}
 	}
@@ -481,7 +491,7 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 		// this goroutine and finish it
 		onChunkResult = nil
 		onChunkFinish = nil
-		_ = local_key
+		_ = key
 		_ = chunk
 	}()
 
@@ -513,9 +523,18 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 	total_size -= n64
 	offset += n64
 
+	ekey, err := NewKey(key)
+	if err != nil {
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		close(keepaliver)
+		return responseCh
+	}
+	defer ekey.Free()
+
 	C.session_write_prepare(s.session,
 		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-		local_key.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		ekey.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
 		(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 
 	return responseCh
@@ -523,10 +542,6 @@ func (s *Session) WriteChunk(key *Key, input io.Reader, initial_offset, total_si
 
 //WriteKey writes blob by Key.
 func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64) <-chan Lookuper {
-	if total_size > max_chunk_size {
-		return s.WriteChunk(key, input, offset, total_size)
-	}
-
 	responseCh := make(chan Lookuper, defaultVOLUME)
 
 	keepaliver := make(chan struct{}, 0)
