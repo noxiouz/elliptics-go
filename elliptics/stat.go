@@ -233,7 +233,7 @@ func NewStatGroup() StatGroup {
 	}
 }
 
-func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*StatBackend, error) {
+func (sg *StatGroup) FindStatBackendKey(s *Session, key string, group_id uint32) (*StatBackend, error) {
 	addr, backend_id, err := s.LookupBackend(key, group_id)
 	if err != nil {
 		return nil, &DnetError {
@@ -243,6 +243,10 @@ func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*
 		}
 	}
 
+	return sg.FindStatBackend(addr, backend_id)
+}
+
+func (sg *StatGroup) FindStatBackend(addr *DnetAddr, backend_id int32) (*StatBackend, error) {
 	ab := NewAddressBackend(addr, backend_id)
 
 	st, ok := sg.Ab[ab]
@@ -250,8 +254,8 @@ func (sg *StatGroup) FindStatBackend(s *Session, key string, group_id uint32) (*
 		return nil, &DnetError {
 			Code:		-2, // -ENOENT
 			Flags:		0,
-			Message:	fmt.Sprintf("could not find statistics for key: %s, group: %d -> addr: %s, backend: %d",
-						key, group_id, addr.String(), backend_id),
+			Message:	fmt.Sprintf("could not find statistics for addr: %s, backend: %d",
+						addr.String(), backend_id),
 		}
 	}
 
