@@ -223,9 +223,8 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
-		_ = try_next
+		onResult = nil
+		onFinish = nil
 	}()
 
 	try_next()
@@ -322,8 +321,8 @@ func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_read_data(s.session,
@@ -490,8 +489,8 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		// we keep them referenced until write_data() completes, i.e. onFinish()
 		// is called, which in turn writes into @keepalive channel to wake up
 		// this goroutine and finish it
-		_ = onChunkResult
-		_ = onChunkFinish
+		onChunkResult = nil
+		onChunkFinish = nil
 		_ = key
 		_ = chunk
 	}()
@@ -589,8 +588,8 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 		// we keep them referenced until write_data() completes, i.e. onFinish()
 		// is called, which in turn writes into @keepalive channel to wake up
 		// this goroutine and finish it
-		_ = onWriteResult
-		_ = onWriteFinish
+		onWriteResult = nil
+		onWriteFinish = nil
 		_ = chunk
 	}()
 
@@ -623,8 +622,8 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	/* To keep callbacks alive */
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
@@ -663,8 +662,8 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	/* To keep callbacks alive */
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_parallel_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
@@ -735,8 +734,8 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
@@ -794,8 +793,8 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 		_ = keys
 
 		defer keys.Free()
@@ -885,9 +884,8 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 
 	go func() {
 		<-keepaliver
-		_ = _result
-		_ = onResult
-		_ = _finish
+		_result = nil
+		_finish = nil
 	}()
 
 	onFinish = unsafe.Pointer(&_finish)
@@ -952,8 +950,8 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	// TODO: Reimplement this with pointer on functions
@@ -1011,8 +1009,8 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_list_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), ekey.key)
@@ -1052,8 +1050,8 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
+		onResult = nil
+		onFinish = nil
 	}()
 
 	C.session_remove_indexes(s.session,
