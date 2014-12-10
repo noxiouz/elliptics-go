@@ -225,6 +225,7 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 		<-keepaliver
 		onResult = nil
 		onFinish = nil
+		try_next = nil
 	}()
 
 	try_next()
