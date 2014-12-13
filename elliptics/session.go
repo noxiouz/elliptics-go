@@ -177,7 +177,7 @@ func (r *readResult) Error() error {
 	return r.err
 }
 
-//ReadKey performs a read operation by key.
+//ReadKey performs a read operation for given key.
 func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
 	keepaliver := make(chan struct{}, 0)
@@ -223,9 +223,9 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 
 	go func() {
 		<-keepaliver
-		onResult = nil
-		onFinish = nil
-		try_next = nil
+		_ = onResult
+		_ = onFinish
+		_ = try_next
 	}()
 
 	try_next()
