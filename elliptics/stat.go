@@ -542,7 +542,6 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			DefragStateNotStarted:		"not-started",
 			DefragStateInProgress:		"in-progress",
 		}
-		_ = defrag_state
 		_ = backend_state
 	)
 
