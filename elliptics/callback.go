@@ -6,12 +6,9 @@ package elliptics
 import "C"
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 )
-
-var _ = fmt.Println
 
 //export go_final_callback
 func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
