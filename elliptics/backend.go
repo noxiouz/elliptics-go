@@ -112,7 +112,7 @@ func go_backend_status_error(context unsafe.Pointer, cerr *C.struct_go_error) {
 	}
 
 	ch := *(*chan *DnetBackendsStatus)(context)
-	ch <- res
+	//ch <- res
 	close(ch)
 }
 
