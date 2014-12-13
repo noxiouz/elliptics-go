@@ -103,6 +103,10 @@ func go_backend_status_callback(context unsafe.Pointer, list *C.struct_dnet_back
 
 //export go_backend_status_error
 func go_backend_status_error(context unsafe.Pointer, cerr *C.struct_go_error) {
+	ch := *(*chan *DnetBackendsStatus)(context)
+	close(ch)
+	return
+
 	res := &DnetBackendsStatus {
 		Error: &DnetError {
 			Code:		int(cerr.code),
@@ -111,8 +115,7 @@ func go_backend_status_error(context unsafe.Pointer, cerr *C.struct_go_error) {
 		},
 	}
 
-	ch := *(*chan *DnetBackendsStatus)(context)
-	//ch <- res
+	ch <- res
 	close(ch)
 }
 
