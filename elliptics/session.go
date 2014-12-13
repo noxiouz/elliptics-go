@@ -223,9 +223,9 @@ func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
 
 	go func() {
 		<-keepaliver
-		_ = onResult
-		_ = onFinish
-		_ = try_next
+		onResult = nil
+		onFinish = nil
+		try_next = nil
 	}()
 
 	try_next()
@@ -492,8 +492,8 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		// this goroutine and finish it
 		onChunkResult = nil
 		onChunkFinish = nil
-		_ = key
-		_ = chunk
+		key = ""
+		chunk = nil
 	}()
 
 	rest := total_size
@@ -591,7 +591,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 		// this goroutine and finish it
 		onWriteResult = nil
 		onWriteFinish = nil
-		_ = chunk
+		chunk = nil
 	}()
 
 	C.session_write_data(s.session,
@@ -796,9 +796,8 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 		<-keepaliver
 		onResult = nil
 		onFinish = nil
-		_ = keys
 
-		defer keys.Free()
+		keys.Free()
 	}()
 
 	return responseCh
