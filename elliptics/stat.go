@@ -418,6 +418,11 @@ func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
 		Len: len(addr.Addr),
 		Family: addr.Family,
 	}
+	if (len(addr.Addr) > len(raw.Addr)) {
+		log.Fatalf("can not create new address+backend: addr: %s, backend: %d, addr.len: %d, raw.len: %d\n\n",
+			addr.String(), backend, len(addr.Addr), len(raw.Addr))
+	}
+
 	copy(raw.Addr[:], addr.Addr)
 
 	return AddressBackend {
@@ -577,6 +582,8 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.Error = vnode.Backend.Error
 
 			if vnode.Backend.Error.Code != 0 {
+				log.Printf("stat: addr: %s, backend: %d, group: %d, error: %d\n",
+					entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group, vnode.Backend.Error.Code)
 				// do not update backend statistics
 				continue
 			}
@@ -594,6 +601,10 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags & (1<<4) == 0){
 				backend.VFS.TotalSizeLimit = vnode.Backend.Config.BlobSizeLimit
 			}
+
+			log.Printf("stat: addr: %s, backend: %d, group: %d, used: %d, limit: %d\n",
+				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
+				backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
 
 			backend.DefragState = vnode.Status.DefragState
 			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
