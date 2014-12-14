@@ -25,6 +25,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -126,6 +127,8 @@ type DStat struct {
 }
 
 type PID struct {
+	sync.RWMutex
+
 	Error			float64
 	IntegralError		float64
 	ErrorTime		time.Time
@@ -200,8 +203,17 @@ func NewStatBackend() *StatBackend {
 	}
 }
 
+func (backend *StatBackend) PIDPain() float64 {
+	p := &backend.PID
+
+	p.RLock()
+	defer p.RUnlock()
+
+	return p.Pain
+}
 func (backend *StatBackend) PIDUpdate(e float64) {
 	p := &backend.PID
+	p.Lock()
 
 	delta_T := time.Since(p.ErrorTime).Seconds()
 	integral_new := e * delta_T + p.IntegralError
@@ -221,6 +233,8 @@ func (backend *StatBackend) PIDUpdate(e float64) {
 	p.Error = e
 	p.ErrorTime = time.Now()
 	p.Pain = u
+
+	p.Unlock()
 }
 
 func (sb *StatBackend) Len() int {
