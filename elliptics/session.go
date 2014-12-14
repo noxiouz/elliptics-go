@@ -177,61 +177,6 @@ func (r *readResult) Error() error {
 	return r.err
 }
 
-//ReadKey performs a read operation for given key.
-func (s *Session) ReadChunk(key *Key, offset, size uint64) <-chan ReadResult {
-	responseCh := make(chan ReadResult, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
-
-	var onResult func(result readResult)
-	var onFinish func(err error)
-
-	try_next := func() {
-		chunk_size := size
-		if chunk_size > max_chunk_size {
-			chunk_size = max_chunk_size
-		}
-
-		size -= chunk_size
-		offset += chunk_size
-
-		C.session_read_data(s.session,
-			unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
-			key.key, C.uint64_t(offset - chunk_size), C.uint64_t(chunk_size))
-	}
-
-
-	onResult = func(result readResult) {
-		responseCh <- &result
-	}
-
-	onFinish = func(err error) {
-		if err != nil {
-			responseCh <- &readResult{err: err}
-			close(responseCh)
-			close(keepaliver)
-			return
-		}
-
-		if (size == 0) {
-			close(responseCh)
-			close(keepaliver)
-			return
-		}
-
-		try_next()
-	}
-
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-		try_next = nil
-	}()
-
-	try_next()
-	return responseCh
-}
-
 //StreamData sends a stream read from elliptics into given http response writer
 // It doesn't start reading next chunk (10M) until the one already read has not been written
 // into the client's pipe. This eliminates number of unneeded copies and adds flow control
@@ -259,7 +204,7 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			Message: fmt.Sprintf("could not read anything at all"),
 		}
 
-		for rd := range s.ReadChunk(key, offset, chunk_size) {
+		for rd := range s.ReadKey(key, offset, chunk_size) {
 			err = rd.Error()
 			if err != nil {
 				continue
