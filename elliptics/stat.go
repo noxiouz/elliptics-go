@@ -41,6 +41,27 @@ const (
 	StatCategoryBackend	int64 =		1 << 4
 	StatCategoryProcFS	int64 =		1 << 6
 	StatSectorSize		uint64 =	512
+
+	BackendStateDisabled		int32	= 0
+	BackendStateEnabled		int32	= 1
+	BackendStateActivating		int32	= 2
+	BackendStateDeactivating	int32	= 3
+
+	DefragStateNotStarted		int32	= 0
+	DefragStateInProgress		int32	= 1
+)
+
+var (
+	backend_state = map[int32]string {
+		BackendStateDisabled:		"disabled",
+		BackendStateEnabled:		"enabled",
+		BackendStateActivating:		"activating",
+		BackendStateDeactivating:	"deactivating",
+	}
+	defrag_state = map[int32]string {
+		DefragStateNotStarted:		"not-started",
+		DefragStateInProgress:		"in-progress",
+	}
 )
 
 type RawAddr struct {
@@ -147,7 +168,7 @@ type StatBackend struct {
 	Percentage	float64
 
 	// defragmentation status: 0 - not started, 1 - in progress
-	DefragState	int
+	DefragState	int32
 	DefragStateStr	string
 
 	// backend is in read-only mode
@@ -520,30 +541,6 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			fmt.Printf("Shitty json: %v\n", r)
         }
 	}()
-
-	const (
-		BackendStateDisabled		int	= 0
-		BackendStateEnabled		int	= 1
-		BackendStateActivating		int	= 2
-		BackendStateDeactivating	int	= 3
-
-		DefragStateNotStarted		int	= 0
-		DefragStateInProgress		int	= 1
-	)
-
-	var (
-		backend_state = map[int]string {
-			BackendStateDisabled:		"disabled",
-			BackendStateEnabled:		"enabled",
-			BackendStateActivating:		"activating",
-			BackendStateDeactivating:	"deactivating",
-		}
-		defrag_state = map[int]string {
-			DefragStateNotStarted:		"not-started",
-			DefragStateInProgress:		"in-progress",
-		}
-		_ = backend_state
-	)
 
 	var r Response
 

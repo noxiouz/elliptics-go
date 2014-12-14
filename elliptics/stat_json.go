@@ -24,8 +24,8 @@ type Time struct {
 	USec		uint64		`json:"tv_usec"`
 }
 type Status struct {
-	State		int		`json:"state"`
-	DefragState	int		`json:"defrag_state"`
+	State		int32		`json:"state"`
+	DefragState	int32		`json:"defrag_state"`
 	LastStart	Time		`json:"last_start"`
 	LastStartErr	int		`json:"last_start_err"`
 	RO		bool		`json:"read_only"`
