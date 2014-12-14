@@ -484,7 +484,7 @@ func (s *Session) DnetStat() *DnetStat {
 		Group:		make(map[uint32]*StatGroup),
 	}
 
-	//s.GetRoutes(st)
+	s.GetRoutes(st)
 
 	// read stat results from the channel and update DnetStat
 	for se := range response {
