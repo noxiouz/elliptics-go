@@ -60,24 +60,32 @@ import (
 	"unsafe"
 )
 
-const DnetAddrSize int = 32
-
 type DnetAddr struct {
-	Addr   [DnetAddrSize]byte
-	Family uint16
+	Addr	[]byte
+	Family	uint16
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	a := DnetAddr{
-		Family: uint16(addr.family),
+	return DnetAddr {
+		Family:	uint16(addr.family),
+		Addr: C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
 	}
-
-	copy(a.Addr[:], C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)))
-	return a
 }
 
-func (a *DnetAddr) String() string {
-	var tmp C.struct_dnet_addr
+func NewDnetAddrStr(addr_str string) (DnetAddr, error) {
+	var caddr C.struct_dnet_addr
+	caddr_str := C.CString(addr_str)
+	defer C.free(unsafe.Pointer(caddr_str))
+
+	err := int(C.dnet_create_addr_str(&caddr, caddr_str, C.int(len(addr_str))))
+	if err < 0 {
+		return DnetAddr{}, fmt.Errorf("could not create addr '%s': %d", addr_str, err)
+	}
+
+	return NewDnetAddr(&caddr), nil
+}
+
+func (a *DnetAddr) CAddr(tmp *C.struct_dnet_addr) {
 	var arrayptr = uintptr(unsafe.Pointer(&tmp.addr[0]))
 	for i := 0; i < len(a.Addr); i++ {
 		*(*C.uint8_t)(unsafe.Pointer(arrayptr)) = C.uint8_t(a.Addr[i])
@@ -86,8 +94,20 @@ func (a *DnetAddr) String() string {
 
 	tmp.addr_len = C.uint16_t(len(a.Addr))
 	tmp.family = C.uint16_t(a.Family)
+}
 
-	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_server_convert_dnet_addr(&tmp)), a.Family)
+func (a *DnetAddr) String() string {
+	var tmp C.struct_dnet_addr
+
+	a.CAddr(&tmp)
+	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_addr_string(&tmp)), a.Family)
+}
+
+func (a *DnetAddr) HostString() string {
+	var tmp C.struct_dnet_addr
+
+	a.CAddr(&tmp)
+	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(&tmp)))
 }
 
 type DnetRawID struct {

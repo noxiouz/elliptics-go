@@ -74,13 +74,16 @@ struct go_data_pointer {
 
 struct go_error {
 	int		code;		// elliptics error code, should be negative errno value
-	int		flags;		// this will mainly say whether it is client or server error in 2.26
+	uint64_t	flags;		// dnet_cmd.flags
 	const char	*message;
 };
 
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
+
+void session_set_filter_all(ell_session *session);
+void session_set_filter_positive(ell_session *session);
 
 void session_set_groups(ell_session *session, uint32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);
@@ -154,6 +157,21 @@ void session_remove_indexes(ell_session *session, void *on_chunk_context,
 
 void session_list_indexes(ell_session *sesion, void *on_chunk_context,
 		void *final_context, ell_key *key);
+
+struct go_backends_status {
+	struct dnet_backend_status_list		*list;
+	struct go_error				error;
+};
+
+void session_backends_status(ell_session *session, const struct dnet_addr *addr, void *context);
+void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
+void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context);
+
+int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id);
 
 #ifdef __cplusplus
 }
