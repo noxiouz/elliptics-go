@@ -46,7 +46,7 @@ func NewRouteEntry(entry *C.struct_dnet_route_entry) *RouteEntry {
 	// @dnet_route_entry is not packed, so its fields can be accessed directly
 	// compare it to @DnetCmd creation which uses special C wrappers to access fields of the packed structure
 	return  &RouteEntry {
-		id:		C.GoBytes(unsafe.Pointer(&entry.id.id[0]), C.int(C.DNET_ID_SIZE)),
+		id:		CopyBytes(unsafe.Pointer(&entry.id.id[0]), int(C.DNET_ID_SIZE)),
 		addr:		NewDnetAddr(&entry.addr),
 		group:		uint32(entry.group_id),
 		backend:	int32(entry.backend_id),

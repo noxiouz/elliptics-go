@@ -68,7 +68,7 @@ type DnetAddr struct {
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
 	return DnetAddr {
 		Family:	uint16(addr.family),
-		Addr: C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+		Addr: CopyBytes(unsafe.Pointer(&addr.addr[0]), int(addr.addr_len)),
 	}
 }
 
@@ -134,7 +134,7 @@ type DnetCmd struct {
 func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 	return DnetCmd {
 		ID: DnetID {
-			ID: C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(C.DNET_ID_SIZE)),
+			ID: CopyBytes(unsafe.Pointer(&cmd.id.id[0]), int(C.DNET_ID_SIZE)),
 			Group: uint32(C.dnet_cmd_get_group(cmd)),
 		},
 
@@ -168,8 +168,8 @@ type DnetIOAttr struct {
 
 func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {
 	return DnetIOAttr {
-		Parent:		C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
-		ID:		C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
+		Parent:		CopyBytes(unsafe.Pointer(&io.parent[0]), int(C.DNET_ID_SIZE)),
+		ID:		CopyBytes(unsafe.Pointer(&io.id[0]), int(C.DNET_ID_SIZE)),
 		Start:		uint64(io.start),
 		Num:		uint64(io.num),
 		Timestamp:	time.Unix(int64(io.timestamp.tsec), int64(io.timestamp.tnsec)),
@@ -190,7 +190,7 @@ type DnetFileInfo struct {
 
 func NewDnetFileInfo(info *C.struct_dnet_file_info) DnetFileInfo {
 	return DnetFileInfo {
-		Csum:	C.GoBytes(unsafe.Pointer(&info.checksum[0]), C.int(C.DNET_ID_SIZE)),
+		Csum:	CopyBytes(unsafe.Pointer(&info.checksum[0]), int(C.DNET_ID_SIZE)),
 		Offset:		uint64(info.offset),
 		Size:		uint64(info.size),
 		Mtime:		time.Unix(int64(info.mtime.tsec), int64(info.mtime.tnsec)),

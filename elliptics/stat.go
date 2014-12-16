@@ -1,16 +1,16 @@
 /*
- * 2014+ Copyright (c) Evgeniy Polyakov <zbr@ioremap.net>
- * All rights reserved.
+ * 2014+ copyright (c) evgeniy polyakov <zbr@ioremap.net>
+ * all rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * this program is free software; you can redistribute it and/or modify
+ * it under the terms of the gnu general public license as published by
+ * the free software foundation; either version 2 of the license, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * this program is distributed in the hope that it will be useful,
+ * but without any warranty; without even the implied warranty of
+ * merchantability or fitness for a particular purpose. see the
+ * gnu general public license for more details.
  */
 
 package elliptics
@@ -442,7 +442,7 @@ func go_stat_callback(result *C.struct_go_stat_result, context unsafe.Pointer) {
 	res := &StatEntry {
 		cmd:	NewDnetCmd(result.cmd),
 		addr:	NewDnetAddr(result.addr),
-		stat:	C.GoBytes(unsafe.Pointer(result.stat_data), C.int(result.stat_size)),
+		stat:	CopyBytes(unsafe.Pointer(result.stat_data), int(result.stat_size)),
 		err:	nil,
 	}
 
