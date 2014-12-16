@@ -49,6 +49,15 @@ ell_session *new_elliptics_session(ell_node *node)
 	return session;
 }
 
+void session_set_filter_all(ell_session *session)
+{
+	session->set_filter(elliptics::filters::all);
+}
+void session_set_filter_positive(ell_session *session)
+{
+	session->set_filter(elliptics::filters::positive);
+}
+
 void session_set_groups(ell_session *session, uint32_t *groups, int count)
 {
 	std::vector<int>g(groups, groups + count);
@@ -128,12 +137,22 @@ void session_read_data(ell_session *session, void *on_chunk_context,
  */
 static void on_lookup(void *context, const elliptics::lookup_result_entry & result)
 {
-	go_lookup_result to_go {
-		result.command(), result.address(),
-		result.file_info(), result.storage_address(), result.file_path()
-	};
+	if (result.error()) {
+		go_error err {
+			result.error().code(),
+			result.command()->flags,
+			result.error().message().c_str()
+		};
 
-	go_lookup_callback(&to_go, context);
+		go_lookup_error(result.command(), result.address(), &err, context);
+	} else {
+		go_lookup_result to_go {
+			result.command(), result.address(),
+			result.file_info(), result.storage_address(), result.file_path()
+		};
+
+		go_lookup_callback(&to_go, context);
+	}
 }
 
 void session_write_data(ell_session *session, void *on_chunk_context,
@@ -358,6 +377,65 @@ void session_remove_indexes(ell_session *session,
 	session->remove_indexes(*key, index_names)
 		.connect(std::bind(&on_set_indexes, on_chunk_context, _1),
 			 std::bind(&on_finish, final_context, _1));
+}
+
+static void on_backend_status(void *context, const std::vector<elliptics::backend_status_result_entry> &result,
+		const elliptics::error_info &error)
+{
+	if (error) {
+		go_error err {
+			error.code(),
+			0,
+			error.message().c_str()
+		};
+
+		go_backend_status_error(context, &err);
+		return;
+	}
+
+	struct dnet_backend_status_list *elements = result[0].list();
+	go_backend_status_callback(context, elements);
+}
+
+void session_backends_status(ell_session *session, const struct dnet_addr *addr, void *context)
+{
+	session->request_backends_status((*addr)).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+{
+	session->start_defrag((*addr), backend_id).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+{
+	session->enable_backend((*addr), backend_id).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+{
+	session->disable_backend((*addr), backend_id).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+{
+	session->make_writable((*addr), backend_id).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+{
+	session->make_readonly((*addr), backend_id).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context)
+{
+	session->set_delay((*addr), backend_id, delay).connect(std::bind(&on_backend_status, context,
+				std::placeholders::_1, std::placeholders::_2));
+}
+
+int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id)
+{
+	return dnet_lookup_addr(session->get_native(), key, len, NULL, group_id, addr, backend_id);
 }
 
 } // extern "C"

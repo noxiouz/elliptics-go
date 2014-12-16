@@ -100,10 +100,20 @@ int node_add_remote_one(ell_node *node, const char *addr)
 int node_add_remote_array(ell_node *node, const char **addr, int num)
 {
 	try {
-		std::vector<ioremap::elliptics::address> vaddr(addr, addr + num);
+		std::vector<ioremap::elliptics::address> vaddr;
+		for (int i = 0; i < num; ++i) {
+			try {
+				vaddr.push_back(ioremap::elliptics::address(addr[i]));
+			} catch (...) {
+				// we do not care if it failed to create address
+			}
+
+		}
 		node->add_remote(vaddr);
-	} catch(const elliptics::error &e) {
+	} catch (const elliptics::error &e) {
 		return e.error_code();
+	} catch (const std::exception &e) {
+		return -EINVAL;
 	}
 	return 0;
 }

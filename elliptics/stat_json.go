@@ -24,16 +24,26 @@ type Time struct {
 	USec		uint64		`json:"tv_usec"`
 }
 type Status struct {
-	State		int		`json:"state"`
-	DefragState	int		`json:"defrag_state"`
+	State		int32		`json:"state"`
+	DefragState	int32		`json:"defrag_state"`
 	LastStart	Time		`json:"last_start"`
 	LastStartErr	int		`json:"last_start_err"`
 	RO		bool		`json:"read_only"`
+	Delay		uint32		`json:"delay"`
 }
 
 type Config struct {
-	Group	uint32	`json:"group"`
-	Data	string	`json:"data"`
+	Group		uint32		`json:"group"`
+	Data		string		`json:"data"`
+	Sync		int		`json:"sync"`
+	BlobFlags	uint64		`json:"blob_flags"`
+	BlobSize	uint64		`json:"blob_size"`
+	BlobSizeLimit	uint64		`json:"blob_size_limit"`
+	MaxRecords	uint64		`json:"records_in_blob"`
+	DefragPercentage	uint64	`json:"defrag_percentage"`
+	DefragTimeout	uint64		`json:"defrag_timeout"`
+	DefragTime	uint64		`json:"defrag_time"`
+	DefragSplay	uint64		`json:"defrag_splay"`
 }
 type GlobalStats struct {
 	DataSortStartTime		uint64		`json:"datasort_start_time"`
@@ -56,7 +66,7 @@ type VStat struct {
 	BFree			uint64		`json:"bfree"`
 	BAvail			uint64		`json:"bavail"`
 }
-type DStat struct {
+type DStatRaw struct {
 	ReadIOs			uint64		`json:"read_ios"`
 	ReadMerges		uint64		`json:"read_merges"`
 	ReadSectors		uint64		`json:"read_sectors"`
@@ -69,13 +79,17 @@ type DStat struct {
 	IOTicks			uint64		`json:"io_ticks"`
 	TimeInQueue		uint64		`json:"time_in_queue"`
 }
+type BackendError struct {
+	Code			int		`json:"code"`
+}
 type Backend struct {
 	Config	Config				`json:"config"`
 	GlobalStats GlobalStats			`json:"global_stats"`
 	SummaryStats BlobStats			`json:"summary_stats"`
 	BaseStats map[string]BlobStats		`json:"base_stats"`
 	VFS VStat				`json:"vfs"`
-	DStat DStat				`json:"dstat"`
+	DStat DStatRaw				`json:"dstat"`
+	Error BackendError			`json:"error"`
 }
 
 type CommandStat struct {

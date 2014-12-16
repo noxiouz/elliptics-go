@@ -26,13 +26,21 @@ import (
 )
 
 type DnetError struct {
-	Code    int
-	Flags   int
-	Message string
+	Code		int
+	Flags		uint64
+	Message		string
 }
 
 func (err *DnetError) Error() string {
 	return fmt.Sprintf("elliptics error: %d: %s", err.Code, err.Message)
+}
+
+func DnetErrorFromError(err error) (*DnetError) {
+	if ke, ok := err.(*DnetError); ok {
+		return ke
+	} else {
+		return nil
+	}
 }
 
 func ErrorData(err error) string {

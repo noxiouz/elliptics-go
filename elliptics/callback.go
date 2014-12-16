@@ -6,28 +6,40 @@ package elliptics
 import "C"
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 )
-
-var _ = fmt.Println
 
 //export go_final_callback
 func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	callback := *(*func(error))(context)
 
-	if cerr.code < 0 {
-		err := &DnetError{
-			Code:    int(cerr.code),
-			Flags:   0,
-			Message: C.GoString(cerr.message),
+	if (cerr.code < 0) {
+		err := &DnetError {
+			Code:		int(cerr.code),
+			Flags:		uint64(cerr.flags),
+			Message:	C.GoString(cerr.message),
 		}
 
 		callback(err)
 	} else {
 		callback(nil)
 	}
+}
+
+//export go_lookup_error
+func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, context unsafe.Pointer) {
+	callback := *(*func(*lookupResult))(context)
+	Result := lookupResult {
+		cmd:	NewDnetCmd(cmd),
+		addr:	NewDnetAddr(addr),
+		err:	&DnetError {
+				Code:		int(cerr.code),
+				Flags:		uint64(cerr.flags),
+				Message:	C.GoString(cerr.message),
+			},
+	}
+	callback(&Result)
 }
 
 //export go_lookup_callback
