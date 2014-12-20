@@ -19,11 +19,55 @@
 using namespace ioremap;
 
 extern "C" {
+#include "_cgo_export.h"
 
-ell_node *new_node(ell_file_logger *fl)
+const std::string go_format = "%(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s";
+
+class go_logger_frontend : public blackhole::base_frontend_t
 {
-	elliptics::node *node = new elliptics::node(*fl);
-	return node;
+	public:
+		go_logger_frontend(void *priv) : m_priv(priv), m_formatter(go_format) {
+		}
+
+		virtual void handle(const blackhole::log::record_t &record) {
+			//dnet_log_level level = record.extract<dnet_log_level>(blackhole::keyword::severity<dnet_log_level>().name());
+			GoLog(m_priv, const_cast<char *>(m_formatter.format(record).c_str()));
+		}
+
+	private:
+		void *m_priv; // this is go's log.Logger pointer
+		blackhole::formatter::string_t m_formatter;
+};
+
+go_logger_base::go_logger_base(void *priv, const char *level)
+{
+	verbosity(elliptics::file_logger::parse_level(level));
+	add_frontend(blackhole::utils::make_unique<go_logger_frontend>(priv));
+}
+
+std::string go_logger_base::format()
+{
+	return go_format;
+}
+
+ell_node *new_node(void *priv, const char *level)
+{
+	try {
+		std::shared_ptr<go_logger_base> base = std::make_shared<go_logger_base>(priv, level);
+
+		dnet_config cfg;
+		memset(&cfg, 0, sizeof(dnet_config));
+		cfg.io_thread_num = 8;
+		cfg.nonblocking_io_thread_num = 4;
+		cfg.net_thread_num = 4;
+		cfg.wait_timeout = 5;
+		cfg.check_timeout = 20;
+
+		return new ell_node(base, cfg);
+	} catch (const std::exception &e) {
+		fprintf(stderr, "could not create new node: exception: %s\n", e.what());
+		return NULL;
+	}
 }
 
 void delete_node(ell_node *node)
@@ -31,10 +75,10 @@ void delete_node(ell_node *node)
 	delete node;
 }
 
-int node_add_remote(ell_node *node, const char *addr, const int port, const int family)
+int node_add_remote(ell_node *node, const char *addr, int port, int family)
 {
 	try {
-		node->add_remote(addr, port, family);
+		node->add_remote(ioremap::elliptics::address(addr, port, family));
 	} catch(const elliptics::error &e) {
 		return e.error_code();
 	}
@@ -45,7 +89,7 @@ int node_add_remote(ell_node *node, const char *addr, const int port, const int 
 int node_add_remote_one(ell_node *node, const char *addr)
 {
 	try {
-		node->add_remote(addr);
+		node->add_remote(ioremap::elliptics::address(addr));
 	} catch(const elliptics::error &e) {
 		return e.error_code();
 	}
@@ -53,20 +97,28 @@ int node_add_remote_one(ell_node *node, const char *addr)
 	return 0;
 }
 
-int node_add_remote_array(ell_node *node, const char **addr, const int num)
+int node_add_remote_array(ell_node *node, const char **addr, int num)
 {
 	try {
-		std::vector<std::string> vaddr(addr, addr + num);
-		node->add_remote(vaddr);
-	} catch(const elliptics::error &e) {
-		return e.error_code();
-	}
+		std::vector<ioremap::elliptics::address> vaddr;
+		for (int i = 0; i < num; ++i) {
+			try {
+				vaddr.push_back(ioremap::elliptics::address(addr[i]));
+			} catch (...) {
+				// we do not care if it failed to create address
+			}
 
+		}
+		node->add_remote(vaddr);
+	} catch (const elliptics::error &e) {
+		return e.error_code();
+	} catch (const std::exception &e) {
+		return -EINVAL;
+	}
 	return 0;
 }
 
-
-void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout)
+void node_set_timeouts(ell_node *node, int wait_timeout, int check_timeout)
 {
 	node->set_timeouts(wait_timeout, check_timeout);
 }

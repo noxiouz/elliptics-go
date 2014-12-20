@@ -16,24 +16,49 @@
 #ifndef __ELLIPTICS_NODE_H
 #define __ELLIPTICS_NODE_H
 
-#include "logger.h"
-
 #ifdef __cplusplus
 #include <elliptics/session.hpp>
-typedef ioremap::elliptics::node ell_node;
+
+#define BOOST_BIND_NO_PLACEHOLDERS
+#include <blackhole/formatter/string.hpp>
+#undef BOOST_BIND_NO_PLACEHOLDERS
+
+class go_logger_base: public ioremap::elliptics::logger_base {
+public:
+	go_logger_base(void *priv, const char *level);
+	std::string format();
+};
+
+class ell_node : public ioremap::elliptics::node {
+public:
+	ell_node(std::shared_ptr<go_logger_base> &base, dnet_config &cfg) :
+		::ioremap::elliptics::node(
+			ioremap::elliptics::logger(*base,
+				blackhole::log::attributes_t({
+					ioremap::elliptics::keyword::request_id() = 0
+				})
+			),
+		cfg),
+		m_log(base) {
+	}
+
+private:
+	std::shared_ptr<go_logger_base> m_log;
+};
+
 extern "C" {
 #else
 typedef void ell_node;
 #endif
 
-ell_node *new_node(ell_file_logger *fl);
+ell_node *new_node(void *priv, const char *level);
 void delete_node(ell_node *node);
 
-int node_add_remote(ell_node *node, const char *addr, const int port, const int family);
+int node_add_remote(ell_node *node, const char *addr, int port, int family);
 int node_add_remote_one(ell_node *node, const char *addr);
-int node_add_remote_array(ell_node *node, const char **addr, const int num);
+int node_add_remote_array(ell_node *node, const char **addr, int num);
 
-void node_set_timeouts(ell_node *node, const int wait_timeout, const int check_timeout);
+void node_set_timeouts(ell_node *node, int wait_timeout, int check_timeout);
 
 #ifdef __cplusplus
 }

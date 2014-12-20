@@ -1,5 +1,5 @@
 /*
- * 2013+ Copyright (c) Anton Tyurin <noxiouz@yandex.ru>
+ * 2014+ Copyright (c) Evgeniy Polyakov <zbr@ioremap.net>
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,27 +13,19 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __ELLIPTICS_LOGGER_H
-#define __ELLIPTICS_LOGGER_H
+#ifndef __ELLIPTICS_ROUTE_H
+#define __ELLIPTICS_ROUTE_H
+
+#include "session.h"
 
 #ifdef __cplusplus
-#include <elliptics/session.hpp>
-typedef ioremap::elliptics::file_logger ell_file_logger;
 extern "C" {
-#else
-typedef void ell_file_logger;
 #endif
 
-ell_file_logger *new_file_logger(const char *file, int level);
-
-void delete_file_logger(ell_file_logger *fl);
-
-void file_logger_log(ell_file_logger *logger, int level, const char *msg);
-
-int file_logger_get_level(ell_file_logger *fl);
+void session_get_routes(ell_session *session, void *result_array_context);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __ELLIPTICS_LOGGER_H */
+#endif // __ELLIPTICS_ROUTE_H

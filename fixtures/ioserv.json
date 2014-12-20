@@ -1,0 +1,57 @@
+{
+	"logger": {
+		"level": "debug",
+		"frontends": [
+			{
+				"formatter": {
+					"type": "string",
+					"pattern": "%(timestamp)s %(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s"
+				},
+				"sink": {
+					"type": "files",
+					"path": "/dev/stdout",
+					"autoflush": true
+				}
+			}
+		]
+	},
+	"options": {
+		"join": true,
+		"flags": 20,
+		"address": [
+			"localhost:1025:2-0"
+		],
+		"wait_timeout": 60,
+		"check_timeout": 60,
+		"io_thread_num": 16,
+		"nonblocking_io_thread_num": 16,
+		"net_thread_num": 4,
+		"daemon": false,
+		"auth_cookie": "qwerty",
+		"bg_ionice_class": 3,
+		"bg_ionice_prio": 0,
+		"server_net_prio": 1,
+		"client_net_prio": 6,
+		"cache": {
+			"size": 68719476736
+		},
+		"indexes_shard_count": 2,
+		"monitor": {
+			"port":20000,
+			"call_tree_timeout": 0
+		}
+	},
+	"backends": [
+		{
+			"backend_id": 1,
+			"type": "blob",
+			"group": 2,
+			"history": "./elliptics/history",
+			"data": "./elliptics/data",
+			"sync": "-1",
+			"blob_flags": "158",
+			"blob_size": "10G",
+			"records_in_blob": "1000000"
+		}
+	]
+}

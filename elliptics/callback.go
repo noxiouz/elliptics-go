@@ -6,12 +6,9 @@ package elliptics
 import "C"
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 )
-
-var _ = fmt.Println
 
 //export go_final_callback
 func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
@@ -20,7 +17,7 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	if (cerr.code < 0) {
 		err := &DnetError {
 			Code:		int(cerr.code),
-			Flags:		0,
+			Flags:		uint64(cerr.flags),
 			Message:	C.GoString(cerr.message),
 		}
 
@@ -30,16 +27,40 @@ func go_final_callback(cerr *C.struct_go_error, context unsafe.Pointer) {
 	}
 }
 
+//export go_lookup_error
+func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, context unsafe.Pointer) {
+	callback := *(*func(*lookupResult))(context)
+	Result := lookupResult {
+		cmd:	NewDnetCmd(cmd),
+		addr:	NewDnetAddr(addr),
+		err:	&DnetError {
+				Code:		int(cerr.code),
+				Flags:		uint64(cerr.flags),
+				Message:	C.GoString(cerr.message),
+			},
+	}
+	callback(&Result)
+}
+
 //export go_lookup_callback
 func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointer) {
 	callback := *(*func(*lookupResult))(context)
-	Result := lookupResult {
-		cmd:	NewDnetCmd(result.cmd),
-		addr:	NewDnetAddr(result.addr),
-		info:	NewDnetFileInfo(result.info),
-		storage_addr:	NewDnetAddr(result.storage_addr),
-		path:	C.GoString(result.path),
-		err:	nil,
+	Result := lookupResult{
+		cmd:          NewDnetCmd(result.cmd),
+		addr:         NewDnetAddr(result.addr),
+		info:         NewDnetFileInfo(result.info),
+		storage_addr: NewDnetAddr(result.storage_addr),
+		path:         C.GoString(result.path),
+		err:          nil,
+	}
+	callback(&Result)
+}
+
+//export go_remove_callback
+func go_remove_callback(result *C.struct_go_remove_result, context unsafe.Pointer) {
+	callback := *(*func(*removeResult))(context)
+	Result := removeResult{
+		cmd: NewDnetCmd(result.cmd),
 	}
 	callback(&Result)
 }
@@ -48,12 +69,12 @@ func go_lookup_callback(result *C.struct_go_lookup_result, context unsafe.Pointe
 func go_read_callback(result *C.struct_go_read_result, context unsafe.Pointer) {
 	callback := *(*func(readResult))(context)
 
-	Result := readResult {
-		cmd:	NewDnetCmd(result.cmd),
-		addr:	NewDnetAddr(result.addr),
-		ioattr:	NewDnetIOAttr(result.io_attribute),
-		data:	C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
-		err:	nil,
+	Result := readResult{
+		cmd:    NewDnetCmd(result.cmd),
+		addr:   NewDnetAddr(result.addr),
+		ioattr: NewDnetIOAttr(result.io_attribute),
+		data:   C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
+		err:    nil,
 	}
 	// All data from C++ has been copied here.
 	callback(Result)

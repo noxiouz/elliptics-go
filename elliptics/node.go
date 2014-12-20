@@ -15,8 +15,9 @@
 
 package elliptics
 
-
 /*
+#cgo LDFLAGS: -lelliptics_client -lelliptics_cpp -lboost_thread -lboost_system
+
 #include "node.h"
 #include <stdlib.h>
 
@@ -38,29 +39,28 @@ static void freeCharArray(char **a, int size) {
 import "C"
 
 import (
+	"fmt"
+	"log"
 	"syscall"
 	"unsafe"
 )
 
-// A Node is responsible for the connection with the server part.
+// A Node is responsible for the connection with a server side.
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
-	logger *Logger
+	logger *log.Logger
 	node   unsafe.Pointer
 }
 
-func isError(errno syscall.Errno) bool {
-	return errno != syscall.EINPROGRESS &&
-		errno != syscall.EAGAIN &&
-		errno != syscall.EALREADY &&
-		errno != syscall.EISCONN
-}
+// NewNode returns new Node with a given Logger.
+func NewNode(log *log.Logger, level string) (node *Node, err error) {
+	clevel := C.CString(level)
+	defer C.free(unsafe.Pointer(clevel))
 
-// NewNode returns new Node given Logger.
-func NewNode(log *Logger) (node *Node, err error) {
-	cnode, err := C.new_node(log.logger)
-	if err != nil {
+	cnode := C.new_node(unsafe.Pointer(log), clevel)
+	if cnode == nil {
+		err = fmt.Errorf("could not create node, please check stderr output")
 		return
 	}
 	node = &Node{log, cnode}
@@ -114,6 +114,10 @@ func (node *Node) AddRemote(addr string) (err error) {
  */
 
 func (node *Node) AddRemotes(addrs []string) (err error) {
+	if len(addrs) == 0 {
+		return fmt.Errorf("list of remotes is empty")
+	}
+
 	cargs := C.makeCharArray(C.int(len(addrs)))
 	defer C.freeCharArray(cargs, C.int(len(addrs)))
 	for i, s := range addrs {

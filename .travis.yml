@@ -6,9 +6,11 @@ go:
 before_install:
   - echo 'deb http://repo.reverbrain.com/precise current/amd64/' | sudo tee -a /etc/apt/sources.list
   - sudo apt-get update -qq
-  - sudo apt-get install elliptics-dev elliptics-client --force-yes
+  - sudo apt-get install elliptics-dev elliptics-client elliptics --force-yes
   - go get code.google.com/p/go.tools/cmd/cover
   - go get github.com/mattn/goveralls
+  - cd fixtures && sudo ./start.sh && cd - && sleep 10
+  - export FULL_TEST_REMOTES="localhost:1025:2" && export FULL_TEST_GROUPS="2"
 
 script:
   - go test -v -coverprofile=coverage.out github.com/noxiouz/elliptics-go/elliptics
