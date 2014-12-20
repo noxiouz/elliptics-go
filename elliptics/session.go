@@ -55,8 +55,8 @@ For example Remove:
     }
 */
 type Session struct {
-	groups		[]uint32
-	session		unsafe.Pointer
+	groups  []uint32
+	session unsafe.Pointer
 }
 
 //NewSession returns Session connected with given Node.
@@ -67,7 +67,7 @@ func NewSession(node *Node) (*Session, error) {
 	}
 	return &Session{
 		session: session,
-		groups: make([]uint32, 0, 0),
+		groups:  make([]uint32, 0, 0),
 	}, err
 }
 
@@ -131,9 +131,9 @@ func (s *Session) SetNamespace(namespace string) {
 }
 
 const (
-	SessionFilterAll		= iota
-	SessionFilterPositive		= iota
-	SessionFilterMax		= iota
+	SessionFilterAll      = iota
+	SessionFilterPositive = iota
+	SessionFilterMax      = iota
 )
 
 func (s *Session) SetFilter(filter int) {
@@ -266,7 +266,8 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 //ReadKey performs a read operation by key.
 func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(result readResult) {
 		responseCh <- &result
@@ -278,19 +279,15 @@ func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 		}
 
 		close(responseCh)
-
-		// close keepalive context
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 
 	C.session_read_data(s.session,
-		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.context_t(onResultContext), C.context_t(onFinishContext),
 		key.key, C.uint64_t(offset), C.uint64_t(size))
 	return responseCh
 }
@@ -380,7 +377,8 @@ func (s *Session) WriteData(key string, input io.Reader, offset, total_size uint
 
 func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	onChunkContext := NextContext()
+	onFinishContext := NextContext()
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
 
@@ -400,13 +398,15 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			Pool.Delete(onChunkContext)
+			Pool.Delete(onFinishContext)
 			return
 		}
 
 		if total_size == 0 {
 			close(responseCh)
-			close(keepaliver)
+			Pool.Delete(onChunkContext)
+			Pool.Delete(onFinishContext)
 			return
 		}
 
@@ -414,7 +414,8 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if n <= 0 && err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			Pool.Delete(onChunkContext)
+			Pool.Delete(onFinishContext)
 			return
 		}
 
@@ -426,38 +427,24 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			Pool.Delete(onChunkContext)
+			Pool.Delete(onFinishContext)
 			return
 		}
 		defer ekey.Free()
 
 		if total_size != 0 {
 			C.session_write_plain(s.session,
-				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				ekey.key, C.uint64_t(offset - n64),
+				C.context_t(onChunkContext), C.context_t(onFinishContext),
+				ekey.key, C.uint64_t(offset-n64),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		} else {
 			C.session_write_commit(s.session,
-				unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-				ekey.key, C.uint64_t(offset - n64), C.uint64_t(offset),
+				C.context_t(onChunkContext), C.context_t(onFinishContext),
+				ekey.key, C.uint64_t(offset-n64), C.uint64_t(offset),
 				(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 		}
 	}
-
-	go func() {
-		<-keepaliver
-		// this is GC magic - goroutine 'grabs' variables from the WriteKey
-		// context, which it used somehow in the code
-		// we need to keep all variables that are not copied but referenced
-		// in c++ code to be alive long enough to be copied into the socket
-		// we keep them referenced until write_data() completes, i.e. onFinish()
-		// is called, which in turn writes into @keepalive channel to wake up
-		// this goroutine and finish it
-		onChunkResult = nil
-		onChunkFinish = nil
-		key = ""
-		chunk = nil
-	}()
 
 	rest := total_size
 	if rest > max_chunk_size {
@@ -468,14 +455,13 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
 		return responseCh
 	}
 
 	if n == 0 {
-		responseCh <- &lookupResult {
-			err: &DnetError {
-				Code: -22,
+		responseCh <- &lookupResult{
+			err: &DnetError{
+				Code:  -22,
 				Flags: 0,
 				Message: fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
 					initial_offset, offset, total_size, orig_total_size),
@@ -491,14 +477,16 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
 		return responseCh
 	}
 	defer ekey.Free()
 
+	Pool.Store(onChunkContext, onChunkResult)
+	Pool.Store(onFinishContext, onChunkFinish)
+
 	C.session_write_prepare(s.session,
-		unsafe.Pointer(&onChunkResult), unsafe.Pointer(&onChunkFinish),
-		ekey.key, C.uint64_t(offset - n64), C.uint64_t(total_size + n64),
+		C.context_t(onChunkContext), C.context_t(onFinishContext),
+		ekey.key, C.uint64_t(offset-n64), C.uint64_t(total_size+n64),
 		(*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(n))
 	return responseCh
 }
@@ -506,8 +494,8 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 //WriteKey writes blob by Key.
 func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-
-	keepaliver := make(chan struct{}, 0)
+	onWriteContext := NextContext()
+	onWriteFinishContext := NextContext()
 
 	onWriteResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -518,46 +506,34 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(onWriteContext)
+		Pool.Delete(onWriteFinishContext)
 	}
 
 	chunk, err := ioutil.ReadAll(input)
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
 		return responseCh
 	}
 
 	if len(chunk) == 0 {
-		responseCh <- &lookupResult {
-			err: &DnetError {
-				Code: -22,
-				Flags: 0,
+		responseCh <- &lookupResult{
+			err: &DnetError{
+				Code:    -22,
+				Flags:   0,
 				Message: "Invalid zero-length write request",
 			},
 		}
 		close(responseCh)
-		close(keepaliver)
 		return responseCh
 	}
 
-	go func() {
-		<-keepaliver
-		// this is GC magic - goroutine 'grabs' variables from the WriteKey
-		// context, which it used somehow in the code
-		// we need to keep all variables that are not copied but referenced
-		// in c++ code to be alive long enough to be copied into the socket
-		// we keep them referenced until write_data() completes, i.e. onFinish()
-		// is called, which in turn writes into @keepalive channel to wake up
-		// this goroutine and finish it
-		onWriteResult = nil
-		onWriteFinish = nil
-		chunk = nil
-	}()
+	Pool.Store(onWriteContext, onWriteResult)
+	Pool.Store(onWriteFinishContext, onWriteFinish)
 
 	C.session_write_data(s.session,
-		unsafe.Pointer(&onWriteResult), unsafe.Pointer(&onWriteFinish),
+		C.context_t(onWriteContext), C.context_t(onWriteFinishContext),
 		key.key, C.uint64_t(offset), (*C.char)(unsafe.Pointer(&chunk[0])), C.uint64_t(len(chunk)))
 
 	return responseCh
@@ -1026,7 +1002,7 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 	return responseCh
 }
 
-func (s *Session) LookupBackend(key string, group_id uint32)  (addr *DnetAddr, backend_id int32, err error) {
+func (s *Session) LookupBackend(key string, group_id uint32) (addr *DnetAddr, backend_id int32, err error) {
 	var caddr C.struct_dnet_addr
 	var cbackend_id C.int
 
@@ -1038,11 +1014,11 @@ func (s *Session) LookupBackend(key string, group_id uint32)  (addr *DnetAddr, b
 
 	cerr := C.session_lookup_addr(s.session, ckey, C.int(len(key)), C.int(group_id), &caddr, &cbackend_id)
 	if cerr < 0 {
-		err = &DnetError {
-			Code:		int(cerr),
-			Flags:		0,
-			Message:	fmt.Sprintf("could not lookup backend: key '%s', group: %d: %d",
-						key, group_id, int(cerr)),
+		err = &DnetError{
+			Code:  int(cerr),
+			Flags: 0,
+			Message: fmt.Sprintf("could not lookup backend: key '%s', group: %d: %d",
+				key, group_id, int(cerr)),
 		}
 
 		return

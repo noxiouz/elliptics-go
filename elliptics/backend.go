@@ -17,7 +17,6 @@ package elliptics
 
 import (
 	"time"
-	"unsafe"
 )
 
 /*
@@ -59,219 +58,193 @@ static inline int dnet_backend_status_from_list(struct dnet_backend_status_list 
 import "C"
 
 type DnetBackendStatus struct {
-	Backend		int32
-	State		int32
-	DefragState	uint32
-	LastStart	time.Time
-	LastStartErr	int32
-	RO		bool
-	Delay		uint32
+	Backend      int32
+	State        int32
+	DefragState  uint32
+	LastStart    time.Time
+	LastStartErr int32
+	RO           bool
+	Delay        uint32
 }
 
 type DnetBackendsStatus struct {
-	Backends	[]DnetBackendStatus
-	Error		error
+	Backends []DnetBackendStatus
+	Error    error
 }
 
 //export go_backend_status_callback
-func go_backend_status_callback(context unsafe.Pointer, list *C.struct_dnet_backend_status_list) {
-	res := &DnetBackendsStatus {
+func go_backend_status_callback(key uint64, list *C.struct_dnet_backend_status_list) {
+	res := &DnetBackendsStatus{
 		Backends: make([]DnetBackendStatus, 0, list.backends_count),
 	}
 
 	for i := 0; i < int(list.backends_count); i++ {
 		var st C.struct_dnet_backend_status_unpacked
-		if (C.dnet_backend_status_from_list(list, C.uint32_t(i), &st) == 0) {
-			bst := DnetBackendStatus {
-				Backend:		int32(st.backend_id),
-				State:			int32(st.state),
-				DefragState:		uint32(st.defrag_state),
-				LastStart:		time.Unix(int64(st.last_start.tsec), int64(st.last_start.tnsec)),
-				LastStartErr:		int32(st.last_start_err),
-				RO:			st.read_only != 0,
-				Delay:			uint32(st.delay),
+		if C.dnet_backend_status_from_list(list, C.uint32_t(i), &st) == 0 {
+			bst := DnetBackendStatus{
+				Backend:      int32(st.backend_id),
+				State:        int32(st.state),
+				DefragState:  uint32(st.defrag_state),
+				LastStart:    time.Unix(int64(st.last_start.tsec), int64(st.last_start.tnsec)),
+				LastStartErr: int32(st.last_start_err),
+				RO:           st.read_only != 0,
+				Delay:        uint32(st.delay),
 			}
 
 			res.Backends = append(res.Backends, bst)
 		}
 	}
 
-	callback := *(*func(* DnetBackendsStatus))(context)
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session numbder")
+	}
+	callback := context.(func(*DnetBackendsStatus))
 	callback(res)
 	return
 }
 
 //export go_backend_status_error
-func go_backend_status_error(context unsafe.Pointer, cerr *C.struct_go_error) {
-	res := &DnetBackendsStatus {
-		Error: &DnetError {
-			Code:		int(cerr.code),
-			Flags:		uint64(cerr.flags),
-			Message:	C.GoString(cerr.message),
+func go_backend_status_error(key uint64, cerr *C.struct_go_error) {
+	res := &DnetBackendsStatus{
+		Error: &DnetError{
+			Code:    int(cerr.code),
+			Flags:   uint64(cerr.flags),
+			Message: C.GoString(cerr.message),
 		},
 	}
 
-	callback := *(*func(* DnetBackendsStatus))(context)
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session numbder")
+	}
+	callback := context.(func(*DnetBackendsStatus))
 	callback(res)
 	return
 }
 
 func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backends_status(s.session, &tmp, unsafe.Pointer(&onFinish))
+	C.session_backends_status(s.session, &tmp, C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_start_defrag(s.session, &tmp, C.uint32_t(backend_id),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_start_defrag(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_enable(s.session, &tmp, C.uint32_t(backend_id),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_enable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_disable(s.session, &tmp, C.uint32_t(backend_id),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_disable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_make_writable(s.session, &tmp, C.uint32_t(backend_id),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_make_writable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_make_readonly(s.session, &tmp, C.uint32_t(backend_id),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_make_readonly(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
 
 func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan * DnetBackendsStatus, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(context)
 	}
-
-	go func() {
-		<-keepaliver
-		onFinish = nil
-	}()
+	Pool.Store(context, onFinish)
 
 	var tmp C.struct_dnet_addr
 	addr.CAddr(&tmp)
-	C.session_backend_set_delay(s.session, &tmp, C.uint32_t(backend_id), C.uint32_t(delay),
-		unsafe.Pointer(&onFinish))
+	C.session_backend_set_delay(s.session, &tmp, C.uint32_t(backend_id), C.uint32_t(delay), C.context_t(context))
 
 	return responseCh
 }

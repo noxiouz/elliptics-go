@@ -29,7 +29,7 @@ struct go_data_pointer new_data_pointer(char *data, int size) {
 	};
 };
 
-void on_finish(void *context, const elliptics::error_info &error)
+void on_finish(context_t context, const elliptics::error_info &error)
 {
 	go_error err;
 	err.code = error.code();
@@ -113,7 +113,7 @@ ioflags_t session_get_ioflags(ell_session *session)
 /*
  * Read
  */
-static void on_read(void *context, const elliptics::read_result_entry & result)
+static void on_read(context_t context, const elliptics::read_result_entry & result)
 {
 	elliptics::data_pointer data(result.file());
 	go_read_result to_go {
@@ -124,8 +124,8 @@ static void on_read(void *context, const elliptics::read_result_entry & result)
 	go_read_callback(&to_go, context);
 }
 
-void session_read_data(ell_session *session, void *on_chunk_context,
-		       void *final_context, ell_key *key, uint64_t offset, uint64_t size)
+void session_read_data(ell_session *session, context_t on_chunk_context,
+		       context_t final_context, ell_key *key, uint64_t offset, uint64_t size)
 {
 	using namespace std::placeholders;
 	session->read_data(*key, offset, size).connect(std::bind(&on_read, on_chunk_context, _1),
@@ -135,7 +135,7 @@ void session_read_data(ell_session *session, void *on_chunk_context,
 /*
  * Write and Lookup
  */
-static void on_lookup(void *context, const elliptics::lookup_result_entry & result)
+static void on_lookup(context_t context, const elliptics::lookup_result_entry & result)
 {
 	if (result.error()) {
 		go_error err {
@@ -155,8 +155,8 @@ static void on_lookup(void *context, const elliptics::lookup_result_entry & resu
 	}
 }
 
-void session_write_data(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key, uint64_t offset,
+void session_write_data(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key, uint64_t offset,
 			char *data, uint64_t size)
 {
 	using namespace std::placeholders;
@@ -166,8 +166,8 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 				       std::bind(&on_finish, final_context, _1));
 }
 
-void session_write_prepare(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_prepare(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset, uint64_t total_size,
 			char *data, uint64_t size)
 {
@@ -178,8 +178,8 @@ void session_write_prepare(ell_session *session, void *on_chunk_context,
 				       std::bind(&on_finish, final_context, _1));
 }
 
-void session_write_plain(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_plain(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset,
 			char *data, uint64_t size)
 {
@@ -190,8 +190,8 @@ void session_write_plain(ell_session *session, void *on_chunk_context,
 				       std::bind(&on_finish, final_context, _1));
 }
 
-void session_write_commit(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_commit(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset,
 			uint64_t commit_size,
 			char *data, uint64_t size)
@@ -203,16 +203,16 @@ void session_write_commit(ell_session *session, void *on_chunk_context,
 				       std::bind(&on_finish, final_context, _1));
 }
 
-void session_lookup(ell_session *session, void *on_chunk_context,
-		    void *final_context, ell_key *key)
+void session_lookup(ell_session *session, context_t on_chunk_context,
+		    context_t final_context, ell_key *key)
 {
 	using namespace std::placeholders;
 	session->lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1),
 				      std::bind(&on_finish, final_context, _1));
 }
 
-void session_parallel_lookup(ell_session *session, void *on_chunk_context,
-		    void *final_context, ell_key *key)
+void session_parallel_lookup(ell_session *session, context_t on_chunk_context,
+		    context_t final_context, ell_key *key)
 {
 	using namespace std::placeholders;
 	session->parallel_lookup(*key).connect(std::bind(&on_lookup, on_chunk_context, _1),
@@ -223,7 +223,7 @@ void session_parallel_lookup(ell_session *session, void *on_chunk_context,
  * Remove
  * @on_remove() callback converts returned command into golang DnetCmd
  */
-static void on_remove(void *context, const elliptics::remove_result_entry &result)
+static void on_remove(context_t context, const elliptics::remove_result_entry &result)
 {
 	go_remove_result res {
 		result.command()
@@ -232,15 +232,15 @@ static void on_remove(void *context, const elliptics::remove_result_entry &resul
 	go_remove_callback(&res, context);
 }
 
-void session_remove(ell_session *session, void *on_chunk_context,
-		    void *final_context, ell_key *key)
+void session_remove(ell_session *session, context_t on_chunk_context,
+		    context_t final_context, ell_key *key)
 {
 	using namespace std::placeholders;
 	session->remove(*key).connect(std::bind(&on_remove, on_chunk_context, _1),
 				      std::bind(&on_finish, final_context, _1));
 }
 
-void session_bulk_remove(ell_session *session, void *on_chunk_context, void *final_context, void *ekeys)
+void session_bulk_remove(ell_session *session, context_t on_chunk_context, context_t final_context, void *ekeys)
 {
 	using namespace std::placeholders;
 
@@ -258,7 +258,7 @@ void session_bulk_remove(ell_session *session, void *on_chunk_context, void *fin
 /*
  * Find
  */
-static void on_find(void *context, const elliptics::find_indexes_result_entry &result)
+static void on_find(context_t context, const elliptics::find_indexes_result_entry &result)
 {
 	std::vector <c_index_entry> c_index_entries;
 
@@ -278,8 +278,8 @@ static void on_find(void *context, const elliptics::find_indexes_result_entry &r
 }
 
 void session_find_all_indexes(ell_session *session,
-			      void *on_chunk_context,
-			      void *final_context, char *indexes[], uint64_t nsize)
+			      context_t on_chunk_context,
+			      context_t final_context, char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
 	std::vector <std::string> index_names(indexes, indexes + nsize);
@@ -288,8 +288,8 @@ void session_find_all_indexes(ell_session *session,
 }
 
 void session_find_any_indexes(ell_session *session,
-			      void *on_chunk_context,
-			      void *final_context, char *indexes[], uint64_t nsize)
+			      context_t on_chunk_context,
+			      context_t final_context, char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
 	std::vector <std::string> index_names(indexes, indexes + nsize);
@@ -302,13 +302,13 @@ void session_find_any_indexes(ell_session *session,
  * Indexes
  * Not implemented. Don't know about anything usefull informaitopn from result.
  */
-static void on_set_indexes(void *context, const elliptics::callback_result_entry &result)
+static void on_set_indexes(context_t context, const elliptics::callback_result_entry &result)
 {
 	(void)context;
 	(void)result;
 }
 
-static void on_list_indexes(void *context, const elliptics::index_entry &result)
+static void on_list_indexes(context_t context, const elliptics::index_entry &result)
 {
 	c_index_entry to_go {
 		(const char *)result.data.data(), result.data.size()
@@ -318,15 +318,15 @@ static void on_list_indexes(void *context, const elliptics::index_entry &result)
 }
 
 void session_list_indexes(ell_session *session,
-			  void *on_chunk_context, void *final_context, ell_key *key)
+			  context_t on_chunk_context, context_t final_context, ell_key *key)
 {
 	using namespace std::placeholders;
 	session->list_indexes(*key).connect(std::bind(&on_list_indexes, on_chunk_context, _1),
 					    std::bind(&on_finish, final_context, _1));
 }
 
-void session_set_indexes(ell_session *session, void *on_chunk_context,
-			 void *final_context, ell_key *key,
+void session_set_indexes(ell_session *session, context_t on_chunk_context,
+			 context_t final_context, ell_key *key,
 			 char *indexes[], struct go_data_pointer *data, uint64_t count)
 {
 	/*Move to util function */
@@ -346,8 +346,8 @@ void session_set_indexes(ell_session *session, void *on_chunk_context,
 }
 
 void session_update_indexes(ell_session *session,
-			    void *on_chunk_context,
-			    void *final_context, ell_key *key,
+			    context_t on_chunk_context,
+			    context_t final_context, ell_key *key,
 			    char *indexes[], struct go_data_pointer *data, uint64_t count)
 {
 	/*Move to util function */
@@ -367,8 +367,8 @@ void session_update_indexes(ell_session *session,
 }
 
 void session_remove_indexes(ell_session *session,
-			    void *on_chunk_context,
-			    void *final_context, ell_key *key,
+			    context_t on_chunk_context,
+			    context_t final_context, ell_key *key,
 			    char *indexes[], uint64_t nsize)
 {
 	using namespace std::placeholders;
@@ -379,7 +379,7 @@ void session_remove_indexes(ell_session *session,
 			 std::bind(&on_finish, final_context, _1));
 }
 
-static void on_backend_status(void *context, const std::vector<elliptics::backend_status_result_entry> &result,
+static void on_backend_status(context_t context, const std::vector<elliptics::backend_status_result_entry> &result,
 		const elliptics::error_info &error)
 {
 	if (error) {
@@ -397,37 +397,37 @@ static void on_backend_status(void *context, const std::vector<elliptics::backen
 	go_backend_status_callback(context, elements);
 }
 
-void session_backends_status(ell_session *session, const struct dnet_addr *addr, void *context)
+void session_backends_status(ell_session *session, const struct dnet_addr *addr, context_t context)
 {
 	session->request_backends_status((*addr)).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context)
 {
 	session->start_defrag((*addr), backend_id).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context)
 {
 	session->enable_backend((*addr), backend_id).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context)
 {
 	session->disable_backend((*addr), backend_id).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context)
 {
 	session->make_writable((*addr), backend_id).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context)
+void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context)
 {
 	session->make_readonly((*addr), backend_id).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));
 }
-void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context)
+void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, context_t context)
 {
 	session->set_delay((*addr), backend_id, delay).connect(std::bind(&on_backend_status, context,
 				std::placeholders::_1, std::placeholders::_2));

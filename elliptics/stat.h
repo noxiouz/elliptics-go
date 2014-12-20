@@ -16,6 +16,7 @@
 #ifndef __ELLIPTICS_STAT_H
 #define __ELLIPTICS_STAT_H
 
+
 #include "session.h"
 
 #include <elliptics/packet.h>
@@ -31,7 +32,7 @@ struct go_stat_result {
 extern "C" {
 #endif
 
-void session_get_stats(ell_session *session, void *on_chunk_context, void *final_context, uint64_t categories);
+void session_get_stats(ell_session *session, context_t on_chunk_context, context_t final_context, uint64_t categories);
 
 #ifdef __cplusplus
 }

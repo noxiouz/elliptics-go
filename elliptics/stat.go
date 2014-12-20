@@ -36,43 +36,44 @@ import (
 import "C"
 
 const (
-	StatCategoryCache	int64 =		1 << 0
-	StatCategoryIO		int64 =		1 << 1
-	StatCategoryCommands	int64 =		1 << 2
-	StatCategoryBackend	int64 =		1 << 4
-	StatCategoryProcFS	int64 =		1 << 6
-	StatSectorSize		uint64 =	512
+	StatCategoryCache    int64  = 1 << 0
+	StatCategoryIO       int64  = 1 << 1
+	StatCategoryCommands int64  = 1 << 2
+	StatCategoryBackend  int64  = 1 << 4
+	StatCategoryProcFS   int64  = 1 << 6
+	StatSectorSize       uint64 = 512
 
-	BackendStateDisabled		int32	= 0
-	BackendStateEnabled		int32	= 1
-	BackendStateActivating		int32	= 2
-	BackendStateDeactivating	int32	= 3
+	BackendStateDisabled     int32 = 0
+	BackendStateEnabled      int32 = 1
+	BackendStateActivating   int32 = 2
+	BackendStateDeactivating int32 = 3
 
-	DefragStateNotStarted		int32	= 0
-	DefragStateInProgress		int32	= 1
+	DefragStateNotStarted int32 = 0
+	DefragStateInProgress int32 = 1
 )
 
 var (
-	backend_state = map[int32]string {
-		BackendStateDisabled:		"disabled",
-		BackendStateEnabled:		"enabled",
-		BackendStateActivating:		"activating",
-		BackendStateDeactivating:	"deactivating",
+	backend_state = map[int32]string{
+		BackendStateDisabled:     "disabled",
+		BackendStateEnabled:      "enabled",
+		BackendStateActivating:   "activating",
+		BackendStateDeactivating: "deactivating",
 	}
-	defrag_state = map[int32]string {
-		DefragStateNotStarted:		"not-started",
-		DefragStateInProgress:		"in-progress",
+	defrag_state = map[int32]string{
+		DefragStateNotStarted: "not-started",
+		DefragStateInProgress: "in-progress",
 	}
 )
 
 type RawAddr struct {
-	Addr		[32]byte
-	Len		int
-	Family		uint16
+	Addr   [32]byte
+	Len    int
+	Family uint16
 }
+
 func (a *RawAddr) DnetAddr() *DnetAddr {
-	return &DnetAddr {
-		Addr: a.Addr[:a.Len],
+	return &DnetAddr{
+		Addr:   a.Addr[:a.Len],
 		Family: a.Family,
 	}
 }
@@ -80,9 +81,10 @@ func (a *RawAddr) String() string {
 	tmp := a.DnetAddr()
 	return tmp.String()
 }
+
 type AddressBackend struct {
-	Addr		RawAddr
-	Backend		int32
+	Addr    RawAddr
+	Backend int32
 }
 
 func (ab *AddressBackend) String() string {
@@ -91,58 +93,58 @@ func (ab *AddressBackend) String() string {
 
 type VFS struct {
 	// space in bytes for given backend
-	Total, Avail		uint64
+	Total, Avail uint64
 
 	// logical size limitation for backends which support it
 	// blob backend may set this (configuration must allow blob size checks, bit-4 must be zero)
 	// for all others this field equals to @VFS.Total
-	TotalSizeLimit		uint64
+	TotalSizeLimit uint64
 
-	BackendRemovedSize	uint64
-	BackendUsedSize		uint64
+	BackendRemovedSize uint64
+	BackendUsedSize    uint64
 
-	RecordsTotal		uint64
-	RecordsRemoved		uint64
-	RecordsCorrupted	uint64
+	RecordsTotal     uint64
+	RecordsRemoved   uint64
+	RecordsCorrupted uint64
 }
 
 type CStat struct {
-	RequestsSuccess		uint64
-	RequestsFailures	uint64
-	Bytes			uint64
+	RequestsSuccess  uint64
+	RequestsFailures uint64
+	Bytes            uint64
 
-	RPSFailures		float64
-	RPSSuccess		float64
-	BPS			float64
+	RPSFailures float64
+	RPSSuccess  float64
+	BPS         float64
 }
 
 type DStat struct {
-	WSectors		uint64
-	RSectors		uint64
-	IOTicks			uint64
+	WSectors uint64
+	RSectors uint64
+	IOTicks  uint64
 
-	WBS			float64
-	RBS			float64
-	Util			float64
+	WBS  float64
+	RBS  float64
+	Util float64
 }
 
 type PID struct {
 	sync.RWMutex
 
-	Error			float64
-	IntegralError		float64
-	ErrorTime		time.Time
-	Pain			float64
+	Error         float64
+	IntegralError float64
+	ErrorTime     time.Time
+	Pain          float64
 }
 
 func NewPIDController() PID {
-	return PID {
-		ErrorTime:		time.Now(),
+	return PID{
+		ErrorTime: time.Now(),
 	}
 }
 
 const (
-	PIDKe float64			= 1.0
+	PIDKe float64 = 1.0
 
 	// Integral part has to be zero in this case
 	// since there is no continuous 'force' to check/change in our case
@@ -152,15 +154,15 @@ const (
 	// desired velocity, but in our case there is no engine controller which
 	// can output continuous power to driver the vehicle, instead we have to
 	// determine which of the backends is currently the fastest
-	PIDKi float64			= 0
-	PIDKd float64			= 0.3
+	PIDKi float64 = 0
+	PIDKd float64 = 0.3
 )
 
 type StatBackend struct {
-	Error		BackendError			`json:"error"`
+	Error BackendError `json:"error"`
 
 	// All range starts (IDs) for given node (server address + backend)
-	ID		[]DnetRawID			`json:"-"`
+	ID []DnetRawID `json:"-"`
 
 	// @sum hosts total sum of uint64 ids created frm DnetRawID
 	// after it is devided by math.MaxUint64 it becomes @Percentage
@@ -168,39 +170,39 @@ type StatBackend struct {
 
 	// percentage of the whole IDs ring currently occupied by given ids
 	// and thus node (address + backend)
-	Percentage	float64
+	Percentage float64
 
 	// defragmentation status: 0 - not started, 1 - in progress
-	DefragState	int32
-	DefragStateStr	string
+	DefragState    int32
+	DefragStateStr string
 
 	// backend is in read-only mode
-	RO		bool
+	RO bool
 
 	// backend has delay of @Delay ms for every operation
-	Delay		uint32
+	Delay uint32
 
 	// VFS statistics: available, used and total space
-	VFS		VFS
+	VFS VFS
 
 	// dsat (disk utilization, read/write per second)
-	DStat		DStat
+	DStat DStat
 
 	// PID-controller used for data writing
-	PID		PID
+	PID PID
 
 	// per-command size/number counters
 	// difference between the two divided by the time difference equals to RPS/BPS
-	Commands	map[string]*CStat
+	Commands map[string]*CStat
 }
 
 func NewStatBackend() *StatBackend {
-	return &StatBackend {
-		ID:		make([]DnetRawID, 0),
-		Percentage:	0,
-		sum:		0,
-		Commands:	make(map[string]*CStat),
-		PID:		NewPIDController(),
+	return &StatBackend{
+		ID:         make([]DnetRawID, 0),
+		Percentage: 0,
+		sum:        0,
+		Commands:   make(map[string]*CStat),
+		PID:        NewPIDController(),
 	}
 }
 
@@ -217,17 +219,17 @@ func (backend *StatBackend) PIDUpdate(e float64) {
 	p.Lock()
 
 	delta_T := time.Since(p.ErrorTime).Seconds()
-	integral_new := e * delta_T + p.IntegralError
+	integral_new := e*delta_T + p.IntegralError
 	diff := (e - p.Error) / delta_T
 
-	u := e * PIDKe + integral_new * PIDKi + diff * PIDKd
+	u := e*PIDKe + integral_new*PIDKi + diff*PIDKd
 	if u <= 0 {
 		// negative 'force' means we have to decrease/to hold down current attempts
 		// to achieve desired performance, but we do not have engine to tune its power,
 		// instead we have to select the fastest backend
 		// thus, let's just reduce the pain of the current backend when its performance
 		// is higher than desired one
-		u = p.Pain / 2.0 + 1.0
+		u = p.Pain/2.0 + 1.0
 	}
 
 	p.IntegralError = integral_new
@@ -273,10 +275,10 @@ func NewStatGroup() StatGroup {
 func (sg *StatGroup) FindStatBackendKey(s *Session, key string, group_id uint32) (*StatBackend, error) {
 	addr, backend_id, err := s.LookupBackend(key, group_id)
 	if err != nil {
-		return nil, &DnetError {
-			Code:		-2, // -ENOENT
-			Flags:		0,
-			Message:	fmt.Sprintf("could not find backend for key: %s, group: %d: %v", key, group_id, err),
+		return nil, &DnetError{
+			Code:    -2, // -ENOENT
+			Flags:   0,
+			Message: fmt.Sprintf("could not find backend for key: %s, group: %d: %v", key, group_id, err),
 		}
 	}
 
@@ -288,11 +290,11 @@ func (sg *StatGroup) FindStatBackend(addr *DnetAddr, backend_id int32) (*StatBac
 
 	st, ok := sg.Ab[ab]
 	if !ok {
-		return nil, &DnetError {
-			Code:		-2, // -ENOENT
-			Flags:		0,
-			Message:	fmt.Sprintf("could not find statistics for addr: %s, backend: %d",
-						addr.String(), backend_id),
+		return nil, &DnetError{
+			Code:  -2, // -ENOENT
+			Flags: 0,
+			Message: fmt.Sprintf("could not find statistics for addr: %s, backend: %d",
+				addr.String(), backend_id),
 		}
 	}
 
@@ -300,29 +302,29 @@ func (sg *StatGroup) FindStatBackend(addr *DnetAddr, backend_id int32) (*StatBac
 }
 
 type StatBackendData struct {
-	Address		string
-	Backend		int32
-	Stat		*StatBackend
+	Address string
+	Backend int32
+	Stat    *StatBackend
 }
 
 type StatGroupData struct {
-	Backends		[]*StatBackendData
+	Backends []*StatBackendData
 
-	RecordsTotal		uint64
-	RecordsRemoved		uint64
-	RecordsCorrupted	uint64
+	RecordsTotal     uint64
+	RecordsRemoved   uint64
+	RecordsCorrupted uint64
 }
 
 func (sg *StatGroup) StatGroupData() (reply *StatGroupData) {
 
-	reply = &StatGroupData {
+	reply = &StatGroupData{
 		Backends: make([]*StatBackendData, 0, len(sg.Ab)),
 	}
 	for ab, backend := range sg.Ab {
-		tmp := &StatBackendData {
-			Address:	ab.Addr.String(),
-			Backend:	ab.Backend,
-			Stat:		backend,
+		tmp := &StatBackendData{
+			Address: ab.Addr.String(),
+			Backend: ab.Backend,
+			Stat:    backend,
 		}
 
 		reply.Backends = append(reply.Backends, tmp)
@@ -400,8 +402,8 @@ func (rg *StatGroup) Finalize() {
 }
 
 type DnetStat struct {
-	Time		time.Time
-	Group		map[uint32]*StatGroup
+	Time  time.Time
+	Group map[uint32]*StatGroup
 }
 
 type StatEntry struct {
@@ -416,20 +418,20 @@ func (entry *StatEntry) Group() uint32 {
 }
 
 func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
-	raw := RawAddr {
-		Len: len(addr.Addr),
+	raw := RawAddr{
+		Len:    len(addr.Addr),
 		Family: addr.Family,
 	}
-	if (len(addr.Addr) > len(raw.Addr)) {
+	if len(addr.Addr) > len(raw.Addr) {
 		log.Fatalf("can not create new address+backend: addr: %s, backend: %d, addr.len: %d, raw.len: %d\n\n",
 			addr.String(), backend, len(addr.Addr), len(raw.Addr))
 	}
 
 	copy(raw.Addr[:], addr.Addr)
 
-	return AddressBackend {
-		Addr:		raw,
-		Backend:	backend,
+	return AddressBackend{
+		Addr:    raw,
+		Backend: backend,
 	}
 }
 
@@ -438,7 +440,11 @@ func (entry *StatEntry) AddressBackend() AddressBackend {
 }
 
 //export go_stat_callback
-func go_stat_callback(result *C.struct_go_stat_result, context unsafe.Pointer) {
+func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session numbder %d", context)
+	}
 	callback := *(*func(*StatEntry))(context)
 
 	res := &StatEntry{
@@ -519,9 +525,9 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 
 			sb.PID = psb.PID
 
-			sb.DStat.WBS = float64((sb.DStat.WSectors - psb.DStat.WSectors) * StatSectorSize) / duration
-			sb.DStat.RBS = float64((sb.DStat.RSectors - psb.DStat.RSectors) * StatSectorSize) / duration
-			sb.DStat.Util = float64(sb.DStat.IOTicks - psb.DStat.IOTicks) / 1000.0 / duration
+			sb.DStat.WBS = float64((sb.DStat.WSectors-psb.DStat.WSectors)*StatSectorSize) / duration
+			sb.DStat.RBS = float64((sb.DStat.RSectors-psb.DStat.RSectors)*StatSectorSize) / duration
+			sb.DStat.Util = float64(sb.DStat.IOTicks-psb.DStat.IOTicks) / 1000.0 / duration
 
 			for cmd, cstat := range sb.Commands {
 				pcstat, ok := psb.Commands[cmd]
@@ -529,9 +535,9 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 					continue
 				}
 
-				cstat.RPSSuccess = float64(cstat.RequestsSuccess - pcstat.RequestsSuccess) / duration
-				cstat.RPSFailures = float64(cstat.RequestsFailures - pcstat.RequestsFailures) / duration
-				cstat.BPS = float64(cstat.Bytes - pcstat.Bytes) / duration
+				cstat.RPSSuccess = float64(cstat.RequestsSuccess-pcstat.RequestsSuccess) / duration
+				cstat.RPSFailures = float64(cstat.RequestsFailures-pcstat.RequestsFailures) / duration
+				cstat.BPS = float64(cstat.Bytes-pcstat.Bytes) / duration
 			}
 		}
 	}
@@ -570,7 +576,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		log.Printf("%s: could not parse stat entry '%s' reply: %v\n", entry.addr.String(), string(entry.stat), err)
 	}
 
-	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec * 1000))
+	stat.Time = time.Unix(int64(r.Timestamp.Sec), int64(r.Timestamp.USec*1000))
 
 	if r.MonitorStatus != "enabled" {
 		log.Printf("%s: monitoring doesn't work: %v\n", entry.addr.String(), r.MonitorStatus)
@@ -600,7 +606,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 
 			backend.VFS.TotalSizeLimit = backend.VFS.Total
 			// check blob flags, if bit 4 is set, blob will not perform size checks at all
-			if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags & (1<<4) == 0){
+			if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags&(1<<4) == 0) {
 				backend.VFS.TotalSizeLimit = vnode.Backend.Config.BlobSizeLimit
 			}
 
@@ -618,10 +624,10 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.DStat.IOTicks = vnode.Backend.DStat.IOTicks
 
 			for cname, cstat := range vnode.Commands {
-				backend.Commands[cname] = &CStat {
-					RequestsSuccess:	cstat.RequestsSuccess(),
-					RequestsFailures:	cstat.RequestsFailures(),
-					Bytes:			cstat.Bytes(),
+				backend.Commands[cname] = &CStat{
+					RequestsSuccess:  cstat.RequestsSuccess(),
+					RequestsFailures: cstat.RequestsFailures(),
+					Bytes:            cstat.Bytes(),
 				}
 			}
 		}

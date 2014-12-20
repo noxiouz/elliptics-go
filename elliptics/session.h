@@ -20,6 +20,8 @@
 #include "node.h"
 #include "key.h"
 
+typedef uint64_t context_t;
+
 #ifdef __cplusplus
 
 #include <iostream>
@@ -103,16 +105,16 @@ void session_set_trace_id(ell_session *session, trace_id_t trace_id);
 trace_id_t session_get_trace_id(ell_session *session);
 
 // ->lookup() returns only the first group where given key has been found
-void session_lookup(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key);
+void session_lookup(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key);
 // ->parallel_lookup() sends multiple lookups in parallel and returns all groups where given key has been found
-void session_parallel_lookup(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key);
+void session_parallel_lookup(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key);
 
-void session_read_data(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key, uint64_t offset, uint64_t size);
-void session_write_data(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key, uint64_t offset, char *data, uint64_t size);
+void session_read_data(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key, uint64_t offset, uint64_t size);
+void session_write_data(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key, uint64_t offset, char *data, uint64_t size);
 
 // prepare/write/commit sequence for large objects
 // @offset says on which offset should data go
@@ -120,56 +122,56 @@ void session_write_data(ell_session *session, void *on_chunk_context,
 // @commit_size means how many bytes to actually commit as record size, if 0 all written data will be used
 //
 // Each of these calls can be accomplished with data chunk
-void session_write_prepare(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_prepare(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset, uint64_t total_size,
 			char *data, uint64_t size);
-void session_write_plain(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_plain(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset,
 			char *data, uint64_t size);
-void session_write_commit(ell_session *session, void *on_chunk_context,
-			void *final_context, ell_key *key,
+void session_write_commit(ell_session *session, context_t on_chunk_context,
+			context_t final_context, ell_key *key,
 			uint64_t offset,
 			uint64_t commit_size,
 			char *data, uint64_t size);
 
-void session_remove(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key);
-void session_bulk_remove(ell_session *session, void *on_chunk_context, void *final_context, void *ekeys);
+void session_remove(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key);
+void session_bulk_remove(ell_session *session, context_t on_chunk_context, context_t final_context, void *ekeys);
 
-void session_find_all_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, char *indexes[], uint64_t nsize);
-void session_find_any_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, char *indexes[], uint64_t nsize);
+void session_find_all_indexes(ell_session *session, context_t on_chunk_context,
+		context_t final_context, char *indexes[], uint64_t nsize);
+void session_find_any_indexes(ell_session *session, context_t on_chunk_context,
+		context_t final_context, char *indexes[], uint64_t nsize);
 
-void session_set_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key, char *indexes[],
+void session_set_indexes(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key, char *indexes[],
 		struct go_data_pointer *data, uint64_t count);
 
-void session_update_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key,
+void session_update_indexes(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key,
 		char *indexes[], struct go_data_pointer *data, uint64_t count);
 
-void session_remove_indexes(ell_session *session, void *on_chunk_context,
-		void *final_context, ell_key *key,
+void session_remove_indexes(ell_session *session, context_t on_chunk_context,
+		context_t final_context, ell_key *key,
 		char *indexes[], uint64_t nsize);
 
-void session_list_indexes(ell_session *sesion, void *on_chunk_context,
-		void *final_context, ell_key *key);
+void session_list_indexes(ell_session *sesion, context_t on_chunk_context,
+		context_t final_context, ell_key *key);
 
 struct go_backends_status {
 	struct dnet_backend_status_list		*list;
 	struct go_error				error;
 };
 
-void session_backends_status(ell_session *session, const struct dnet_addr *addr, void *context);
-void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
-void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
-void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
-void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
-void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, void *context);
-void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, void *context);
+void session_backends_status(ell_session *session, const struct dnet_addr *addr, context_t context);
+void session_backend_start_defrag(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context);
+void session_backend_enable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context);
+void session_backend_disable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context);
+void session_backend_make_writable(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context);
+void session_backend_make_readonly(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, context_t context);
+void session_backend_set_delay(ell_session *session, const struct dnet_addr *addr, uint32_t backend_id, uint32_t delay, context_t context);
 
 int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id);
 
