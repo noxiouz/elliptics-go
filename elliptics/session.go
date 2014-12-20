@@ -262,7 +262,14 @@ func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 		close(responseCh)
 
 		// close keepalive context
-		close(keepaliver)
+		// it must be deferred to fix race when finish callback is still alive,
+		// but keepalive context has been closed, keepalive goroutine has awakened,
+		// set callback pointer to NIL, GC has fired and freed this memory
+		// ...
+		// and then the rest of the final callback has been executed
+		// there may exist some golang internal stuff even though close(keepaliver)
+		// is the last operation in the function
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -382,13 +389,13 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			defer close(keepaliver)
 			return
 		}
 
 		if total_size == 0 {
 			close(responseCh)
-			close(keepaliver)
+			defer close(keepaliver)
 			return
 		}
 
@@ -396,7 +403,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if n <= 0 && err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			defer close(keepaliver)
 			return
 		}
 
@@ -408,7 +415,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 		if err != nil {
 			responseCh <- &lookupResult{err: err}
 			close(responseCh)
-			close(keepaliver)
+			defer close(keepaliver)
 			return
 		}
 		defer ekey.Free()
@@ -450,7 +457,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 		return responseCh
 	}
 
@@ -473,7 +480,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 		return responseCh
 	}
 	defer ekey.Free()
@@ -501,14 +508,14 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	chunk, err := ioutil.ReadAll(input)
 	if err != nil {
 		responseCh <- &lookupResult{err: err}
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 		return responseCh
 	}
 
@@ -521,7 +528,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 			},
 		}
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 		return responseCh
 	}
 
@@ -562,7 +569,7 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	/* To keep callbacks alive */
@@ -602,7 +609,7 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	/* To keep callbacks alive */
@@ -675,7 +682,7 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -732,7 +739,7 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 		}
 
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	C.session_bulk_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), keys.keys)
@@ -824,7 +831,7 @@ func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResul
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -890,7 +897,7 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -949,7 +956,7 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -990,7 +997,7 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {

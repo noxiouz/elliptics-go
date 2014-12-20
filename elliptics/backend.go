@@ -123,7 +123,7 @@ func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -145,7 +145,7 @@ func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *D
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -168,7 +168,7 @@ func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBa
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -191,7 +191,7 @@ func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetB
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -214,7 +214,7 @@ func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -237,7 +237,7 @@ func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
@@ -260,7 +260,7 @@ func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32
 	onFinish := func(tmp *DnetBackendsStatus) {
 		responseCh <- tmp
 		close(responseCh)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {

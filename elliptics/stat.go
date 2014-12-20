@@ -465,7 +465,7 @@ func (s *Session) DnetStat() *DnetStat {
 		}
 
 		close(response)
-		close(keepaliver)
+		defer close(keepaliver)
 	}
 
 	go func() {
