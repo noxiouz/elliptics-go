@@ -443,9 +443,9 @@ func (entry *StatEntry) AddressBackend() AddressBackend {
 func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder %d", context)
+		panic("Unable to find session numbder")
 	}
-	callback := *(*func(*StatEntry))(context)
+	callback := context.(func(*StatEntry))
 
 	res := &StatEntry{
 		cmd:  NewDnetCmd(result.cmd),
@@ -459,7 +459,9 @@ func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 
 func (s *Session) DnetStat() *DnetStat {
 	response := make(chan *StatEntry, 10)
-	keepaliver := make(chan struct{}, 0)
+
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(result *StatEntry) {
 		response <- result
@@ -473,19 +475,17 @@ func (s *Session) DnetStat() *DnetStat {
 		}
 
 		close(response)
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 
 	categories := StatCategoryBackend | StatCategoryProcFS | StatCategoryCommands
 
 	C.session_get_stats(s.session,
-		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.context_t(onResultContext), C.context_t(onFinishContext),
 		C.uint64_t(categories))
 
 	st := &DnetStat{

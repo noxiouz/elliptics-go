@@ -64,12 +64,8 @@ func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
 }
 
 //export go_route_callback
-func go_route_callback(dnet_entry *C.struct_dnet_route_entry, key uint64) {
+func go_route_callback(dnet_entry *C.struct_dnet_route_entry, context unsafe.Pointer) {
 	entry := NewRouteEntry(dnet_entry)
-	context, err := Pool.Get(key)
-	if err != nil {
-		panic("Unable to find session numbder")
-	}
 
 	stat := (*DnetStat)(context)
 	stat.AddRouteEntry(entry)

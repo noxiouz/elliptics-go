@@ -18,11 +18,12 @@
 
 #include "session.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void session_get_routes(ell_session *session, uint64_t result_array_context);
+void session_get_routes(ell_session *session, void *result_array_context);
 
 #ifdef __cplusplus
 }

@@ -543,7 +543,8 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 // It only returns the first group where key has been found.
 func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
-	keepaliver := make(chan struct{}, 0)
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -554,18 +555,14 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
-
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	/* To keep callbacks alive */
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 
-	C.session_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	C.session_lookup(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), key.key)
 	return responseCh
 }
 
@@ -574,6 +571,8 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 // and returns information about all specified group where given key has been found.
 func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	key, err := NewKey(kstr)
 	if err != nil {
@@ -583,8 +582,6 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	}
 	defer key.Free()
 
-	keepaliver := make(chan struct{}, 0)
-
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
 	}
@@ -594,18 +591,14 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 			responseCh <- &lookupResult{err: err}
 		}
 		close(responseCh)
-
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 	/* To keep callbacks alive */
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
-
-	C.session_parallel_lookup(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	C.session_parallel_lookup(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), key.key)
 	return responseCh
 }
 
@@ -657,7 +650,8 @@ func (s *Session) Remove(key string) <-chan Remover {
 //RemoveKey performs remove operation by key.
 func (s *Session) RemoveKey(key *Key) <-chan Remover {
 	responseCh := make(chan Remover, defaultVOLUME)
-	keepaliver := make(chan struct{})
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(r *removeResult) {
 		responseCh <- r
@@ -668,16 +662,13 @@ func (s *Session) RemoveKey(key *Key) <-chan Remover {
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
-
-	C.session_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), key.key)
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+	C.session_remove(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), key.key)
 	return responseCh
 }
 
@@ -695,7 +686,8 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 		return responseCh
 	}
 
-	keepaliver := make(chan struct{})
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(r *removeResult) {
 		if r.err != nil {
@@ -725,18 +717,13 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 		}
 
 		close(responseCh)
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	C.session_bulk_remove(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), keys.keys)
-
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-
-		keys.Free()
-	}()
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+	C.session_bulk_remove(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), keys.keys)
 
 	return responseCh
 }
@@ -780,7 +767,7 @@ func (f *findResult) Error() error {
 func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
-	C.session_find_all_indexes(s.session, onResult, onFinish,
+	C.session_find_all_indexes(s.session, C.context_t(onResult), C.context_t(onFinish),
 		(**C.char)(&cindexes[0]), C.uint64_t(len(indexes)))
 	//Free cindexes
 	for _, item := range cindexes {
@@ -793,7 +780,7 @@ func (s *Session) FindAllIndexes(indexes []string) <-chan Finder {
 func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
 	responseCh := make(chan Finder, defaultVOLUME)
 	onResult, onFinish, cindexes := s.findIndexes(indexes, responseCh)
-	C.session_find_any_indexes(s.session, onResult, onFinish,
+	C.session_find_any_indexes(s.session, C.context_t(onResult), C.context_t(onFinish),
 		(**C.char)(&cindexes[0]), C.uint64_t(len(indexes)))
 	//Free cindexes
 	for _, item := range cindexes {
@@ -802,35 +789,30 @@ func (s *Session) FindAnyIndexes(indexes []string) <-chan Finder {
 	return responseCh
 }
 
-func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResult, onFinish unsafe.Pointer, cindexes []*C.char) {
+func (s *Session) findIndexes(indexes []string, responseCh chan Finder) (onResultContext, onFinishContext uint64, cindexes []*C.char) {
 	for _, index := range indexes {
 		cindex := C.CString(index)
 		cindexes = append(cindexes, cindex)
 	}
+	onResultContext = NextContext()
+	onFinishContext = NextContext()
 
-	keepaliver := make(chan struct{})
-
-	_result := func(result *findResult) {
+	onResult := func(result *findResult) {
 		responseCh <- result
 	}
-	onResult = unsafe.Pointer(&_result)
 
-	_finish := func(err error) {
+	onFinish := func(err error) {
 		if err != nil {
 			responseCh <- &findResult{err: err}
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		_result = nil
-		_finish = nil
-	}()
-
-	onFinish = unsafe.Pointer(&_finish)
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 	return
 }
 
@@ -875,7 +857,8 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		cdatas = append(cdatas, cdata)
 	}
 
-	keepaliver := make(chan struct{})
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func() {
 		//It's never called. For the future.
@@ -887,26 +870,23 @@ func (s *Session) setOrUpdateIndexes(operation int, key string, indexes map[stri
 		}
 		close(responseCh)
 
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
-
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 	// TODO: Reimplement this with pointer on functions
 	switch operation {
 	case indexesSet:
-		C.session_set_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.session_set_indexes(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
 			ekey.key,
 			(**C.char)(&cindexes[0]),
 			(*C.struct_go_data_pointer)(&cdatas[0]),
 			C.uint64_t(len(cindexes)))
 
 	case indexesUpdate:
-		C.session_update_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.session_update_indexes(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
 			ekey.key,
 			(**C.char)(&cindexes[0]),
 			(*C.struct_go_data_pointer)(&cdatas[0]),
@@ -934,7 +914,8 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 	}
 	defer ekey.Free()
 
-	keepaliver := make(chan struct{})
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func(indexentry *IndexEntry) {
 		responseCh <- *indexentry
@@ -945,17 +926,13 @@ func (s *Session) ListIndexes(key string) <-chan IndexEntry {
 			responseCh <- IndexEntry{err: err}
 		}
 		close(responseCh)
-
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
-
-	C.session_list_indexes(s.session, unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish), ekey.key)
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+	C.session_list_indexes(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), ekey.key)
 	return responseCh
 }
 
@@ -975,7 +952,8 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 		cindexes = append(cindexes, cindex)
 	}
 
-	keepaliver := make(chan struct{})
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
 
 	onResult := func() {
 		//It's never called. For the future.
@@ -986,18 +964,15 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 			responseCh <- &indexResult{err: err}
 		}
 		close(responseCh)
-
-		close(keepaliver)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	go func() {
-		<-keepaliver
-		onResult = nil
-		onFinish = nil
-	}()
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
 
 	C.session_remove_indexes(s.session,
-		unsafe.Pointer(&onResult), unsafe.Pointer(&onFinish),
+		C.context_t(onResultContext), C.context_t(onFinishContext),
 		ekey.key, (**C.char)(&cindexes[0]), C.uint64_t(len(cindexes)))
 	return responseCh
 }
