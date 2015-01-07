@@ -98,8 +98,13 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 		cmd:    NewDnetCmd(result.cmd),
 		addr:   NewDnetAddr(result.addr),
 		ioattr: NewDnetIOAttr(result.io_attribute),
-		data:   C.GoBytes(unsafe.Pointer(result.file), C.int(result.size)),
 		err:    nil,
+	}
+
+	if result.size > 0 && result.file != nil {
+		Result.data = C.GoBytes(unsafe.Pointer(result.file), C.int(result.size))
+	} else {
+		Result.data = make([]byte, 0)
 	}
 	// All data from C++ has been copied here.
 	callback(Result)
