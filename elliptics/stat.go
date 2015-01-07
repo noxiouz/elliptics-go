@@ -450,8 +450,13 @@ func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 	res := &StatEntry{
 		cmd:  NewDnetCmd(result.cmd),
 		addr: NewDnetAddr(result.addr),
-		stat: C.GoBytes(unsafe.Pointer(result.stat_data), C.int(result.stat_size)),
 		err:  nil,
+	}
+
+	if result.stat_data != nil && result.stat_size != 0 {
+		res.stat = C.GoBytes(unsafe.Pointer(result.stat_data), C.int(result.stat_size))
+	} else {
+		res.stat = make([]byte, 0)
 	}
 
 	callback(res)
