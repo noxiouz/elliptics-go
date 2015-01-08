@@ -40,7 +40,6 @@ import "C"
 
 import (
 	"fmt"
-	"log"
 	"syscall"
 	"unsafe"
 )
@@ -49,21 +48,23 @@ import (
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
-	logger *log.Logger
 	node   unsafe.Pointer
 }
 
 // NewNode returns new Node with a given Logger.
-func NewNode(log *log.Logger, level string) (node *Node, err error) {
+func NewNode(logfile string, level string) (node *Node, err error) {
 	clevel := C.CString(level)
 	defer C.free(unsafe.Pointer(clevel))
 
-	cnode := C.new_node(unsafe.Pointer(log), clevel)
+	clogfile := C.CString(logfile)
+	defer C.free(unsafe.Pointer(clogfile))
+
+	cnode := C.new_node(clogfile, clevel)
 	if cnode == nil {
 		err = fmt.Errorf("could not create node, please check stderr output")
 		return
 	}
-	node = &Node{log, cnode}
+	node = &Node{cnode}
 	return
 }
 

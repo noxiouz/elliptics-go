@@ -21,40 +21,9 @@ using namespace ioremap;
 extern "C" {
 #include "_cgo_export.h"
 
-const std::string go_format = "%(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s";
-
-class go_logger_frontend : public blackhole::base_frontend_t
-{
-	public:
-		go_logger_frontend(void *priv) : m_priv(priv), m_formatter(go_format) {
-		}
-
-		virtual void handle(const blackhole::log::record_t &record) {
-			//dnet_log_level level = record.extract<dnet_log_level>(blackhole::keyword::severity<dnet_log_level>().name());
-			GoLog(m_priv, const_cast<char *>(m_formatter.format(record).c_str()));
-		}
-
-	private:
-		void *m_priv; // this is go's log.Logger pointer
-		blackhole::formatter::string_t m_formatter;
-};
-
-go_logger_base::go_logger_base(void *priv, const char *level)
-{
-	verbosity(elliptics::file_logger::parse_level(level));
-	add_frontend(blackhole::utils::make_unique<go_logger_frontend>(priv));
-}
-
-std::string go_logger_base::format()
-{
-	return go_format;
-}
-
-ell_node *new_node(void *priv, const char *level)
+ell_node *new_node(const char *logfile, const char *level)
 {
 	try {
-		std::shared_ptr<go_logger_base> base = std::make_shared<go_logger_base>(priv, level);
-
 		dnet_config cfg;
 		memset(&cfg, 0, sizeof(dnet_config));
 		cfg.io_thread_num = 8;
@@ -62,6 +31,8 @@ ell_node *new_node(void *priv, const char *level)
 		cfg.net_thread_num = 4;
 		cfg.wait_timeout = 5;
 		cfg.check_timeout = 20;
+
+		std::shared_ptr<elliptics::file_logger> base = std::make_shared<elliptics::file_logger>(logfile, elliptics::file_logger::parse_level(level));
 
 		return new ell_node(base, cfg);
 	} catch (const std::exception &e) {

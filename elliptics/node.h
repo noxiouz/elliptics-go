@@ -23,15 +23,9 @@
 #include <blackhole/formatter/string.hpp>
 #undef BOOST_BIND_NO_PLACEHOLDERS
 
-class go_logger_base: public ioremap::elliptics::logger_base {
-public:
-	go_logger_base(void *priv, const char *level);
-	std::string format();
-};
-
 class ell_node : public ioremap::elliptics::node {
 public:
-	ell_node(std::shared_ptr<go_logger_base> &base, dnet_config &cfg) :
+	ell_node(std::shared_ptr<ioremap::elliptics::file_logger> &base, dnet_config &cfg) :
 		::ioremap::elliptics::node(
 			ioremap::elliptics::logger(*base,
 				blackhole::log::attributes_t({
@@ -43,7 +37,7 @@ public:
 	}
 
 private:
-	std::shared_ptr<go_logger_base> m_log;
+	std::shared_ptr<ioremap::elliptics::file_logger> m_log;
 };
 
 extern "C" {
@@ -51,7 +45,7 @@ extern "C" {
 typedef void ell_node;
 #endif
 
-ell_node *new_node(void *priv, const char *level);
+ell_node *new_node(const char *logfile, const char *level);
 void delete_node(ell_node *node);
 
 int node_add_remote(ell_node *node, const char *addr, int port, int family);
