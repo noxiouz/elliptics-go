@@ -84,7 +84,7 @@ func (s *Session) GetRoutes(stat *DnetStat) {
 	context := NextContext()
 	Pool.Store(context, stat)
 
-	log.Printf("get_routes: stat: %p, condext: %d\n", stat, context)
+	log.Printf("get_routes: stat: %p, context: %d\n", stat, context)
 
 	C.session_get_routes(s.session, C.context_t(context))
 	stat.Finalize()
