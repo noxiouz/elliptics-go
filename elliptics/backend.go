@@ -54,6 +54,17 @@ static inline int dnet_backend_status_from_list(struct dnet_backend_status_list 
 
 	return 0;
 }
+
+static inline struct dnet_addr *dnet_addr_alloc() {
+	struct dnet_addr *addr = (struct dnet_addr *)malloc(sizeof(struct dnet_addr));
+	memset(addr, 0, sizeof(struct dnet_addr));
+	return addr;
+}
+
+static inline void dnet_addr_free(struct dnet_addr *addr) {
+	free(addr);
+}
+
 */
 import "C"
 
@@ -97,7 +108,7 @@ func go_backend_status_callback(key uint64, list *C.struct_dnet_backend_status_l
 
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find session number")
 	}
 	callback := context.(func(*DnetBackendsStatus))
 	callback(res)
@@ -116,7 +127,7 @@ func go_backend_status_error(key uint64, cerr *C.struct_go_error) {
 
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find session number")
 	}
 	callback := context.(func(*DnetBackendsStatus))
 	callback(res)
@@ -134,9 +145,10 @@ func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backends_status(s.session, &tmp, C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backends_status(s.session, tmp, C.context_t(context))
 
 	return responseCh
 }
@@ -152,9 +164,10 @@ func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *D
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_start_defrag(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_start_defrag(s.session, tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
@@ -170,9 +183,10 @@ func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBa
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_enable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_enable(s.session, tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
@@ -188,9 +202,10 @@ func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetB
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_disable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_disable(s.session, tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
@@ -206,9 +221,10 @@ func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_make_writable(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_make_writable(s.session, tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
@@ -224,9 +240,10 @@ func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_make_readonly(s.session, &tmp, C.uint32_t(backend_id), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_make_readonly(s.session, tmp, C.uint32_t(backend_id), C.context_t(context))
 
 	return responseCh
 }
@@ -242,9 +259,10 @@ func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32
 	}
 	Pool.Store(context, onFinish)
 
-	var tmp C.struct_dnet_addr
-	addr.CAddr(&tmp)
-	C.session_backend_set_delay(s.session, &tmp, C.uint32_t(backend_id), C.uint32_t(delay), C.context_t(context))
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
+	addr.CAddr(tmp)
+	C.session_backend_set_delay(s.session, tmp, C.uint32_t(backend_id), C.uint32_t(delay), C.context_t(context))
 
 	return responseCh
 }
