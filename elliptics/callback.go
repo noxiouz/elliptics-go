@@ -6,6 +6,7 @@ package elliptics
 import "C"
 
 import (
+	"log"
 	"reflect"
 	"unsafe"
 )
@@ -18,6 +19,9 @@ func go_final_callback(cerr *C.struct_go_error, key uint64) {
 		panic("Unable to find session numbder")
 	}
 	callback := context.(func(error))
+
+	log.Printf("go_final_callback: key: %d, context: %p, error_code: %d, error_message: %p\n",
+		key, context, cerr.code, cerr.message)
 
 	if cerr.code < 0 {
 		err = &DnetError{
@@ -41,6 +45,9 @@ func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.s
 	}
 	callback := context.(func(*lookupResult))
 
+	log.Printf("go_lookup_error: key: %d, context: %p, cmd: %p, addr: %p, error_code: %d, error_message: %p\n",
+		key, context, cmd, addr, cerr.code, cerr.message)
+
 	Result := lookupResult{
 		cmd:  NewDnetCmd(cmd),
 		addr: NewDnetAddr(addr),
@@ -61,6 +68,9 @@ func go_lookup_callback(result *C.struct_go_lookup_result, key uint64) {
 	}
 	callback := context.(func(*lookupResult))
 
+	log.Printf("go_lookup_callback: key: %d, context: %p, result.cmd: %p, result.addr: %p, result.info: %p, result.storage_addr: %p, result.path: %p\n",
+		key, context, result.cmd, result.addr, result.info, result.storage_addr, result.path)
+
 	Result := lookupResult{
 		cmd:          NewDnetCmd(result.cmd),
 		addr:         NewDnetAddr(result.addr),
@@ -80,6 +90,9 @@ func go_remove_callback(result *C.struct_go_remove_result, key uint64) {
 	}
 	callback := context.(func(*removeResult))
 
+	log.Printf("go_remove_callback: key: %d, context: %p, result.cmd: %p\n",
+		key, context, result.cmd, result.cmd)
+
 	Result := removeResult{
 		cmd: NewDnetCmd(result.cmd),
 	}
@@ -93,6 +106,9 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 		panic("Unable to find session numbder")
 	}
 	callback := context.(func(readResult))
+
+	log.Printf("go_read_callback: key: %d, context: %p, result.cmd: %p, result.addr: %p, result.io: %p, result.file: %p, result.size: %d\n",
+		key, context, result.cmd, result.addr, result.io_attribute, result.file, result.size)
 
 	Result := readResult{
 		cmd:    NewDnetCmd(result.cmd),
