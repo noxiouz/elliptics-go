@@ -18,6 +18,7 @@ package elliptics
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"unsafe"
 )
 
@@ -64,16 +65,28 @@ func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
 }
 
 //export go_route_callback
-func go_route_callback(dnet_entry *C.struct_dnet_route_entry, context unsafe.Pointer) {
+func go_route_callback(dnet_entry *C.struct_dnet_route_entry, key uint64) {
 	entry := NewRouteEntry(dnet_entry)
 
-	stat := (*DnetStat)(context)
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session number")
+	}
+
+	log.Printf("go_route_callback: key: %d, context: %p, route_entry: %p\n", key, context, dnet_entry)
+
+	stat := context.(*DnetStat)
 	stat.AddRouteEntry(entry)
 	return
 }
 
 func (s *Session) GetRoutes(stat *DnetStat) {
-	C.session_get_routes(s.session, unsafe.Pointer(stat))
+	context := NextContext()
+	Pool.Store(context, stat)
+
+	log.Printf("get_routes: stat: %p, condext: %d\n", stat, context)
+
+	C.session_get_routes(s.session, C.context_t(context))
 	stat.Finalize()
 	return
 }
