@@ -73,7 +73,7 @@ func go_route_callback(dnet_entry *C.struct_dnet_route_entry, key uint64) {
 		panic("Unable to find session number")
 	}
 
-	log.Printf("go_route_callback: key: %d, context: %p, route_entry: %p\n", key, context, dnet_entry)
+	//log.Printf("go_route_callback: key: %d, context: %p, route_entry: %p\n", key, context, dnet_entry)
 
 	stat := context.(*DnetStat)
 	stat.AddRouteEntry(entry)
@@ -88,5 +88,7 @@ func (s *Session) GetRoutes(stat *DnetStat) {
 
 	C.session_get_routes(s.session, C.context_t(context))
 	stat.Finalize()
+
+	Pool.Delete(context)
 	return
 }
