@@ -51,6 +51,16 @@ static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
 	return d->backend_id;
 }
 
+static struct dnet_addr *dnet_addr_alloc() {
+	struct dnet_addr *addr = (struct dnet_addr *)malloc(sizeof(struct dnet_addr));
+	memset(addr, 0, sizeof(struct dnet_addr));
+	return addr;
+}
+
+static void dnet_addr_free(struct dnet_addr *addr) {
+	free(addr);
+}
+
 */
 import "C"
 
@@ -73,16 +83,17 @@ func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
 }
 
 func NewDnetAddrStr(addr_str string) (DnetAddr, error) {
-	var caddr C.struct_dnet_addr
+	var caddr *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(caddr);
 	caddr_str := C.CString(addr_str)
 	defer C.free(unsafe.Pointer(caddr_str))
 
-	err := int(C.dnet_create_addr_str(&caddr, caddr_str, C.int(len(addr_str))))
+	err := int(C.dnet_create_addr_str(caddr, caddr_str, C.int(len(addr_str))))
 	if err < 0 {
 		return DnetAddr{}, fmt.Errorf("could not create addr '%s': %d", addr_str, err)
 	}
 
-	return NewDnetAddr(&caddr), nil
+	return NewDnetAddr(caddr), nil
 }
 
 func (a *DnetAddr) CAddr(tmp *C.struct_dnet_addr) {
@@ -97,17 +108,19 @@ func (a *DnetAddr) CAddr(tmp *C.struct_dnet_addr) {
 }
 
 func (a *DnetAddr) String() string {
-	var tmp C.struct_dnet_addr
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
 
-	a.CAddr(&tmp)
-	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_addr_string(&tmp)), a.Family)
+	a.CAddr(tmp)
+	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_addr_string(tmp)), a.Family)
 }
 
 func (a *DnetAddr) HostString() string {
-	var tmp C.struct_dnet_addr
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
+	defer C.dnet_addr_free(tmp);
 
-	a.CAddr(&tmp)
-	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(&tmp)))
+	a.CAddr(tmp)
+	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(tmp)))
 }
 
 type DnetRawID struct {
