@@ -552,6 +552,16 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 			}
 		}
 	}
+
+	// use old stats if new @DnetStat doesn't contain info for some groups
+	// this happens when heavy defragmentation runs on some server,
+	// and stat request to that server times out
+	for group, prev_sg := range prev.Group {
+		new_sg, ok := stat.Group[group]
+		if !ok {
+			stat.Group[group] = prev_sg
+		}
+	}
 }
 
 func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
