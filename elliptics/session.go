@@ -383,6 +383,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	onChunkContext := NextContext()
 	onFinishContext := NextContext()
+	chunk_context := NextContext()
 
 	chunk := make([]byte, max_chunk_size, max_chunk_size)
 
@@ -404,6 +405,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 			close(responseCh)
 			Pool.Delete(onChunkContext)
 			Pool.Delete(onFinishContext)
+			Pool.Delete(chunk_context)
 			return
 		}
 
@@ -411,6 +413,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 			close(responseCh)
 			Pool.Delete(onChunkContext)
 			Pool.Delete(onFinishContext)
+			Pool.Delete(chunk_context)
 			return
 		}
 
@@ -420,6 +423,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 			close(responseCh)
 			Pool.Delete(onChunkContext)
 			Pool.Delete(onFinishContext)
+			Pool.Delete(chunk_context)
 			return
 		}
 
@@ -433,6 +437,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 			close(responseCh)
 			Pool.Delete(onChunkContext)
 			Pool.Delete(onFinishContext)
+			Pool.Delete(chunk_context)
 			return
 		}
 		defer ekey.Free()
@@ -490,6 +495,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 
 	Pool.Store(onChunkContext, onChunkResult)
 	Pool.Store(onFinishContext, onChunkFinish)
+	Pool.Store(chunk_context, chunk)
 
 	C.session_write_prepare(s.session,
 		C.context_t(onChunkContext), C.context_t(onFinishContext),
@@ -503,6 +509,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	onWriteContext := NextContext()
 	onWriteFinishContext := NextContext()
+	chunk_context := NextContext()
 
 	onWriteResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -515,6 +522,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 		close(responseCh)
 		Pool.Delete(onWriteContext)
 		Pool.Delete(onWriteFinishContext)
+		Pool.Delete(chunk_context)
 	}
 
 	log.Printf("write_key: onWriteContext: %d, onWriteFinishContext: %d, onWriteResult: %p, onWriteFinish: %p\n",
@@ -541,6 +549,7 @@ func (s *Session) WriteKey(key *Key, input io.Reader, offset, total_size uint64)
 
 	Pool.Store(onWriteContext, onWriteResult)
 	Pool.Store(onWriteFinishContext, onWriteFinish)
+	Pool.Store(chunk_context, chunk)
 
 	C.session_write_data(s.session,
 		C.context_t(onWriteContext), C.context_t(onWriteFinishContext),
