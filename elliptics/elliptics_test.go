@@ -201,7 +201,7 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 		}
 
 		if res.Data()[0] != TEST_BLOB[1] {
-			t.Fatalf("session.ReadData: wrong response content. Expected %s, got %s", TEST_BLOB[1], res.Data()[0])
+			t.Fatalf("session.ReadData: wrong response content. Expected %v, got %v", TEST_BLOB[1], res.Data()[0])
 		}
 	}
 
