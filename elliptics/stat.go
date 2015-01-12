@@ -557,7 +557,7 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 	// this happens when heavy defragmentation runs on some server,
 	// and stat request to that server times out
 	for group, prev_sg := range prev.Group {
-		new_sg, ok := stat.Group[group]
+		_, ok := stat.Group[group]
 		if !ok {
 			stat.Group[group] = prev_sg
 		}
