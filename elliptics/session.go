@@ -1000,7 +1000,8 @@ func (s *Session) RemoveIndexes(key string, indexes []string) <-chan Indexer {
 }
 
 func (s *Session) LookupBackend(key string, group_id uint32) (addr *DnetAddr, backend_id int32, err error) {
-	var caddr C.struct_dnet_addr
+	var caddr *C.struct_dnet_addr = C.dnet_addr_alloc()
+	defer C.dnet_addr_free(caddr)
 	var cbackend_id C.int
 
 	ckey := C.CString(key)
@@ -1009,7 +1010,7 @@ func (s *Session) LookupBackend(key string, group_id uint32) (addr *DnetAddr, ba
 	addr = nil
 	backend_id = -1
 
-	cerr := C.session_lookup_addr(s.session, ckey, C.int(len(key)), C.int(group_id), &caddr, &cbackend_id)
+	cerr := C.session_lookup_addr(s.session, ckey, C.int(len(key)), C.int(group_id), caddr, &cbackend_id)
 	if cerr < 0 {
 		err = &DnetError{
 			Code:  int(cerr),
@@ -1021,7 +1022,7 @@ func (s *Session) LookupBackend(key string, group_id uint32) (addr *DnetAddr, ba
 		return
 	}
 
-	new_addr := NewDnetAddr(&caddr)
+	new_addr := NewDnetAddr(caddr)
 
 	addr = &new_addr
 	backend_id = int32(cbackend_id)
