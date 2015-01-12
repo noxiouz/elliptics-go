@@ -470,7 +470,7 @@ func (s *Session) WriteChunk(key string, input io.Reader, initial_offset, total_
 			err: &DnetError{
 				Code:  -22,
 				Flags: 0,
-				Message: fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d, rest-size: %d/%d",
+				Message: fmt.Sprintf("Invalid zero-length write: current-offset: %d/%d, rest-size: %d/%d",
 					initial_offset, offset, total_size, orig_total_size),
 			},
 		}
