@@ -51,6 +51,33 @@ static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
 	return d->backend_id;
 }
 
+static uint64_t dnet_io_attr_get_start(struct dnet_io_attr *io) {
+	return io->start;
+}
+static uint64_t dnet_io_attr_get_num(struct dnet_io_attr *io) {
+	return io->num;
+}
+static int64_t dnet_io_attr_get_tsec(struct dnet_io_attr *io) {
+	return io->timestamp.tsec;
+}
+static int64_t dnet_io_attr_get_tnsec(struct dnet_io_attr *io) {
+	return io->timestamp.tsec;
+}
+static uint64_t dnet_io_attr_get_user_flags(struct dnet_io_attr *io) {
+	return io->user_flags;
+}
+static uint64_t dnet_io_attr_get_total_size(struct dnet_io_attr *io) {
+	return io->total_size;
+}
+static uint64_t dnet_io_attr_get_flags(struct dnet_io_attr *io) {
+	return io->flags;
+}
+static uint64_t dnet_io_attr_get_offset(struct dnet_io_attr *io) {
+	return io->offset;
+}
+static uint64_t dnet_io_attr_get_size(struct dnet_io_attr *io) {
+	return io->size;
+}
 */
 import "C"
 
@@ -73,8 +100,9 @@ func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
 }
 
 func NewDnetAddrStr(addr_str string) (DnetAddr, error) {
-	var caddr *C.struct_dnet_addr = C.dnet_addr_alloc();
-	defer C.dnet_addr_free(caddr);
+	var caddr *C.struct_dnet_addr = C.dnet_addr_alloc()
+	defer C.dnet_addr_free(caddr)
+
 	caddr_str := C.CString(addr_str)
 	defer C.free(unsafe.Pointer(caddr_str))
 
@@ -87,13 +115,12 @@ func NewDnetAddrStr(addr_str string) (DnetAddr, error) {
 }
 
 func (a *DnetAddr) CAddr(tmp *C.struct_dnet_addr) {
-	var arrayptr = uintptr(unsafe.Pointer(&tmp.addr[0]))
-	for i := 0; i < len(a.Addr); i++ {
-		*(*C.uint8_t)(unsafe.Pointer(arrayptr)) = C.uint8_t(a.Addr[i])
-		arrayptr++
+	length := len(a.Addr)
+	if length > int(C.DNET_ADDR_SIZE) {
+		length = int(C.DNET_ADDR_SIZE)
 	}
-
-	tmp.addr_len = C.uint16_t(len(a.Addr))
+	C.memcpy(unsafe.Pointer(&tmp.addr[0]), unsafe.Pointer(&a.Addr[0]), C.size_t(length));
+	tmp.addr_len = C.uint16_t(length)
 	tmp.family = C.uint16_t(a.Family)
 }
 
@@ -172,14 +199,14 @@ func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {
 	return DnetIOAttr{
 		Parent:    C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
 		ID:        C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
-		Start:     uint64(io.start),
-		Num:       uint64(io.num),
-		Timestamp: time.Unix(int64(io.timestamp.tsec), int64(io.timestamp.tnsec)),
-		UserFlags: uint64(io.user_flags),
-		TotalSize: uint64(io.total_size),
-		Flags:     uint32(io.flags),
-		Offset:    uint64(io.offset),
-		Size:      uint64(io.size),
+		Start:     uint64(C.dnet_io_attr_get_start(io)),
+		Num:       uint64(C.dnet_io_attr_get_num(io)),
+		Timestamp: time.Unix(int64(C.dnet_io_attr_get_tsec(io)), int64(C.dnet_io_attr_get_tnsec(io))),
+		UserFlags: uint64(C.dnet_io_attr_get_user_flags(io)),
+		TotalSize: uint64(C.dnet_io_attr_get_total_size(io)),
+		Flags:     uint32(C.dnet_io_attr_get_flags(io)),
+		Offset:    uint64(C.dnet_io_attr_get_offset(io)),
+		Size:      uint64(C.dnet_io_attr_get_size(io)),
 	}
 }
 
