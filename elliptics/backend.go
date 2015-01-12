@@ -55,17 +55,6 @@ static inline int dnet_backend_status_from_list(struct dnet_backend_status_list 
 
 	return 0;
 }
-
-static inline struct dnet_addr *dnet_addr_alloc() {
-	struct dnet_addr *addr = (struct dnet_addr *)malloc(sizeof(struct dnet_addr));
-	memset(addr, 0, sizeof(struct dnet_addr));
-	return addr;
-}
-
-static inline void dnet_addr_free(struct dnet_addr *addr) {
-	free(addr);
-}
-
 */
 import "C"
 

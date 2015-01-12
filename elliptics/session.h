@@ -175,6 +175,19 @@ void session_backend_set_delay(ell_session *session, const struct dnet_addr *add
 
 int session_lookup_addr(ell_session *session, const char *key, int len, int group_id, struct dnet_addr *addr, int *backend_id);
 
+static inline struct dnet_addr *dnet_addr_alloc()
+{
+	struct dnet_addr *addr = (struct dnet_addr *)malloc(sizeof(struct dnet_addr));
+	memset(addr, 0, sizeof(struct dnet_addr));
+	return addr;
+}
+
+static inline void dnet_addr_free(struct dnet_addr *addr)
+{
+	free(addr);
+}
+
+
 #ifdef __cplusplus
 }
 #endif

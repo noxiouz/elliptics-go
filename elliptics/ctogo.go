@@ -51,16 +51,6 @@ static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
 	return d->backend_id;
 }
 
-static struct dnet_addr *dnet_addr_alloc() {
-	struct dnet_addr *addr = (struct dnet_addr *)malloc(sizeof(struct dnet_addr));
-	memset(addr, 0, sizeof(struct dnet_addr));
-	return addr;
-}
-
-static void dnet_addr_free(struct dnet_addr *addr) {
-	free(addr);
-}
-
 */
 import "C"
 
