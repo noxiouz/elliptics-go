@@ -91,7 +91,7 @@ func go_remove_callback(result *C.struct_go_remove_result, key uint64) {
 	callback := context.(func(*removeResult))
 
 	log.Printf("go_remove_callback: key: %d, context: %p, result.cmd: %p\n",
-		key, context, result.cmd, result.cmd)
+		key, context, result.cmd)
 
 	Result := removeResult{
 		cmd: NewDnetCmd(result.cmd),
