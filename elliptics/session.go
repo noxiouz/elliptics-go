@@ -270,8 +270,8 @@ func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
 
-	onResult := func(result readResult) {
-		responseCh <- &result
+	onResult := func(result *readResult) {
+		responseCh <- result
 	}
 
 	onFinish := func(err error) {

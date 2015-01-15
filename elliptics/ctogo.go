@@ -88,14 +88,14 @@ import (
 )
 
 type DnetAddr struct {
-	Addr	[]byte
-	Family	uint16
+	Addr   []byte
+	Family uint16
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
-	return DnetAddr {
-		Family:	uint16(addr.family),
-		Addr: C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+	return DnetAddr{
+		Family: uint16(addr.family),
+		Addr:   C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
 	}
 }
 
@@ -119,22 +119,24 @@ func (a *DnetAddr) CAddr(tmp *C.struct_dnet_addr) {
 	if length > int(C.DNET_ADDR_SIZE) {
 		length = int(C.DNET_ADDR_SIZE)
 	}
-	C.memcpy(unsafe.Pointer(&tmp.addr[0]), unsafe.Pointer(&a.Addr[0]), C.size_t(length));
+	if length > 0 {
+		C.memcpy(unsafe.Pointer(&tmp.addr[0]), unsafe.Pointer(&a.Addr[0]), C.size_t(length))
+	}
 	tmp.addr_len = C.uint16_t(length)
 	tmp.family = C.uint16_t(a.Family)
 }
 
 func (a *DnetAddr) String() string {
-	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
-	defer C.dnet_addr_free(tmp);
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc()
+	defer C.dnet_addr_free(tmp)
 
 	a.CAddr(tmp)
 	return fmt.Sprintf("%s:%d", C.GoString(C.dnet_addr_string(tmp)), a.Family)
 }
 
 func (a *DnetAddr) HostString() string {
-	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc();
-	defer C.dnet_addr_free(tmp);
+	var tmp *C.struct_dnet_addr = C.dnet_addr_alloc()
+	defer C.dnet_addr_free(tmp)
 
 	a.CAddr(tmp)
 	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(tmp)))

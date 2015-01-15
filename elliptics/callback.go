@@ -105,12 +105,12 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	if err != nil {
 		panic("Unable to find session numbder")
 	}
-	callback := context.(func(readResult))
+	callback := context.(func(*readResult))
 
 	log.Printf("go_read_callback: key: %d, context: %p, result.cmd: %p, result.addr: %p, result.io: %p, result.file: %p, result.size: %d\n",
 		key, context, result.cmd, result.addr, result.io_attribute, result.file, result.size)
 
-	Result := readResult{
+	Result := &readResult{
 		cmd:    NewDnetCmd(result.cmd),
 		addr:   NewDnetAddr(result.addr),
 		ioattr: NewDnetIOAttr(result.io_attribute),
