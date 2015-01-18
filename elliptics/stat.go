@@ -175,6 +175,9 @@ type StatBackend struct {
 	// defragmentation status: 0 - not started, 1 - in progress
 	DefragState    int32
 	DefragStateStr string
+	DefragStartTime time.Time
+	DefragCompletionTime time.Time
+	DefragCompletionStatus int32
 
 	// backend is in read-only mode
 	RO bool
@@ -635,6 +638,9 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
 				backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
 
+			backend.DefragStartTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortStartTime), 0)
+			backend.DefragCompletionTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortCompletionTime), 0)
+			backend.DefragCompletionStatus = vnode.Backend.GlobalStats.DataSortCompletionStatus
 			backend.DefragState = vnode.Status.DefragState
 			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
 			backend.RO = vnode.Status.RO

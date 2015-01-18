@@ -27,7 +27,7 @@ type Status struct {
 	State		int32		`json:"state"`
 	DefragState	int32		`json:"defrag_state"`
 	LastStart	Time		`json:"last_start"`
-	LastStartErr	int		`json:"last_start_err"`
+	LastStartErr	int32		`json:"last_start_err"`
 	RO		bool		`json:"read_only"`
 	Delay		uint32		`json:"delay"`
 }
@@ -35,7 +35,7 @@ type Status struct {
 type Config struct {
 	Group		uint32		`json:"group"`
 	Data		string		`json:"data"`
-	Sync		int		`json:"sync"`
+	Sync		int32		`json:"sync"`
 	BlobFlags	uint64		`json:"blob_flags"`
 	BlobSize	uint64		`json:"blob_size"`
 	BlobSizeLimit	uint64		`json:"blob_size_limit"`
@@ -48,7 +48,7 @@ type Config struct {
 type GlobalStats struct {
 	DataSortStartTime		uint64		`json:"datasort_start_time"`
 	DataSortCompletionTime		uint64		`json:"datasort_completion_time"`
-	DataSortCompletionStatus	int		`json:"datasort_completion_status"`
+	DataSortCompletionStatus	int32		`json:"datasort_completion_status"`
 }
 type BlobStats struct {
 	RecordsTotal		uint64		`json:"records_total"`
@@ -56,8 +56,8 @@ type BlobStats struct {
 	RecordsRemovedSize	uint64		`json:"records_removed_size"`
 	RecordsCorrupted	uint64		`json:"records_corrupted"`
 	BaseSize		uint64		`json:"base_size"`
-	WantDefrag		int		`json:"want_defrag"`
-	IsSorted		int		`json:"is_sorted"`
+	WantDefrag		int32		`json:"want_defrag"`
+	IsSorted		int32		`json:"is_sorted"`
 }
 type VStat struct {
 	BSize			uint64		`json:"bsize"`
@@ -80,7 +80,7 @@ type DStatRaw struct {
 	TimeInQueue		uint64		`json:"time_in_queue"`
 }
 type BackendError struct {
-	Code			int		`json:"code"`
+	Code			int32		`json:"code"`
 }
 type Backend struct {
 	Config	Config				`json:"config"`
