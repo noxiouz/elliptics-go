@@ -61,7 +61,7 @@ import "C"
 type DnetBackendStatus struct {
 	Backend      int32
 	State        int32
-	DefragState  uint32
+	DefragState  int32
 	LastStart    time.Time
 	LastStartErr int32
 	RO           bool
@@ -91,7 +91,7 @@ func go_backend_status_callback(key uint64, list *C.struct_dnet_backend_status_l
 			bst := DnetBackendStatus{
 				Backend:      int32(st.backend_id),
 				State:        int32(st.state),
-				DefragState:  uint32(st.defrag_state),
+				DefragState:  int32(st.defrag_state),
 				LastStart:    time.Unix(int64(st.last_start.tsec), int64(st.last_start.tnsec)),
 				LastStartErr: int32(st.last_start_err),
 				RO:           st.read_only != 0,
