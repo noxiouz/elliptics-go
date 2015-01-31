@@ -607,6 +607,8 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		return
 	}
 
+	backends := make([]int32, 0)
+	groups := make([]uint32, 0)
 	for _, vnode := range r.Backends {
 		if vnode.Status.State == BackendStateEnabled {
 			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
@@ -634,9 +636,12 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 				backend.VFS.TotalSizeLimit = vnode.Backend.Config.BlobSizeLimit
 			}
 
-			log.Printf("stat: addr: %s, backend: %d, group: %d, used: %d, limit: %d\n",
-				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
-				backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
+			backends = append(backends, int32(vnode.BackendID))
+			groups = append(groups, vnode.Backend.Config.Group)
+
+			//log.Printf("stat: addr: %s, backend: %d, group: %d, used: %d, limit: %d\n",
+			//	entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
+			//	backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
 
 			backend.DefragStartTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortStartTime), 0)
 			backend.DefragCompletionTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortCompletionTime), 0)
@@ -659,6 +664,9 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			}
 		}
 	}
+
+	log.Printf("stat: addr: %s, good-backends: %v, groups: %v\n",
+		entry.addr.String(), backends, groups)
 
 	return
 }
