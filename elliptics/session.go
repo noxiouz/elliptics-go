@@ -72,6 +72,10 @@ func NewSession(node *Node) (*Session, error) {
 	}, err
 }
 
+func (s *Session) Delete() {
+	C.delete_session(s.session)
+}
+
 //SetGroups points groups Session should work with.
 func (s *Session) SetGroups(groups []uint32) {
 	C.session_set_groups(s.session, (*C.uint32_t)(&groups[0]), C.int(len(groups)))

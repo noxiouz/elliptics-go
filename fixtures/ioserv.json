@@ -8,8 +8,8 @@
 					"pattern": "%(timestamp)s %(request_id)s/%(lwp)s/%(pid)s %(severity)s: %(message)s %(...L)s"
 				},
 				"sink": {
-					"type": "files",
-					"path": "/dev/stdout",
+					"type": "stream",
+					"output": "/dev/stdout",
 					"autoflush": true
 				}
 			}
@@ -19,7 +19,7 @@
 		"join": true,
 		"flags": 20,
 		"address": [
-			"localhost:1025:2-0"
+			"localhost:1025:2"
 		],
 		"wait_timeout": 60,
 		"check_timeout": 60,

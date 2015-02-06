@@ -49,6 +49,11 @@ ell_session *new_elliptics_session(ell_node *node)
 	return session;
 }
 
+void delete_session(ell_session *session)
+{
+	delete session;
+}
+
 void session_set_filter_all(ell_session *session)
 {
 	session->set_filter(elliptics::filters::all);
