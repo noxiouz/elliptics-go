@@ -43,6 +43,7 @@ func TestSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSession: unexpected error %s", err)
 	}
+	defer session.Delete()
 
 	session.SetGroups(sessionGroups)
 

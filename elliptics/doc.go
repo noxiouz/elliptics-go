@@ -44,6 +44,7 @@ Motivaiting example:
 	if err != nil {
 		log.Fatal("Error", err)
 	}
+	defer session.Delete()
 
 	session.SetGroups([]int32{1, 2, 3})
 	session.SetNamespace("example")
