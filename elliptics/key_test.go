@@ -48,6 +48,7 @@ func TestKeyCreationAndFree(t *testing.T) {
 */
 
 func TestKeysCreationAndFree(t *testing.T) {
+	t.Skip("Skip this test")
 	keys, err := NewKeys([]string{"A", "B", "C"})
 	if err != nil {
 		t.Fatalf("NewKeys: Unexpected error %s", err)

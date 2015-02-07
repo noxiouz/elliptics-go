@@ -1,8 +1,6 @@
 package elliptics
 
 import (
-	"io/ioutil"
-	"log"
 	"testing"
 	"time"
 )
@@ -14,13 +12,12 @@ func TestNode(t *testing.T) {
 
 		malformedAddress = "blabla:1025:22"
 	)
-	l := log.New(ioutil.Discard, "TEST", log.Ltime)
 
-	if _, err := NewNode(l, invalidLogLevel); err == nil {
+	if _, err := NewNode("/dev/stderr", invalidLogLevel); err == nil {
 		t.Errorf("NewNode: error was expected, got nil")
 	}
 
-	node, err := NewNode(l, suitableLogLevel)
+	node, err := NewNode("/dev/stderr", suitableLogLevel)
 	if err != nil {
 		t.Fatalf("NewNode: unexpected error %s", err)
 	}

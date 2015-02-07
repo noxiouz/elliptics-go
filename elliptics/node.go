@@ -4,7 +4,7 @@
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -48,7 +48,7 @@ import (
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
-	node   unsafe.Pointer
+	node unsafe.Pointer
 }
 
 // NewNode returns new Node with a given Logger.

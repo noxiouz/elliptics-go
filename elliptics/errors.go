@@ -4,7 +4,7 @@
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -26,16 +26,16 @@ import (
 )
 
 type DnetError struct {
-	Code		int
-	Flags		uint64
-	Message		string
+	Code    int
+	Flags   uint64
+	Message string
 }
 
 func (err *DnetError) Error() string {
 	return fmt.Sprintf("elliptics error: %d: %s", err.Code, err.Message)
 }
 
-func DnetErrorFromError(err error) (*DnetError) {
+func DnetErrorFromError(err error) *DnetError {
 	if ke, ok := err.(*DnetError); ok {
 		return ke
 	} else {

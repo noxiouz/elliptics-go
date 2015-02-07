@@ -3,8 +3,6 @@ package elliptics
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http/httptest"
 	"os"
 	"strconv"
@@ -27,9 +25,7 @@ func TestSession(t *testing.T) {
 		sessionTimeout   = 5
 	)
 
-	l := log.New(ioutil.Discard, "TEST", log.Ltime)
-
-	node, err := NewNode(l, "error")
+	node, err := NewNode("/dev/stderr", "error")
 	if err != nil {
 		t.Fatalf("NewNode: unexpected error %s", err)
 	}
@@ -143,8 +139,7 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 	/*  End of the preparing */
 
 	//Create Node
-	l := log.New(ioutil.Discard, "TEST ", log.Ltime)
-	node, err := NewNode(l, "error")
+	node, err := NewNode("/dev/stderr", "error")
 	if err != nil {
 		t.Fatalf("unexpected error %s during NewNode", err)
 	}
