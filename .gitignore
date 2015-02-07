@@ -20,3 +20,5 @@ _cgo_export.*
 _testmain.go
 s3proxy
 
+fixtures/elliptics/*
+
