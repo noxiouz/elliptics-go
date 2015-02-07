@@ -11,8 +11,7 @@ Use [Elliptics](https://github.com/reverbrain/elliptics) from **Go** language.
 
 Branch  | Build status | Coverage
 ------------- | ------------- | -------
-master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) | [![Coverage Status](https://coveralls.io/repos/noxiouz/elliptics-go/badge.png)](https://coveralls.io/r/noxiouz/elliptics-go)
-
+master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) | [![Coverage Status](https://coveralls.io/repos/noxiouz/elliptics-go/badge.svg?branch=master)](https://coveralls.io/r/noxiouz/elliptics-go?branch=master)
 ## Installation
 
 You should install `elliptics-client-dev` to build this one.
