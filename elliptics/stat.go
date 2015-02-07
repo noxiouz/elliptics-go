@@ -173,10 +173,10 @@ type StatBackend struct {
 	Percentage float64
 
 	// defragmentation status: 0 - not started, 1 - in progress
-	DefragState    int32
-	DefragStateStr string
-	DefragStartTime time.Time
-	DefragCompletionTime time.Time
+	DefragState            int32
+	DefragStateStr         string
+	DefragStartTime        time.Time
+	DefragCompletionTime   time.Time
 	DefragCompletionStatus int32
 
 	// backend is in read-only mode

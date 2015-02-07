@@ -48,7 +48,7 @@ import (
 // Also it is responsible for checking timeouts, maintenance and checking of communication.
 // To initialize the Node you should use NewNode.
 type Node struct {
-	node   unsafe.Pointer
+	node unsafe.Pointer
 }
 
 // NewNode returns new Node with a given Logger.
