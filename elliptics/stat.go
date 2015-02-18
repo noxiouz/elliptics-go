@@ -450,9 +450,6 @@ func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 	}
 	callback := context.(func(*StatEntry))
 
-	log.Printf("go_stat_callback: key: %d, context: %p, result.cmd: %p, result.addr: %p, result.stat_data: %p, result.stat_size: %d\n",
-		key, context, result.cmd, result.addr, result.stat_data, result.stat_size)
-
 	res := &StatEntry{
 		cmd:  NewDnetCmd(result.cmd),
 		addr: NewDnetAddr(result.addr),
@@ -489,9 +486,6 @@ func (s *Session) DnetStat() *DnetStat {
 		Pool.Delete(onResultContext)
 		Pool.Delete(onFinishContext)
 	}
-
-	log.Printf("dnet_stat: onResultContext: %d, onFinishContext: %d, onResult: %p, onFinish: %p\n",
-		onResultContext, onFinishContext, onResult, onFinish)
 
 	Pool.Store(onResultContext, onResult)
 	Pool.Store(onFinishContext, onFinish)
