@@ -227,6 +227,10 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			Message: fmt.Sprintf("could not read anything at all"),
 		}
 
+		if offset != orig_offset {
+			s.SetIOflags(IOflag(C.DNET_IO_FLAGS_NOCSUM))
+		}
+
 		for rd := range s.ReadKey(key, offset, chunk_size) {
 			err = rd.Error()
 			if err != nil {
