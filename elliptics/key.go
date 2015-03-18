@@ -61,6 +61,18 @@ func NewKey(args ...interface{}) (key *Key, err error) {
 	return &Key{ckey}, nil
 }
 
+func NewKeyFromID(id string) (key *Key, err error) {
+	cid := C.CString(id)
+	defer C.free(unsafe.Pointer(cid))
+	ckey := C.new_key_from_id(cid)
+	if ckey == nil {
+		err = fmt.Errorf("could not create new key")
+		return
+	}
+
+	return &Key{ckey}, nil
+}
+
 func (k *Key) ById() bool {
 	return int(C.key_by_id(k.key)) > 0
 }

@@ -37,6 +37,22 @@ ell_key *new_key_remote(const char *remote)
 	}
 }
 
+ell_key *new_key_from_id(const char *id)
+{
+	struct dnet_raw_id raw;
+	int err;
+
+	err = dnet_parse_numeric_id(id, raw.id);
+	if (err)
+		return NULL;
+
+	try {
+		return new elliptics::key(raw);
+	} catch (...) {
+		return NULL;
+	}
+}
+
 const char *key_remote(ell_key *key)
 {
 	std::string remote(key->remote());
@@ -54,7 +70,7 @@ void key_set_id(ell_key *key, const struct dnet_id *id)
 }
 
 int key_id_cmp(ell_key *key, const void *id) {
-	printf("cmp: %s vs %s\n", dnet_dump_id(&key->id()), dnet_dump_id_str((const unsigned char *)id));
+	//printf("cmp: %s vs %s\n", dnet_dump_id(&key->id()), dnet_dump_id_str((const unsigned char *)id));
 	return memcmp(key->raw_id().id, id, DNET_ID_SIZE);
 }
 

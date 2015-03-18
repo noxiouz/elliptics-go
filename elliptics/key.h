@@ -54,6 +54,7 @@ typedef void ell_keys;
 
 ell_key *new_key();
 ell_key *new_key_remote(const char *remote);
+ell_key *new_key_from_id(const char *id);
 
 const char *key_remote(ell_key *key);
 
