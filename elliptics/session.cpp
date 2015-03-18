@@ -118,15 +118,25 @@ ioflags_t session_get_ioflags(ell_session *session)
 /*
  * Read
  */
-static void on_read(context_t context, const elliptics::read_result_entry & result)
+static void on_read(context_t context, const elliptics::read_result_entry &result)
 {
-	elliptics::data_pointer data(result.file());
-	go_read_result to_go {
-		result.command(), result.address(),
-		result.io_attribute(), (const char *)data.data(), data.size()
-	};
+	if (result.error()) {
+		go_error err {
+			result.error().code(),
+			result.command()->flags,
+			result.error().message().c_str()
+		};
 
-	go_read_callback(&to_go, context);
+		go_read_error(result.command(), result.address(), &err, context);
+	} else {
+		elliptics::data_pointer data(result.file());
+		go_read_result to_go {
+			result.command(), result.address(),
+			result.io_attribute(), (const char *)data.data(), data.size()
+		};
+
+		go_read_callback(&to_go, context);
+	}
 }
 
 void session_read_data(ell_session *session, context_t on_chunk_context,

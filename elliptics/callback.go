@@ -86,6 +86,28 @@ func go_remove_callback(result *C.struct_go_remove_result, key uint64) {
 	callback(&Result)
 }
 
+//export go_read_error
+func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, key uint64) {
+	// callback := *(*func(*lookupResult))(context)
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session numbder")
+	}
+	callback := context.(func(*readResult))
+
+	Result := readResult{
+		cmd:  NewDnetCmd(cmd),
+		addr: NewDnetAddr(addr),
+		err: &DnetError{
+			Code:    int(cerr.code),
+			Flags:   uint64(cerr.flags),
+			Message: C.GoString(cerr.message),
+		},
+	}
+	callback(&Result)
+}
+
+
 //export go_read_callback
 func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	context, err := Pool.Get(key)
