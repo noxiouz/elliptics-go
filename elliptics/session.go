@@ -153,6 +153,13 @@ func (s *Session) SetFilter(filter int) {
 	}
 }
 
+func (s *Session) Transform(key string) string {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+
+	return C.GoString(C.session_transform(s.session, ckey))
+}
+
 /*
    Read
 */

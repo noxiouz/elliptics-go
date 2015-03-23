@@ -114,6 +114,12 @@ ioflags_t session_get_ioflags(ell_session *session)
 	return session->get_ioflags();
 }
 
+const char *session_transform(ell_session *session, const char *key)
+{
+	dnet_raw_id id;
+	session->transform(key, id);
+	return dnet_dump_id_str_full(id.id);
+}
 
 /*
  * Read
