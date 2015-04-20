@@ -531,6 +531,15 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 				continue
 			}
 
+			// backend does not contain any valid information - client has failed to read stats
+			// copy backend data from previous stats
+			if sb.Error.Code != 0 {
+				e := sb.Error
+				sb = psb
+				sb.Error = e
+				continue
+			}
+
 			sb.PID = psb.PID
 
 			sb.DStat.WBS = float64((sb.DStat.WSectors-psb.DStat.WSectors)*StatSectorSize) / duration
