@@ -307,10 +307,6 @@ type StatBackendData struct {
 
 type StatGroupData struct {
 	Backends []*StatBackendData
-
-	RecordsTotal     uint64
-	RecordsRemoved   uint64
-	RecordsCorrupted uint64
 }
 
 func (sg *StatGroup) StatGroupData() (reply *StatGroupData) {
@@ -326,9 +322,6 @@ func (sg *StatGroup) StatGroupData() (reply *StatGroupData) {
 		}
 
 		reply.Backends = append(reply.Backends, tmp)
-		reply.RecordsTotal += backend.VFS.RecordsTotal
-		reply.RecordsRemoved += backend.VFS.RecordsRemoved
-		reply.RecordsCorrupted += backend.VFS.RecordsCorrupted
 	}
 
 	return reply
