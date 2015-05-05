@@ -54,7 +54,7 @@ func NewRouteEntry(entry *C.struct_dnet_route_entry) *RouteEntry {
 }
 
 func (stat *DnetStat) AddRouteEntry(entry *RouteEntry) {
-	backend := stat.FindBackend(entry.group, &entry.addr, entry.backend)
+	backend := stat.FindCreateBackend(entry.group, &entry.addr, entry.backend)
 
 	backend.ID = append(backend.ID,
 		DnetRawID{

@@ -159,8 +159,6 @@ const (
 )
 
 type StatBackend struct {
-	Error BackendError `json:"error"`
-
 	// All range starts (IDs) for given node (server address + backend)
 	ID []DnetRawID `json:"-"`
 
@@ -528,15 +526,6 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 				continue
 			}
 
-			// backend does not contain any valid information - client has failed to read stats
-			// copy backend data from previous stats
-			if sb.Error.Code != 0 {
-				e := sb.Error
-				sb = psb
-				sb.Error = e
-				continue
-			}
-
 			sb.PID = psb.PID
 
 			for cmd, cstat := range sb.Commands {
@@ -551,19 +540,9 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 			}
 		}
 	}
-
-	// use old stats if new @DnetStat doesn't contain info for some groups
-	// this happens when heavy defragmentation runs on some server,
-	// and stat request to that server times out
-	for group, prev_sg := range prev.Group {
-		_, ok := stat.Group[group]
-		if !ok {
-			stat.Group[group] = prev_sg
-		}
-	}
 }
 
-func (stat *DnetStat) FindBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
+func (stat *DnetStat) FindCreateBackend(group uint32, addr *DnetAddr, backend_id int32) *StatBackend {
 	sg, ok := stat.Group[group]
 	if !ok {
 		nsg := NewStatGroup()
@@ -603,62 +582,63 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		return
 	}
 
-	backends := make([]int32, 0)
-	groups := make([]uint32, 0)
+	good_backends := 0
 	for _, vnode := range r.Backends {
-		if vnode.Status.State == BackendStateEnabled {
-			backend := stat.FindBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
+		if vnode.Status.State != BackendStateEnabled {
+			log.Printf("stat: addr: %s, backend: %d, group: %d: DISABLED\n",
+				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group, vnode.Backend.Error.Code)
+			// do not update backend statistics
+			continue
+		}
 
-			backend.Error = vnode.Backend.Error
+		if vnode.Backend.Error.Code != 0 {
+			log.Printf("stat: addr: %s, backend: %d, group: %d: ERROR: %d\n",
+				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group, vnode.Backend.Error.Code)
+			// do not update backend statistics
+			continue
+		}
 
-			if vnode.Backend.Error.Code != 0 {
-				log.Printf("stat: addr: %s, backend: %d, group: %d, error: %d\n",
-					entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group, vnode.Backend.Error.Code)
-				// do not update backend statistics
-				continue
-			}
+		backend := stat.FindCreateBackend(vnode.Backend.Config.Group, &entry.addr, int32(vnode.BackendID))
 
-			backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
-			backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
-			backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
-			backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
-			backend.VFS.RecordsTotal = vnode.Backend.SummaryStats.RecordsTotal
-			backend.VFS.RecordsRemoved = vnode.Backend.SummaryStats.RecordsRemoved
-			backend.VFS.RecordsCorrupted = vnode.Backend.SummaryStats.RecordsCorrupted
+		backend.VFS.Total = vnode.Backend.VFS.FrSize * vnode.Backend.VFS.Blocks
+		backend.VFS.Avail = vnode.Backend.VFS.BFree * vnode.Backend.VFS.BSize
+		backend.VFS.BackendRemovedSize = vnode.Backend.SummaryStats.RecordsRemovedSize
+		backend.VFS.BackendUsedSize = vnode.Backend.SummaryStats.BaseSize
+		backend.VFS.RecordsTotal = vnode.Backend.SummaryStats.RecordsTotal
+		backend.VFS.RecordsRemoved = vnode.Backend.SummaryStats.RecordsRemoved
+		backend.VFS.RecordsCorrupted = vnode.Backend.SummaryStats.RecordsCorrupted
 
-			backend.VFS.TotalSizeLimit = backend.VFS.Total
-			// check blob flags, if bit 4 is set, blob will not perform size checks at all
-			if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags&(1<<4) == 0) {
-				backend.VFS.TotalSizeLimit = vnode.Backend.Config.BlobSizeLimit
-			}
+		backend.VFS.TotalSizeLimit = backend.VFS.Total
+		// check blob flags, if bit 4 is set, blob will not perform size checks at all
+		if (vnode.Backend.Config.BlobSizeLimit != 0) && (vnode.Backend.Config.BlobFlags&(1<<4) == 0) {
+			backend.VFS.TotalSizeLimit = vnode.Backend.Config.BlobSizeLimit
+		}
 
-			backends = append(backends, int32(vnode.BackendID))
-			groups = append(groups, vnode.Backend.Config.Group)
+		//log.Printf("stat: addr: %s, backend: %d, group: %d, used: %d, limit: %d\n",
+		//	entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
+		//	backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
 
-			//log.Printf("stat: addr: %s, backend: %d, group: %d, used: %d, limit: %d\n",
-			//	entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group,
-			//	backend.VFS.BackendUsedSize, backend.VFS.TotalSizeLimit)
+		backend.DefragStartTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortStartTime), 0)
+		backend.DefragCompletionTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortCompletionTime), 0)
+		backend.DefragCompletionStatus = vnode.Backend.GlobalStats.DataSortCompletionStatus
+		backend.DefragState = vnode.Status.DefragState
+		backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
+		backend.RO = vnode.Status.RO
+		backend.Delay = vnode.Status.Delay
 
-			backend.DefragStartTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortStartTime), 0)
-			backend.DefragCompletionTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortCompletionTime), 0)
-			backend.DefragCompletionStatus = vnode.Backend.GlobalStats.DataSortCompletionStatus
-			backend.DefragState = vnode.Status.DefragState
-			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
-			backend.RO = vnode.Status.RO
-			backend.Delay = vnode.Status.Delay
-
-			for cname, cstat := range vnode.Commands {
-				backend.Commands[cname] = &CStat{
-					RequestsSuccess:  cstat.RequestsSuccess(),
-					RequestsFailures: cstat.RequestsFailures(),
-					Bytes:            cstat.Bytes(),
-				}
+		for cname, cstat := range vnode.Commands {
+			backend.Commands[cname] = &CStat{
+				RequestsSuccess:  cstat.RequestsSuccess(),
+				RequestsFailures: cstat.RequestsFailures(),
+				Bytes:            cstat.Bytes(),
 			}
 		}
+
+		good_backends++
 	}
 
-	log.Printf("stat: addr: %s, good-backends: %v, groups: %v\n",
-		entry.addr.String(), backends, groups)
+	log.Printf("stat: addr: %s, good-backends: %d/%d\n",
+		entry.addr.String(), good_backends, len(r.Backends))
 
 	return
 }
