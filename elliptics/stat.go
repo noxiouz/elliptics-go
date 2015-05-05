@@ -188,9 +188,6 @@ type StatBackend struct {
 	// VFS statistics: available, used and total space
 	VFS VFS
 
-	// dsat (disk utilization, read/write per second)
-	DStat DStat
-
 	// PID-controller used for data writing
 	PID PID
 
@@ -542,10 +539,6 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 
 			sb.PID = psb.PID
 
-			sb.DStat.WBS = float64((sb.DStat.WSectors-psb.DStat.WSectors)*StatSectorSize) / duration
-			sb.DStat.RBS = float64((sb.DStat.RSectors-psb.DStat.RSectors)*StatSectorSize) / duration
-			sb.DStat.Util = float64(sb.DStat.IOTicks-psb.DStat.IOTicks) / 1000.0 / duration
-
 			for cmd, cstat := range sb.Commands {
 				pcstat, ok := psb.Commands[cmd]
 				if !ok {
@@ -653,10 +646,6 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 			backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
 			backend.RO = vnode.Status.RO
 			backend.Delay = vnode.Status.Delay
-
-			backend.DStat.RSectors = vnode.Backend.DStat.ReadSectors
-			backend.DStat.WSectors = vnode.Backend.DStat.WriteSectors
-			backend.DStat.IOTicks = vnode.Backend.DStat.IOTicks
 
 			for cname, cstat := range vnode.Commands {
 				backend.Commands[cname] = &CStat{
