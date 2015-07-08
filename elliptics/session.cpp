@@ -136,9 +136,58 @@ static void on_read(context_t context, const elliptics::read_result_entry &resul
 		go_read_error(result.command(), result.address(), &err, context);
 	} else {
 		elliptics::data_pointer data(result.file());
+
+		// unpack dnet_addr
+		unpacked_dnet_addr u_addr;
+		dnet_addr* addr = result.address();
+		memcpy(u_addr.addr, addr->addr, sizeof(addr->addr));
+		u_addr.addr_len = addr->addr_len;
+		u_addr.family =	addr->family;
+
+		// unpacke dnet_cmd
+		unpacked_dnet_id u_id;
+		dnet_cmd* cmd = result.command();
+
+		// copy id
+		memcpy(u_id.id, cmd->id.id, sizeof(cmd->id.id));
+		u_id.group_id = cmd->id.group_id;
+
+		unpacked_dnet_cmd u_cmd;
+		u_cmd.id = u_id;
+		u_cmd.status = cmd->status;
+    	u_cmd.cmd = cmd->cmd;
+    	u_cmd.backend_id = cmd->backend_id;
+        u_cmd.trace_id = cmd->trace_id;
+    	u_cmd.flags = cmd->flags;
+    	u_cmd.trans = cmd->trans;
+    	u_cmd.size = cmd->size;
+    	memcpy(u_cmd.data, cmd->data, sizeof(cmd->data));
+
+    	// io_attr
+    	dnet_io_attr* attr = result.io_attribute();
+    	unpacked_dnet_io_attr u_attr;
+
+    	memcpy(u_attr.parent, attr->parent, sizeof(attr->parent));
+    	memcpy(u_attr.id, attr->id, sizeof(attr->id));
+		u_attr.start = attr->start;
+		u_attr.num = attr->num;
+
+		u_attr.timestamp.tsec = attr->timestamp.tsec;
+		u_attr.timestamp.tnsec = attr->timestamp.tnsec;
+		u_attr.user_flags = attr->user_flags;
+		u_attr.total_size = attr->total_size;
+
+		// // uint64_t        reserved1;
+		// // uint32_t        reserved2;
+		u_attr.flags = attr->flags;
+		u_attr.offset = attr->offset;
+		u_attr.size = attr->size;
+
 		go_read_result to_go {
-			result.command(), result.address(),
-			result.io_attribute(), (const char *)data.data(), data.size()
+			&u_cmd,
+			&u_addr,
+			&u_attr,
+			(const char *)data.data(), data.size()
 		};
 
 		go_read_callback(&to_go, context);

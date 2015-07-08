@@ -51,6 +51,43 @@ static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
 	return d->backend_id;
 }
 
+//---------------------
+static uint64_t unpacked_dnet_cmd_get_trace_id(struct unpacked_dnet_cmd* d) {
+	return d->trace_id;
+}
+
+static uint64_t unpacked_dnet_cmd_get_flags(struct unpacked_dnet_cmd* d) {
+	return d->flags;
+}
+
+static uint64_t unpacked_dnet_cmd_get_size(struct unpacked_dnet_cmd* d) {
+	return d->size;
+}
+
+static uint64_t unpacked_dnet_cmd_get_trans(struct unpacked_dnet_cmd* d) {
+	return d->trans;
+}
+
+static uint32_t unpacked_dnet_cmd_get_group(struct unpacked_dnet_cmd* d) {
+	return d->id.group_id;
+}
+
+static int unpacked_dnet_cmd_get_status(struct unpacked_dnet_cmd* d) {
+	return d->status;
+}
+
+static int unpacked_dnet_cmd_get_cmd(struct unpacked_dnet_cmd* d) {
+	return d->cmd;
+}
+
+static int unpacked_dnet_cmd_get_backend_id(struct unpacked_dnet_cmd* d) {
+	return d->backend_id;
+}
+
+//---------------------
+
+
+
 static uint64_t dnet_io_attr_get_start(struct dnet_io_attr *io) {
 	return io->start;
 }
@@ -78,6 +115,36 @@ static uint64_t dnet_io_attr_get_offset(struct dnet_io_attr *io) {
 static uint64_t dnet_io_attr_get_size(struct dnet_io_attr *io) {
 	return io->size;
 }
+
+// ==============================================
+
+static uint64_t unpacked_dnet_io_attr_get_start(struct unpacked_dnet_io_attr *io) {
+	return io->start;
+}
+static uint64_t unpacked_dnet_io_attr_get_num(struct unpacked_dnet_io_attr *io) {
+	return io->num;
+}
+static int64_t unpacked_dnet_io_attr_get_tsec(struct unpacked_dnet_io_attr *io) {
+	return io->timestamp.tsec;
+}
+static int64_t unpacked_dnet_io_attr_get_tnsec(struct unpacked_dnet_io_attr *io) {
+	return io->timestamp.tsec;
+}
+static uint64_t unpacked_dnet_io_attr_get_user_flags(struct unpacked_dnet_io_attr *io) {
+	return io->user_flags;
+}
+static uint64_t unpacked_dnet_io_attr_get_total_size(struct unpacked_dnet_io_attr *io) {
+	return io->total_size;
+}
+static uint64_t unpacked_dnet_io_attr_get_flags(struct unpacked_dnet_io_attr *io) {
+	return io->flags;
+}
+static uint64_t unpacked_dnet_io_attr_get_offset(struct unpacked_dnet_io_attr *io) {
+	return io->offset;
+}
+static uint64_t unpacked_dnet_io_attr_get_size(struct unpacked_dnet_io_attr *io) {
+	return io->size;
+}
 */
 import "C"
 
@@ -93,6 +160,13 @@ type DnetAddr struct {
 }
 
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
+	return DnetAddr{
+		Family: uint16(addr.family),
+		Addr:   C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+	}
+}
+
+func NewDnetAddrUnpacked(addr *C.struct_unpacked_dnet_addr) DnetAddr {
 	return DnetAddr{
 		Family: uint16(addr.family),
 		Addr:   C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
@@ -179,6 +253,23 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 	}
 }
 
+func NewDnetCmdUnpacked(cmd *C.struct_unpacked_dnet_cmd) DnetCmd {
+	return DnetCmd{
+		ID: DnetID{
+			ID:    C.GoBytes(unsafe.Pointer(&cmd.id.id[0]), C.int(C.DNET_ID_SIZE)),
+			Group: uint32(C.unpacked_dnet_cmd_get_group(cmd)),
+		},
+
+		Status:  int32(C.unpacked_dnet_cmd_get_status(cmd)),
+		Cmd:     int32(C.unpacked_dnet_cmd_get_cmd(cmd)),
+		Backend: int32(C.unpacked_dnet_cmd_get_backend_id(cmd)),
+		Trace:   uint64(C.unpacked_dnet_cmd_get_trace_id(cmd)),
+		Flags:   uint64(C.unpacked_dnet_cmd_get_flags(cmd)),
+		Trans:   uint64(C.unpacked_dnet_cmd_get_trans(cmd)),
+		Size:    uint64(C.unpacked_dnet_cmd_get_size(cmd)),
+	}
+}
+
 type DnetIOAttr struct {
 	Parent []byte
 	ID     []byte
@@ -209,6 +300,21 @@ func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {
 		Flags:     uint32(C.dnet_io_attr_get_flags(io)),
 		Offset:    uint64(C.dnet_io_attr_get_offset(io)),
 		Size:      uint64(C.dnet_io_attr_get_size(io)),
+	}
+}
+
+func NewDnetIOAttrUnpacked(io *C.struct_unpacked_dnet_io_attr) DnetIOAttr {
+	return DnetIOAttr{
+		Parent:    C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
+		ID:        C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
+		Start:     uint64(C.unpacked_dnet_io_attr_get_start(io)),
+		Num:       uint64(C.unpacked_dnet_io_attr_get_num(io)),
+		Timestamp: time.Unix(int64(C.unpacked_dnet_io_attr_get_tsec(io)), int64(C.unpacked_dnet_io_attr_get_tnsec(io))),
+		UserFlags: uint64(C.unpacked_dnet_io_attr_get_user_flags(io)),
+		TotalSize: uint64(C.unpacked_dnet_io_attr_get_total_size(io)),
+		Flags:     uint32(C.unpacked_dnet_io_attr_get_flags(io)),
+		Offset:    uint64(C.unpacked_dnet_io_attr_get_offset(io)),
+		Size:      uint64(C.unpacked_dnet_io_attr_get_size(io)),
 	}
 }
 

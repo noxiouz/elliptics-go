@@ -107,7 +107,6 @@ func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.str
 	callback(&Result)
 }
 
-
 //export go_read_callback
 func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	context, err := Pool.Get(key)
@@ -117,9 +116,9 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	callback := context.(func(*readResult))
 
 	Result := &readResult{
-		cmd:    NewDnetCmd(result.cmd),
-		addr:   NewDnetAddr(result.addr),
-		ioattr: NewDnetIOAttr(result.io_attribute),
+		cmd:    NewDnetCmdUnpacked(result.cmd),
+		addr:   NewDnetAddrUnpacked(result.addr),
+		ioattr: NewDnetIOAttrUnpacked(result.io_attribute),
 		err:    nil,
 	}
 

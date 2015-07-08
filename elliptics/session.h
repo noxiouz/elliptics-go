@@ -33,13 +33,55 @@ extern "C" {
 typedef void ell_session;
 #endif
 
+struct unpacked_dnet_addr {
+	uint8_t         addr[DNET_ADDR_SIZE];
+    uint16_t        addr_len;
+    uint16_t        family;
+};
+
+struct unpacked_dnet_id {
+    uint8_t         id[DNET_ID_SIZE];
+    uint32_t        group_id;
+};
+
+struct unpacked_dnet_cmd {
+	struct unpacked_dnet_id id;
+	int         status;
+    int         cmd;
+    int         backend_id;
+    uint64_t        trace_id;
+    uint64_t        flags;
+    uint64_t        trans;
+    uint64_t        size;
+    uint8_t         data[0];
+};
+
+struct unpacked_dnet_io_attr {
+    uint8_t         parent[DNET_ID_SIZE];
+    uint8_t         id[DNET_ID_SIZE];
+
+    uint64_t        start, num;
+
+    struct dnet_time    timestamp;
+    uint64_t        user_flags;
+
+    uint64_t        total_size;
+
+    // uint64_t        reserved1;
+    // uint32_t        reserved2;
+    uint32_t        flags;
+    uint64_t        offset;
+    uint64_t        size;
+};
+
+
 //read_result_entry
 struct go_read_result {
-	const struct dnet_cmd		*cmd;
-	const struct dnet_addr		*addr;
-	const struct dnet_io_attr	*io_attribute;
+	const struct unpacked_dnet_cmd		*cmd;
+	const struct unpacked_dnet_addr		*addr;
+	const struct unpacked_dnet_io_attr	*io_attribute;
 	const char			*file;
-	uint64_t				size;
+	uint64_t			size;
 };
 
 //lookup_result_entry
