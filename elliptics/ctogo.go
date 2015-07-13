@@ -51,6 +51,47 @@ static int dnet_cmd_get_backend_id(struct dnet_cmd* d) {
 	return d->backend_id;
 }
 
+//=======================================================
+
+static uint64_t dnet_cmd_get_trace_id_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->trace_id;
+}
+
+static uint64_t dnet_cmd_get_flags_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->flags;
+}
+
+static uint64_t dnet_cmd_get_size_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->size;
+}
+
+static uint64_t dnet_cmd_get_trans_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->trans;
+}
+
+static uint32_t dnet_cmd_get_group_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->id.group_id;
+}
+
+static int dnet_cmd_get_status_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->status;
+}
+
+static int dnet_cmd_get_cmd_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->cmd;
+}
+
+static int dnet_cmd_get_backend_id_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->backend_id;
+}
+
+
+static const void* dnet_cmd_get_id_id_raw(uintptr_t d) {
+	return ((struct go_read_result*)d)->cmd->id.id;
+}
+
+//=======================================================
+
 static uint64_t dnet_io_attr_get_start(struct dnet_io_attr *io) {
 	return io->start;
 }
@@ -78,6 +119,68 @@ static uint64_t dnet_io_attr_get_offset(struct dnet_io_attr *io) {
 static uint64_t dnet_io_attr_get_size(struct dnet_io_attr *io) {
 	return io->size;
 }
+
+//==========================================================
+static uint64_t dnet_io_attr_get_start_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->start;
+}
+static uint64_t dnet_io_attr_get_num_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->num;
+}
+static int64_t dnet_io_attr_get_tsec_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->timestamp.tsec;
+}
+static int64_t dnet_io_attr_get_tnsec_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->timestamp.tsec;
+}
+static uint64_t dnet_io_attr_get_user_flags_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->user_flags;
+}
+static uint64_t dnet_io_attr_get_total_size_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->total_size;
+}
+static uint64_t dnet_io_attr_get_flags_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->flags;
+}
+static uint64_t dnet_io_attr_get_offset_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->offset;
+}
+static uint64_t dnet_io_attr_get_size_raw(uintptr_t io) {
+	return ((struct go_read_result *)io)->io_attribute->size;
+}
+
+static const void* dnet_io_attr_get_parent_raw(uintptr_t io) {
+	return &((struct go_read_result *)io)->io_attribute->parent;
+}
+
+static const void* dnet_io_attr_get_id_raw(uintptr_t io) {
+	return &((struct go_read_result *)io)->io_attribute->id;
+}
+
+//===============Addr=====
+static uint16_t dnet_addr_get_family(uintptr_t addr) {
+	return ((struct go_read_result *)addr)->addr->family;
+}
+
+static int dnet_addr_len(uintptr_t addr) {
+	return ((struct go_read_result *)addr)->addr->addr_len;
+}
+
+static const void* dnet_addr_get_addr(uintptr_t addr) {
+	return &((struct go_read_result *)addr)->addr->addr;
+}
+
+//=============
+#include <stdio.h>
+
+static uint64_t dnet_read_result_size(uintptr_t result) {
+	return ((struct go_read_result*)result)->size;
+}
+
+static const char* dnet_read_result_file(uintptr_t result) {
+	return ((struct go_read_result*)result)->file;
+}
+
 */
 import "C"
 
@@ -92,10 +195,29 @@ type DnetAddr struct {
 	Family uint16
 }
 
+func NewDnetFile(uresult uintptr) []byte {
+	result := C.uintptr_t(uresult)
+
+	size := C.dnet_read_result_size(result)
+	if size > 0 {
+		return C.GoBytes(unsafe.Pointer(C.dnet_read_result_file(result)), C.int(size))
+	} else {
+		return make([]byte, 0)
+	}
+}
+
 func NewDnetAddr(addr *C.struct_dnet_addr) DnetAddr {
 	return DnetAddr{
 		Family: uint16(addr.family),
 		Addr:   C.GoBytes(unsafe.Pointer(&addr.addr[0]), C.int(addr.addr_len)),
+	}
+}
+
+func NewDnetAddrRaw(uaddr uintptr) DnetAddr {
+	addr := C.uintptr_t(uaddr)
+	return DnetAddr{
+		Family: uint16(C.dnet_addr_get_family(addr)),
+		Addr:   C.GoBytes(C.dnet_addr_get_addr(addr), C.dnet_addr_len(addr)),
 	}
 }
 
@@ -179,6 +301,24 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 	}
 }
 
+func NewDnetCmdRaw(ucmd uintptr) DnetCmd {
+	cmd := C.uintptr_t(ucmd)
+	return DnetCmd{
+		ID: DnetID{
+			ID:    C.GoBytes(C.dnet_cmd_get_id_id_raw(cmd), C.int(C.DNET_ID_SIZE)),
+			Group: uint32(C.dnet_cmd_get_group_raw(cmd)),
+		},
+
+		Status:  int32(C.dnet_cmd_get_status_raw(cmd)),
+		Cmd:     int32(C.dnet_cmd_get_cmd_raw(cmd)),
+		Backend: int32(C.dnet_cmd_get_backend_id_raw(cmd)),
+		Trace:   uint64(C.dnet_cmd_get_trace_id_raw(cmd)),
+		Flags:   uint64(C.dnet_cmd_get_flags_raw(cmd)),
+		Trans:   uint64(C.dnet_cmd_get_trans_raw(cmd)),
+		Size:    uint64(C.dnet_cmd_get_size_raw(cmd)),
+	}
+}
+
 type DnetIOAttr struct {
 	Parent []byte
 	ID     []byte
@@ -195,6 +335,22 @@ type DnetIOAttr struct {
 
 	Offset uint64
 	Size   uint64
+}
+
+func NewDnetIOAttrRaw(uio uintptr) DnetIOAttr {
+	io := C.uintptr_t(uio)
+	return DnetIOAttr{
+		Parent:    C.GoBytes(C.dnet_io_attr_get_parent_raw(io), C.int(C.DNET_ID_SIZE)),
+		ID:        C.GoBytes(C.dnet_io_attr_get_id_raw(io), C.int(C.DNET_ID_SIZE)),
+		Start:     uint64(C.dnet_io_attr_get_start_raw(io)),
+		Num:       uint64(C.dnet_io_attr_get_num_raw(io)),
+		Timestamp: time.Unix(int64(C.dnet_io_attr_get_tsec_raw(io)), int64(C.dnet_io_attr_get_tnsec_raw(io))),
+		UserFlags: uint64(C.dnet_io_attr_get_user_flags_raw(io)),
+		TotalSize: uint64(C.dnet_io_attr_get_total_size_raw(io)),
+		Flags:     uint32(C.dnet_io_attr_get_flags_raw(io)),
+		Offset:    uint64(C.dnet_io_attr_get_offset_raw(io)),
+		Size:      uint64(C.dnet_io_attr_get_size_raw(io)),
+	}
 }
 
 func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {

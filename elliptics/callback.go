@@ -2,6 +2,7 @@ package elliptics
 
 /*
 #include "session.h"
+
 */
 import "C"
 
@@ -107,9 +108,8 @@ func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.str
 	callback(&Result)
 }
 
-
 //export go_read_callback
-func go_read_callback(result *C.struct_go_read_result, key uint64) {
+func go_read_callback(result uintptr, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
 		panic("Unable to find session numbder")
@@ -117,17 +117,13 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	callback := context.(func(*readResult))
 
 	Result := &readResult{
-		cmd:    NewDnetCmd(result.cmd),
-		addr:   NewDnetAddr(result.addr),
-		ioattr: NewDnetIOAttr(result.io_attribute),
+		cmd:    NewDnetCmdRaw(result),
+		addr:   NewDnetAddrRaw(result),
+		ioattr: NewDnetIOAttrRaw(result),
 		err:    nil,
+		data:   NewDnetFile(result),
 	}
 
-	if result.size > 0 && result.file != nil {
-		Result.data = C.GoBytes(unsafe.Pointer(result.file), C.int(result.size))
-	} else {
-		Result.data = make([]byte, 0)
-	}
 	// All data from C++ has been copied here.
 	callback(Result)
 }

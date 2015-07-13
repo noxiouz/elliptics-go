@@ -141,7 +141,7 @@ static void on_read(context_t context, const elliptics::read_result_entry &resul
 			result.io_attribute(), (const char *)data.data(), data.size()
 		};
 
-		go_read_callback(&to_go, context);
+		go_read_callback((uintptr_t)&to_go, context);
 	}
 }
 
