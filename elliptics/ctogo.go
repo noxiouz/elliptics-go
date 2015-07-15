@@ -200,7 +200,7 @@ func NewDnetFile(uresult uintptr) []byte {
 
 	size := C.dnet_read_result_size(result)
 	if size > 0 {
-		return C.GoBytes(unsafe.Pointer(C.dnet_read_result_file(result)), C.int(size))
+		return []byte(C.GoStringN(C.dnet_read_result_file(result), C.int(size)))
 	} else {
 		return make([]byte, 0)
 	}
