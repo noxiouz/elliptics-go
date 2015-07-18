@@ -26,13 +26,15 @@ ell_node *new_node(const char *logfile, const char *level)
 	try {
 		dnet_config cfg;
 		memset(&cfg, 0, sizeof(dnet_config));
+		cfg.flags = DNET_CFG_MIX_STATES;
 		cfg.io_thread_num = 8;
 		cfg.nonblocking_io_thread_num = 4;
 		cfg.net_thread_num = 4;
 		cfg.wait_timeout = 5;
 		cfg.check_timeout = 20;
 
-		std::shared_ptr<elliptics::file_logger> base = std::make_shared<elliptics::file_logger>(logfile, elliptics::file_logger::parse_level(level));
+		std::shared_ptr<elliptics::file_logger> base =
+			std::make_shared<elliptics::file_logger>(logfile, elliptics::file_logger::parse_level(level));
 
 		return new ell_node(base, cfg);
 	} catch (const std::exception &e) {
