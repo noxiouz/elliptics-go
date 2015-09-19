@@ -80,6 +80,25 @@ struct go_error {
 	const char	*message;
 };
 
+
+struct go_iterator_range {
+	const char* key_begin;
+	const char* key_end;
+};
+
+struct go_iterator_result {
+	// dnet_iterator_response
+	struct dnet_iterator_response *reply;
+
+	// data_pointer
+	const char* reply_data;
+	const uint64_t reply_size;
+
+	// iterator_id
+	uint64_t id;
+};
+
+
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
@@ -93,7 +112,7 @@ void session_set_filter_positive(ell_session *session);
 void session_set_groups(ell_session *session, uint32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);
 
-void session_set_timeout (ell_session *session, int timeout);
+void session_set_timeout(ell_session *session, int timeout);
 long session_get_timeout(ell_session *session);
 
 typedef uint64_t cflags_t;
@@ -190,6 +209,24 @@ static inline void dnet_addr_free(struct dnet_addr *addr)
 	free(addr);
 }
 
+
+void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges,
+			const ell_key *key,
+			uint64_t type,
+			uint64_t flags);
+
+void session_pause_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
+
+void session_continue_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
+
+void session_stop_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
 
 #ifdef __cplusplus
 }

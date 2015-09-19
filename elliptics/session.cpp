@@ -459,4 +459,32 @@ int session_lookup_addr(ell_session *session, const char *key, int len, int grou
 	return dnet_lookup_addr(session->get_native(), key, len, NULL, group_id, addr, backend_id);
 }
 
+
+void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges,
+			const ell_key *key,
+			uint64_t type,
+			uint64_t flags)
+{
+
+}
+
+void session_pause_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+		ell_key *key, uint64_t iterator_id)
+{
+
+}
+
+void session_continue_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+		ell_key *key, uint64_t iterator_id)
+{
+
+}
+
+void session_stop_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+		ell_key *key, uint64_t iterator_id)
+{
+
+}
+
 } // extern "C"
