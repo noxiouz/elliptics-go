@@ -107,7 +107,6 @@ func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.str
 	callback(&Result)
 }
 
-
 //export go_read_callback
 func go_read_callback(result *C.struct_go_read_result, key uint64) {
 	context, err := Pool.Get(key)
@@ -168,4 +167,29 @@ func go_index_entry_callback(result *C.struct_c_index_entry, key uint64) {
 	callback := context.(func(*IndexEntry))
 
 	callback(&IndexEntry{Data: C.GoStringN(result.data, C.int(result.size))})
+}
+
+//export go_iterator_callback
+func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
+	context, err := Pool.Get(key)
+	if err != nil {
+		panic("Unable to find session numbder")
+	}
+
+	callback := context.(func(*iteratorResult))
+
+	var Result = iteratorResult{
+		//ToDO; dnet_iterator_response
+
+		id:        uint64(result.id),
+		replyData: nil,
+	}
+
+	if result.reply_size > 0 && result.reply_data != nil {
+		Result.replyData = C.GoBytes(unsafe.Pointer(result.reply_data), C.int(result.reply_size))
+	} else {
+		Result.replyData = make([]byte, 0)
+	}
+
+	callback(&Result)
 }
