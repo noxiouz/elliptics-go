@@ -476,12 +476,25 @@ void on_iterator(context_t context, const elliptics::iterator_result_entry &resu
 	go_iterator_callback(&to_go, context);
 }
 
+//ToDO: support time_begin/time_end
 void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
-			const struct go_iterator_range* ranges,
+			const struct go_iterator_range* ranges, size_t range_count,
 			const ell_key *key,
 			uint64_t type,
 			uint64_t flags)
 {
+	std::vector<dnet_iterator_range> it_ranges(range_count);
+	for (size_t i = 0; i < range_count; i++) {
+		dnet_iterator_range range;
+		std::memcpy(range.key_begin.id, ranges[i].key_begin, DNET_ID_SIZE);
+		std::memcpy(range.key_end.id, ranges[i].key_end, DNET_ID_SIZE);
+
+		it_ranges.push_back(range);
+	}
+
+	session->start_iterator(*key, it_ranges, type, flags).connect(
+		std::bind(&on_iterator, on_chunk_context, ph::_1),
+		std::bind(&on_finish, final_context, ph::_1));
 }
 
 void session_pause_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,

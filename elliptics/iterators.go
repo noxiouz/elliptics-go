@@ -80,6 +80,13 @@ type iteratorResult struct {
 	err       error
 }
 
+type dnetRawId [C.DNET_ID_SIZE]uint8
+
+type DnetIteratorRange struct {
+	KeyBegin dnetRawId
+	KeyEnd   dnetRawId
+}
+
 func (i *iteratorResult) Reply() *DnetIteratorResponse { return i.reply }
 
 func (i *iteratorResult) ReplyData() []byte { return i.replyData }
@@ -126,7 +133,7 @@ func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
 	callback(&Result)
 }
 
-func iteratorHelper(key string, iteratorId uint64) (*Key, uint64, uint64, <-chan IteratorResult) {
+func iteratorHelper(key string) (*Key, uint64, uint64, <-chan IteratorResult) {
 	ekey, err := NewKey(key)
 	if err != nil {
 		panic(err)
@@ -156,8 +163,30 @@ func iteratorHelper(key string, iteratorId uint64) (*Key, uint64, uint64, <-chan
 	return ekey, onResultContext, onFinishContext, responseCh
 }
 
+func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+	defer ekey.Free()
+
+	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
+	// Seems it's redundant copying
+	for _, rng := range ranges {
+		cranges = append(cranges, C.struct_go_iterator_range{
+			(*C.uint8_t)(&rng.KeyBegin[0]),
+			(*C.uint8_t)(&rng.KeyEnd[0]),
+		})
+	}
+
+	C.session_start_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
+		(*C.struct_go_iterator_range)(&cranges[0]),
+		C.size_t(len(ranges)),
+		ekey.key,
+		C.uint64_t(Type),
+		C.uint64_t(flags))
+	return responseCh
+}
+
 func (s *Session) IteratorPause(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key, iteratorId)
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
 	defer ekey.Free()
 
 	C.session_pause_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
@@ -167,7 +196,7 @@ func (s *Session) IteratorPause(key string, iteratorId uint64) <-chan IteratorRe
 }
 
 func (s *Session) IteratorContinue(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key, iteratorId)
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
 	defer ekey.Free()
 
 	C.session_continue_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
@@ -177,7 +206,7 @@ func (s *Session) IteratorContinue(key string, iteratorId uint64) <-chan Iterato
 }
 
 func (s *Session) IteratorStop(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key, iteratorId)
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
 	defer ekey.Free()
 
 	C.session_stop_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
