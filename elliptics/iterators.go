@@ -192,6 +192,7 @@ func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uin
 			panic("Unable to find session numbder")
 		}
 		context.(func(error))(err)
+		return responseCh
 	}
 
 	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
@@ -256,6 +257,7 @@ func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, grou
 			panic("Unable to find session numbder")
 		}
 		context.(func(error))(err)
+		return responseCh
 	}
 
 	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
@@ -271,7 +273,43 @@ func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, grou
 		(*C.struct_go_iterator_range)(&cranges[0]), C.size_t(len(ranges)),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)),
 		ekey.key,
-		C.uint64_t(Type),
+		C.uint64_t(flags),
 		ctime_begin,
 		ctime_end)
+}
+
+func (s *Session) ServerSend(keys []string, uint64 flags, groups []uint32) <-chan IteratorResult {
+	responseCh := make(chan IteratorResult, defaultVOLUME)
+
+	kkeys, err := NewKeys(keys)
+	if err != nil {
+		responseCh <- &iteratorResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
+
+	onResult := func(iterres *iteratorResult) {
+		responseCh <- iterres
+	}
+
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &iteratorResult{err: err}
+		}
+		close(responseCh)
+
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
+	}
+
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+
+	C.session_server_send(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
+		kkeys,
+		C.uint64_t(flags),
+		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)))
 }

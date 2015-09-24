@@ -239,6 +239,11 @@ void session_cancel_iterator(ell_session *session, context_t on_chunk_context, c
 			ell_key *key,
 			uint64_t iterator_id);
 
+void session_server_send(ell_session *session, context_t on_chunk_context, context_t final_context,
+			void *ekeys,
+			uint64_t flags,
+			uint32_t *groups, size_t groups_count);
+
 #ifdef __cplusplus
 }
 #endif

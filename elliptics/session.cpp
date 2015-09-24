@@ -546,4 +546,20 @@ void session_cancel_iterator(ell_session *session, context_t on_chunk_context, c
 		std::bind(&on_finish, final_context, ph::_1));
 }
 
+void session_server_send(ell_session *session, context_t on_chunk_context, context_t final_context,
+			void *ekeys,
+			uint64_t flags,
+			uint32_t *groups, size_t groups_count)
+{
+	ell_keys *keys = (ell_keys *)ekeys;
+	std::vector<dnet_raw_id> ids(keys->kk.size());
+	for (auto it = keys->kk.begin(); it != keys->kk.end(); ++it) {
+		ids.emplace_back(it->raw_id());
+	}
+
+	session->server_send(ids, flags, std::vector<int>(groups, groups + groups_count)).connect(
+		std::bind(&on_iterator, on_chunk_context, ph::_1),
+		std::bind(&on_finish, final_context, ph::_1));
+}
+
 } // extern "C"
