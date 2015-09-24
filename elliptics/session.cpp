@@ -355,9 +355,8 @@ void session_set_indexes(ell_session *session, context_t on_chunk_context,
 	/*Move to util function */
 	using namespace std::placeholders;
 	std::vector<std::string> index_names(indexes, indexes + count);
-	std::vector<elliptics::data_pointer> index_datas;
+	std::vector<elliptics::data_pointer> index_datas(count);
 
-	index_datas.reserve(count);
 	for (uint64_t i = 0; i < count; i++) {
 		elliptics::data_pointer dp = elliptics::data_pointer::from_raw(data[i].data, data[i].size);
 		index_datas.push_back(dp);
@@ -495,6 +494,29 @@ void session_start_iterator(ell_session *session, context_t on_chunk_context, co
 	}
 
 	session->start_iterator(*key, it_ranges, type, flags, time_begin, time_end).connect(
+		std::bind(&on_iterator, on_chunk_context, ph::_1),
+		std::bind(&on_finish, final_context, ph::_1));
+}
+
+void session_start_copy_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges, size_t range_count,
+			uint32_t *groups, size_t groups_count,
+			const ell_key *key,
+			uint64_t flags,
+			struct dnet_time time_begin,
+			struct dnet_time time_end)
+{
+	std::vector<dnet_iterator_range> it_ranges(range_count);
+	for (size_t i = 0; i < range_count; i++) {
+		dnet_iterator_range range;
+		std::memcpy(range.key_begin.id, ranges[i].key_begin, DNET_ID_SIZE);
+		std::memcpy(range.key_end.id, ranges[i].key_end, DNET_ID_SIZE);
+
+		it_ranges.push_back(range);
+	}
+
+
+	session->start_copy_iterator(*key, it_ranges, flags, time_begin, time_end, std::vector<int>(groups, groups + groups_count)).connect(
 		std::bind(&on_iterator, on_chunk_context, ph::_1),
 		std::bind(&on_finish, final_context, ph::_1));
 }

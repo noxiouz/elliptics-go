@@ -218,6 +218,15 @@ void session_start_iterator(ell_session *session, context_t on_chunk_context, co
 			struct dnet_time time_begin,
 			struct dnet_time time_end);
 
+void session_start_copy_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges, size_t range_count,
+			uint32_t *groups, size_t groups_count,
+			const ell_key *key,
+			uint64_t flags,
+			struct dnet_time time_begin,
+			struct dnet_time time_end);
+
+
 void session_pause_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 			ell_key *key,
 			uint64_t iterator_id);

@@ -50,6 +50,7 @@ static inline void unpack_dnet_iterator_response(struct dnet_iterator_response *
 import "C"
 
 import (
+	"fmt"
 	"time"
 	"unsafe"
 )
@@ -163,12 +164,7 @@ func iteratorHelper(key string) (*Key, uint64, uint64, <-chan IteratorResult) {
 	return ekey, onResultContext, onFinishContext, responseCh
 }
 
-func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
-	defer ekey.Free()
-
-	var ctime_begin, ctime_end C.struct_dnet_time
-
+func adjustTimeFrame(ctime_begin, ctime_end *C.struct_dnet_time, timeFrame ...time.Time) error {
 	switch count := len(timeFrame); {
 	case count >= 1: // set time begin
 		if !timeFrame[0].IsZero() {
@@ -180,7 +176,22 @@ func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uin
 			ctime_end.tnsec = C.uint64_t(timeFrame[1].UnixNano())
 		}
 	default:
-		panic("no more than 2 items can be passed as timeFrame")
+		return fmt.Errorf("no more than 2 items can be passed as timeFrame")
+	}
+}
+
+func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+	defer ekey.Free()
+
+	var ctime_begin, ctime_end C.struct_dnet_time
+
+	if err := adjustTimeFrame(&ctime_begin, &ctime_end, timeFrame...); err != nil {
+		context, pool_err := Pool.Get(onFinishContext)
+		if pool_err != nil {
+			panic("Unable to find session numbder")
+		}
+		context.(func(error))(err)
 	}
 
 	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
@@ -231,4 +242,36 @@ func (s *Session) IteratorCancel(key string, iteratorId uint64) <-chan IteratorR
 		ekey.key,
 		C.uint64_t(iteratorId))
 	return responseCh
+}
+
+func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, groups []uint32, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+	defer ekey.Free()
+
+	var ctime_begin, ctime_end C.struct_dnet_time
+
+	if err := adjustTimeFrame(&ctime_begin, &ctime_end, timeFrame...); err != nil {
+		context, pool_err := Pool.Get(onFinishContext)
+		if pool_err != nil {
+			panic("Unable to find session numbder")
+		}
+		context.(func(error))(err)
+	}
+
+	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
+	// Seems it's redundant copying
+	for _, rng := range ranges {
+		cranges = append(cranges, C.struct_go_iterator_range{
+			(*C.uint8_t)(&rng.KeyBegin[0]),
+			(*C.uint8_t)(&rng.KeyEnd[0]),
+		})
+	}
+
+	C.session_start_copy_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
+		(*C.struct_go_iterator_range)(&cranges[0]), C.size_t(len(ranges)),
+		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)),
+		ekey.key,
+		C.uint64_t(Type),
+		ctime_begin,
+		ctime_end)
 }
