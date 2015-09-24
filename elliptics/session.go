@@ -709,6 +709,7 @@ func (s *Session) BulkRemove(keys_str []string) <-chan Remover {
 		close(responseCh)
 		return responseCh
 	}
+	defer keys.Free()
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()

@@ -287,6 +287,7 @@ func (s *Session) ServerSend(keys []string, uint64 flags, groups []uint32) <-cha
 		close(responseCh)
 		return responseCh
 	}
+	defer kkeys.Free()
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
@@ -309,7 +310,7 @@ func (s *Session) ServerSend(keys []string, uint64 flags, groups []uint32) <-cha
 	Pool.Store(onFinishContext, onFinish)
 
 	C.session_server_send(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
-		kkeys,
+		kkeys.keys,
 		C.uint64_t(flags),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)))
 }
