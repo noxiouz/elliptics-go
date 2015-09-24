@@ -224,7 +224,7 @@ void session_continue_iterator(ell_session *session, context_t on_chunk_context,
 			ell_key *key,
 			uint64_t iterator_id);
 
-void session_stop_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+void session_cancel_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 			ell_key *key,
 			uint64_t iterator_id);
 

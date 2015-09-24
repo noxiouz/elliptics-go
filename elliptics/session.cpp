@@ -509,15 +509,15 @@ void session_pause_iterator(ell_session *session, context_t on_chunk_context, co
 void session_continue_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 		ell_key *key, uint64_t iterator_id)
 {
-	session->pause_iterator(*key, iterator_id).connect(
+	session->continue_iterator(*key, iterator_id).connect(
 		std::bind(&on_iterator, on_chunk_context, ph::_1),
 		std::bind(&on_finish, final_context, ph::_1));
 }
 
-void session_stop_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+void session_cancel_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 		ell_key *key, uint64_t iterator_id)
 {
-	session->pause_iterator(*key, iterator_id).connect(
+	session->cancel_iterator(*key, iterator_id).connect(
 		std::bind(&on_iterator, on_chunk_context, ph::_1),
 		std::bind(&on_finish, final_context, ph::_1));
 }

@@ -205,11 +205,11 @@ func (s *Session) IteratorContinue(key string, iteratorId uint64) <-chan Iterato
 	return responseCh
 }
 
-func (s *Session) IteratorStop(key string, iteratorId uint64) <-chan IteratorResult {
+func (s *Session) IteratorCancel(key string, iteratorId uint64) <-chan IteratorResult {
 	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
 	defer ekey.Free()
 
-	C.session_stop_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
+	C.session_cancel_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
 		ekey.key,
 		C.uint64_t(iteratorId))
 	return responseCh
