@@ -163,9 +163,25 @@ func iteratorHelper(key string) (*Key, uint64, uint64, <-chan IteratorResult) {
 	return ekey, onResultContext, onFinishContext, responseCh
 }
 
-func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64) <-chan IteratorResult {
+func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
 	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
 	defer ekey.Free()
+
+	var ctime_begin, ctime_end C.struct_dnet_time
+
+	switch count := len(timeFrame); {
+	case count >= 1: // set time begin
+		if !timeFrame[0].IsZero() {
+			ctime_begin.tnsec = C.uint64_t(timeFrame[0].UnixNano())
+		}
+		fallthrough
+	case count == 2: // set both
+		if !timeFrame[1].IsZero() {
+			ctime_end.tnsec = C.uint64_t(timeFrame[1].UnixNano())
+		}
+	default:
+		panic("no more than 2 items can be passed as timeFrame")
+	}
 
 	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
 	// Seems it's redundant copying
@@ -181,7 +197,9 @@ func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uin
 		C.size_t(len(ranges)),
 		ekey.key,
 		C.uint64_t(Type),
-		C.uint64_t(flags))
+		C.uint64_t(flags),
+		ctime_begin,
+		ctime_end)
 	return responseCh
 }
 

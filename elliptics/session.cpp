@@ -481,7 +481,9 @@ void session_start_iterator(ell_session *session, context_t on_chunk_context, co
 			const struct go_iterator_range* ranges, size_t range_count,
 			const ell_key *key,
 			uint64_t type,
-			uint64_t flags)
+			uint64_t flags,
+			struct dnet_time time_begin,
+			struct dnet_time time_end)
 {
 	std::vector<dnet_iterator_range> it_ranges(range_count);
 	for (size_t i = 0; i < range_count; i++) {
@@ -492,7 +494,7 @@ void session_start_iterator(ell_session *session, context_t on_chunk_context, co
 		it_ranges.push_back(range);
 	}
 
-	session->start_iterator(*key, it_ranges, type, flags).connect(
+	session->start_iterator(*key, it_ranges, type, flags, time_begin, time_end).connect(
 		std::bind(&on_iterator, on_chunk_context, ph::_1),
 		std::bind(&on_finish, final_context, ph::_1));
 }
