@@ -75,7 +75,7 @@ struct go_data_pointer {
 };
 
 struct go_error {
-	int             code;		// elliptics error code, should be negative errno value
+	int			code;		// elliptics error code, should be negative errno value
 	uint64_t	flags;		// dnet_cmd.flags
 	const char	*message;
 };
@@ -209,7 +209,6 @@ static inline void dnet_addr_free(struct dnet_addr *addr)
 	free(addr);
 }
 
-//ToDO: support time_begin/time_end
 void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 			const struct go_iterator_range* ranges, size_t range_count,
 			const ell_key *key,

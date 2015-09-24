@@ -475,7 +475,6 @@ void on_iterator(context_t context, const elliptics::iterator_result_entry &resu
 	go_iterator_callback(&to_go, context);
 }
 
-//ToDO: support time_begin/time_end
 void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
 			const struct go_iterator_range* ranges, size_t range_count,
 			const ell_key *key,
