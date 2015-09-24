@@ -36,7 +36,7 @@ static inline void unpack_dnet_iterator_response(struct dnet_iterator_response *
 	 struct dnet_iterator_response_unpacked *to)
 {
 	to->id = from->id;
-    to->key = from->key;
+    memcpy(to->key.id, from->key.id, DNET_ID_SIZE);
     to->status = from->status;
     to->timestamp = from->timestamp;
     to->user_flags = from->user_flags;
