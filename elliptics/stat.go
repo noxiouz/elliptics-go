@@ -82,15 +82,6 @@ func (a *RawAddr) String() string {
 	return tmp.String()
 }
 
-type AddressBackend struct {
-	Addr    RawAddr
-	Backend int32
-}
-
-func (ab *AddressBackend) String() string {
-	return fmt.Sprintf("ab: address: %s, backend: %d", ab.Addr.String(), ab.Backend)
-}
-
 type VFS struct {
 	// space in bytes for given backend
 	Total, Avail uint64
@@ -158,7 +149,41 @@ const (
 	PIDKd float64 = 0.3
 )
 
+type AddressBackend struct {
+	Addr    RawAddr
+	Backend int32
+}
+
+func (ab *AddressBackend) String() string {
+	return fmt.Sprintf("ab: %s/%d", ab.Addr.String(), ab.Backend)
+}
+
+func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
+	raw := RawAddr {
+		Len:    len(addr.Addr),
+		Family: addr.Family,
+	}
+	if len(addr.Addr) > len(raw.Addr) {
+		log.Fatalf("can not create new address+backend: addr: %s, backend: %d, addr.len: %d, raw.len: %d\n\n",
+			addr.String(), backend, len(addr.Addr), len(raw.Addr))
+	}
+
+	copy(raw.Addr[:], addr.Addr)
+
+	return AddressBackend{
+		Addr:    raw,
+		Backend: backend,
+	}
+}
+
+func (entry *StatEntry) AddressBackend() AddressBackend {
+	return NewAddressBackend(&entry.addr, entry.cmd.Backend)
+}
+
+
 type StatBackend struct {
+	Ab AddressBackend
+
 	Error BackendError `json:"error"`
 
 	// All range starts (IDs) for given node (server address + backend)
@@ -196,13 +221,14 @@ type StatBackend struct {
 	Commands map[string]*CStat
 }
 
-func NewStatBackend() *StatBackend {
-	return &StatBackend{
-		ID:         make([]DnetRawID, 0),
-		Percentage: 0,
-		sum:        0,
-		Commands:   make(map[string]*CStat),
-		PID:        NewPIDController(),
+func NewStatBackend(ab AddressBackend) *StatBackend {
+	return &StatBackend {
+		Ab:		ab,
+		ID:		make([]DnetRawID, 0),
+		Percentage:	0,
+		sum:		0,
+		Commands:	make(map[string]*CStat),
+		PID:		NewPIDController(),
 	}
 }
 
@@ -410,28 +436,6 @@ func (entry *StatEntry) Group() uint32 {
 	return entry.cmd.ID.Group
 }
 
-func NewAddressBackend(addr *DnetAddr, backend int32) AddressBackend {
-	raw := RawAddr{
-		Len:    len(addr.Addr),
-		Family: addr.Family,
-	}
-	if len(addr.Addr) > len(raw.Addr) {
-		log.Fatalf("can not create new address+backend: addr: %s, backend: %d, addr.len: %d, raw.len: %d\n\n",
-			addr.String(), backend, len(addr.Addr), len(raw.Addr))
-	}
-
-	copy(raw.Addr[:], addr.Addr)
-
-	return AddressBackend{
-		Addr:    raw,
-		Backend: backend,
-	}
-}
-
-func (entry *StatEntry) AddressBackend() AddressBackend {
-	return NewAddressBackend(&entry.addr, entry.cmd.Backend)
-}
-
 //export go_stat_callback
 func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 	context, err := Pool.Get(key)
@@ -549,7 +553,7 @@ func (stat *DnetStat) FindCreateBackend(group uint32, addr *DnetAddr, backend_id
 
 	backend, ok := sg.Ab[ab]
 	if !ok {
-		backend = NewStatBackend()
+		backend = NewStatBackend(ab)
 		sg.Ab[ab] = backend
 	}
 
