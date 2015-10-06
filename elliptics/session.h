@@ -75,10 +75,29 @@ struct go_data_pointer {
 };
 
 struct go_error {
-	int		code;		// elliptics error code, should be negative errno value
+	int			code;		// elliptics error code, should be negative errno value
 	uint64_t	flags;		// dnet_cmd.flags
 	const char	*message;
 };
+
+
+struct go_iterator_range {
+	uint8_t	*key_begin;
+	uint8_t *key_end;
+};
+
+struct go_iterator_result {
+	// dnet_iterator_response
+	struct dnet_iterator_response *reply;
+
+	// data_pointer
+	const char* reply_data;
+	const uint64_t reply_size;
+
+	// iterator_id
+	uint64_t id;
+};
+
 
 struct go_data_pointer new_data_pointer(char *data, int size);
 
@@ -93,7 +112,7 @@ void session_set_filter_positive(ell_session *session);
 void session_set_groups(ell_session *session, uint32_t *groups, int count);
 void session_set_namespace(ell_session *session, const char *name, int nsize);
 
-void session_set_timeout (ell_session *session, int timeout);
+void session_set_timeout(ell_session *session, int timeout);
 long session_get_timeout(ell_session *session);
 
 typedef uint64_t cflags_t;
@@ -190,6 +209,39 @@ static inline void dnet_addr_free(struct dnet_addr *addr)
 	free(addr);
 }
 
+void session_start_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges, size_t range_count,
+			const ell_key *key,
+			uint64_t type,
+			uint64_t flags,
+			struct dnet_time time_begin,
+			struct dnet_time time_end);
+
+void session_start_copy_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			const struct go_iterator_range* ranges, size_t range_count,
+			uint32_t *groups, size_t groups_count,
+			const ell_key *key,
+			uint64_t flags,
+			struct dnet_time time_begin,
+			struct dnet_time time_end);
+
+
+void session_pause_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
+
+void session_continue_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
+
+void session_cancel_iterator(ell_session *session, context_t on_chunk_context, context_t final_context,
+			ell_key *key,
+			uint64_t iterator_id);
+
+void session_server_send(ell_session *session, context_t on_chunk_context, context_t final_context,
+			void *ekeys,
+			uint64_t flags,
+			uint32_t *groups, size_t groups_count);
 
 #ifdef __cplusplus
 }
