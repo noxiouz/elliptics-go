@@ -100,7 +100,7 @@ func (i *iteratorResult) Error() error { return i.err }
 func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find session number")
 	}
 
 	callback := context.(func(*iteratorResult))
@@ -178,6 +178,8 @@ func adjustTimeFrame(ctime_begin, ctime_end *C.struct_dnet_time, timeFrame ...ti
 	default:
 		return fmt.Errorf("no more than 2 items can be passed as timeFrame")
 	}
+
+	return fmt.Errorf("no less than 1 item can be passed as timeFrame")
 }
 
 func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
@@ -189,7 +191,7 @@ func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uin
 	if err := adjustTimeFrame(&ctime_begin, &ctime_end, timeFrame...); err != nil {
 		context, pool_err := Pool.Get(onFinishContext)
 		if pool_err != nil {
-			panic("Unable to find session numbder")
+			panic("Unable to find session number")
 		}
 		context.(func(error))(err)
 		return responseCh
@@ -254,7 +256,7 @@ func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, grou
 	if err := adjustTimeFrame(&ctime_begin, &ctime_end, timeFrame...); err != nil {
 		context, pool_err := Pool.Get(onFinishContext)
 		if pool_err != nil {
-			panic("Unable to find session numbder")
+			panic("Unable to find session number")
 		}
 		context.(func(error))(err)
 		return responseCh
@@ -276,9 +278,11 @@ func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, grou
 		C.uint64_t(flags),
 		ctime_begin,
 		ctime_end)
+
+	return responseCh
 }
 
-func (s *Session) ServerSend(keys []string, uint64 flags, groups []uint32) <-chan IteratorResult {
+func (s *Session) ServerSend(keys []string, flags uint64, groups []uint32) <-chan IteratorResult {
 	responseCh := make(chan IteratorResult, defaultVOLUME)
 
 	kkeys, err := NewKeys(keys)
@@ -313,4 +317,6 @@ func (s *Session) ServerSend(keys []string, uint64 flags, groups []uint32) <-cha
 		kkeys.keys,
 		C.uint64_t(flags),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)))
+
+	return responseCh
 }
