@@ -182,7 +182,9 @@ func (entry *StatEntry) AddressBackend() AddressBackend {
 
 
 type StatBackend struct {
-	Ab AddressBackend
+	// Address+Backend for given stats, do not put it into json
+	// since @RawAddr is an array of bytes and it can not be parsed by human
+	Ab AddressBackend `json:"-"`
 
 	Error BackendError `json:"error"`
 
