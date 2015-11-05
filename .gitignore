@@ -22,3 +22,6 @@ s3proxy
 
 fixtures/elliptics/*
 
+*~
+*.sw?
+tags
