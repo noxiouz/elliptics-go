@@ -78,6 +78,14 @@ static uint64_t dnet_io_attr_get_offset(struct dnet_io_attr *io) {
 static uint64_t dnet_io_attr_get_size(struct dnet_io_attr *io) {
 	return io->size;
 }
+
+static char *dnet_id_str_raw(void *ptr, size_t len) {
+	static __thread char tmp[2 * DNET_ID_SIZE + 1];
+	if (len > DNET_ID_SIZE)
+		len = DNET_ID_SIZE;
+
+	return dnet_dump_id_len_raw(ptr, len, tmp);
+}
 */
 import "C"
 
@@ -144,6 +152,47 @@ func (a *DnetAddr) HostString() string {
 
 type DnetRawID struct {
 	ID []byte
+}
+
+func NewDnetRawID() *DnetRawID {
+	return &DnetRawID {
+		ID: make([]byte, C.DNET_ID_SIZE),
+	}
+}
+
+func NewDnetRawIDraw(raw *C.struct_dnet_raw_id) *DnetRawID {
+	return &DnetRawID {
+		ID: C.GoBytes(unsafe.Pointer(&raw.id[0]), C.int(C.DNET_ID_SIZE)),
+	}
+}
+
+func (id *DnetRawID) String() string {
+	return C.GoString(C.dnet_id_str_raw(unsafe.Pointer(&id.ID[0]), C.size_t(len(id.ID))))
+}
+
+func (id *DnetRawID) Less(other *DnetRawID) bool {
+	for idx := 0; idx < C.DNET_ID_SIZE; idx++ {
+		if id.ID[idx] < other.ID[idx] {
+			return true
+		}
+
+		if id.ID[idx] > other.ID[idx] {
+			return false
+		}
+	}
+
+	return false
+}
+
+type ByRawID []DnetRawID
+func (a ByRawID) Len() int {
+	return len(a)
+}
+func (a ByRawID) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a ByRawID) Less(i, j int) bool {
+	return (&a[i]).Less(&a[j])
 }
 
 type DnetID struct {
