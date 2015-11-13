@@ -184,6 +184,16 @@ func (id *DnetRawID) Less(other *DnetRawID) bool {
 	return false
 }
 
+func (id *DnetRawID) Equal(other *DnetRawID) bool {
+	for idx := 0; idx < C.DNET_ID_SIZE; idx++ {
+		if id.ID[idx] != other.ID[idx] {
+			return false
+		}
+	}
+
+	return true
+}
+
 type ByRawID []DnetRawID
 func (a ByRawID) Len() int {
 	return len(a)
