@@ -59,7 +59,8 @@ ell_key *new_key_from_id(const char *id);
 const char *key_remote(ell_key *key);
 
 int key_by_id(ell_key *key);
-void key_set_id(ell_key *c_key, const struct dnet_id *id);
+void key_set_id(ell_key *key, const void *raw, int size, int group_id);
+void key_set_raw_id(ell_key *key, const void *raw, int size);
 int key_id_cmp(ell_key *key, const void *id);
 
 void delete_key(ell_key *c_key);

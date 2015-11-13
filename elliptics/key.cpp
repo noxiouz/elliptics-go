@@ -64,9 +64,25 @@ int key_by_id(ell_key *key)
 	return key->by_id();
 }
 
-void key_set_id(ell_key *key, const struct dnet_id *id)
+void key_set_id(ell_key *key, const void *raw, int size, int group_id)
 {
-	key->set_id(*id);
+	struct dnet_id id;
+	memset(&id, 0, sizeof(struct dnet_id));
+
+	memcpy(id.id, raw, size);
+	id.group_id = group_id;
+
+	key->set_id(id);
+}
+
+void key_set_raw_id(ell_key *key, const void *raw, int size)
+{
+	struct dnet_raw_id id;
+	memset(&id, 0, sizeof(struct dnet_raw_id));
+
+	memcpy(id.id, raw, size);
+
+	key->set_id(id);
 }
 
 int key_id_cmp(ell_key *key, const void *id) {
