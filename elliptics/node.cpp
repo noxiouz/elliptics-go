@@ -26,7 +26,7 @@ ell_node *new_node(const char *logfile, const char *level)
 	try {
 		dnet_config cfg;
 		memset(&cfg, 0, sizeof(dnet_config));
-		cfg.flags = DNET_CFG_MIX_STATES;
+		//cfg.flags = DNET_CFG_MIX_STATES;
 		cfg.io_thread_num = 8;
 		cfg.nonblocking_io_thread_num = 4;
 		cfg.net_thread_num = 4;
