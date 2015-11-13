@@ -55,44 +55,53 @@ import (
 	"unsafe"
 )
 
+const (
+	DNET_ITYPE_NETWORK	= uint64(C.DNET_ITYPE_NETWORK)
+	DNET_ITYPE_SERVER_SEND	= uint64(C.DNET_ITYPE_SERVER_SEND)
+
+	DNET_IFLAGS_DATA	= uint64(C.DNET_IFLAGS_DATA)
+	DNET_IFLAGS_KEY_RANGE	= uint64(C.DNET_IFLAGS_KEY_RANGE)
+	DNET_IFLAGS_TS_RANGE	= uint64(C.DNET_IFLAGS_TS_RANGE)
+	DNET_IFLAGS_NO_META	= uint64(C.DNET_IFLAGS_NO_META)
+	DNET_IFLAGS_MOVE	= uint64(C.DNET_IFLAGS_MOVE)
+	DNET_IFLAGS_OVERWRITE	= uint64(C.DNET_IFLAGS_OVERWRITE)
+)
+
 type DnetIteratorResponse struct {
-	Id           uint64
-	Key          C.struct_dnet_raw_id
-	Status       int
-	Timestamp    time.Time
-	UserFlags    uint64
-	Size         uint64
-	IteratedKeys uint64
-	TotalKeys    uint64
-	Flags        uint64
+	ID		uint64
+	Key		DnetRawID
+	Status		int
+	Timestamp	time.Time
+	UserFlags	uint64
+	Size		uint64
+	IteratedKeys	uint64
+	TotalKeys	uint64
+	Flags		uint64
 }
 
 type IteratorResult interface {
-	Reply() *DnetIteratorResponse
-	ReplyData() []byte
-	Id() uint64
-	Error() error
+	Reply()		*DnetIteratorResponse
+	ReplyData()	[]byte
+	ID()		uint64
+	Error()		error
 }
 
 type iteratorResult struct {
-	reply     *DnetIteratorResponse
-	replyData []byte
-	id        uint64
-	err       error
+	reply		*DnetIteratorResponse
+	replyData	[]byte
+	id		uint64
+	err		error
 }
 
-type dnetRawId [C.DNET_ID_SIZE]uint8
-
 type DnetIteratorRange struct {
-	KeyBegin dnetRawId
-	KeyEnd   dnetRawId
+	Begin, End	DnetRawID
 }
 
 func (i *iteratorResult) Reply() *DnetIteratorResponse { return i.reply }
 
 func (i *iteratorResult) ReplyData() []byte { return i.replyData }
 
-func (i *iteratorResult) Id() uint64 { return i.id }
+func (i *iteratorResult) ID() uint64 { return i.id }
 
 func (i *iteratorResult) Error() error { return i.err }
 
@@ -109,10 +118,10 @@ func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
 
 	C.unpack_dnet_iterator_response(result.reply, &reply)
 
-	var Result = iteratorResult{
-		reply: &DnetIteratorResponse{
-			Id:           uint64(result.reply.id),
-			Key:          reply.key,
+	var Result = iteratorResult {
+		reply: &DnetIteratorResponse {
+			ID:           uint64(result.reply.id),
+			Key:          *NewDnetRawIDraw(&reply.key),
 			Status:       int(reply.status),
 			Timestamp:    time.Unix(int64(reply.timestamp.tsec), int64(reply.timestamp.tnsec)),
 			UserFlags:    uint64(reply.user_flags),
@@ -134,13 +143,17 @@ func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
 	callback(&Result)
 }
 
-func iteratorHelper(key string) (*Key, uint64, uint64, <-chan IteratorResult) {
-	ekey, err := NewKey(key)
+func iteratorHelper(id *DnetRawID) (*Key, uint64, uint64, <-chan IteratorResult, error) {
+	responseCh := make(chan IteratorResult, defaultVOLUME)
+	ekey, err := NewKey()
 	if err != nil {
-		panic(err)
+		responseCh <- &iteratorResult{err: err}
+		close(responseCh)
+
+		return nil, 0, 0, responseCh, err
 	}
 
-	responseCh := make(chan IteratorResult, defaultVOLUME)
+	ekey.SetRawId(id.ID)
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
@@ -161,7 +174,7 @@ func iteratorHelper(key string) (*Key, uint64, uint64, <-chan IteratorResult) {
 
 	Pool.Store(onResultContext, onResult)
 	Pool.Store(onFinishContext, onFinish)
-	return ekey, onResultContext, onFinishContext, responseCh
+	return ekey, onResultContext, onFinishContext, responseCh, nil
 }
 
 func adjustTimeFrame(ctime_begin, ctime_end *C.struct_dnet_time, timeFrame ...time.Time) error {
@@ -175,15 +188,50 @@ func adjustTimeFrame(ctime_begin, ctime_end *C.struct_dnet_time, timeFrame ...ti
 		if !timeFrame[1].IsZero() {
 			ctime_end.tnsec = C.uint64_t(timeFrame[1].UnixNano())
 		}
+	case count == 0: {}
 	default:
 		return fmt.Errorf("no more than 2 items can be passed as timeFrame")
 	}
 
-	return fmt.Errorf("no less than 1 item can be passed as timeFrame")
+	return nil
 }
 
-func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uint64, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+func convertRanges(ranges []DnetIteratorRange) []C.struct_go_iterator_range {
+	if len(ranges) == 0 {
+		whole := DnetIteratorRange {
+			Begin:	DnetRawID {
+				ID: make([]byte, C.DNET_ID_SIZE, C.DNET_ID_SIZE),
+			},
+			End:	DnetRawID {
+				ID: make([]byte, C.DNET_ID_SIZE, C.DNET_ID_SIZE),
+			},
+		}
+
+		for i, _ := range whole.End.ID {
+			whole.End.ID[i] = 0xff
+		}
+
+		ranges = append(ranges, whole)
+	}
+
+	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
+	// Seems it's redundant copying
+	for _, rng := range ranges {
+		cranges = append(cranges, C.struct_go_iterator_range{
+			(*C.uint8_t)(&rng.Begin.ID[0]),
+			(*C.uint8_t)(&rng.End.ID[0]),
+		})
+	}
+
+	return cranges
+}
+
+func (s *Session) IteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
+		itype uint64, iflags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
+	if err != nil {
+		return responseCh
+	}
 	defer ekey.Free()
 
 	var ctime_begin, ctime_end C.struct_dnet_time
@@ -196,29 +244,30 @@ func (s *Session) IteratorStart(key string, ranges []DnetIteratorRange, Type uin
 		context.(func(error))(err)
 		return responseCh
 	}
-
-	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
-	// Seems it's redundant copying
-	for _, rng := range ranges {
-		cranges = append(cranges, C.struct_go_iterator_range{
-			(*C.uint8_t)(&rng.KeyBegin[0]),
-			(*C.uint8_t)(&rng.KeyEnd[0]),
-		})
+	if len(timeFrame) != 0 {
+		iflags |= DNET_IFLAGS_TS_RANGE
 	}
+
+
+	iflags |= DNET_IFLAGS_KEY_RANGE
+	cranges := convertRanges(ranges)
 
 	C.session_start_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
 		(*C.struct_go_iterator_range)(&cranges[0]),
-		C.size_t(len(ranges)),
+		C.size_t(len(cranges)),
 		ekey.key,
-		C.uint64_t(Type),
-		C.uint64_t(flags),
+		C.uint64_t(itype),
+		C.uint64_t(iflags),
 		ctime_begin,
 		ctime_end)
 	return responseCh
 }
 
-func (s *Session) IteratorPause(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+func (s *Session) IteratorPause(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
+	if err != nil {
+		return responseCh
+	}
 	defer ekey.Free()
 
 	C.session_pause_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
@@ -227,8 +276,11 @@ func (s *Session) IteratorPause(key string, iteratorId uint64) <-chan IteratorRe
 	return responseCh
 }
 
-func (s *Session) IteratorContinue(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+func (s *Session) IteratorContinue(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
+	if err != nil {
+		return responseCh
+	}
 	defer ekey.Free()
 
 	C.session_continue_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
@@ -237,8 +289,11 @@ func (s *Session) IteratorContinue(key string, iteratorId uint64) <-chan Iterato
 	return responseCh
 }
 
-func (s *Session) IteratorCancel(key string, iteratorId uint64) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+func (s *Session) IteratorCancel(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
+	if err != nil {
+		return responseCh
+	}
 	defer ekey.Free()
 
 	C.session_cancel_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
@@ -247,8 +302,12 @@ func (s *Session) IteratorCancel(key string, iteratorId uint64) <-chan IteratorR
 	return responseCh
 }
 
-func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, groups []uint32, flags uint64, timeFrame ...time.Time) <-chan IteratorResult {
-	ekey, onResultContext, onFinishContext, responseCh := iteratorHelper(key)
+func (s *Session) CopyIteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
+		groups []uint32, iflags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
+	if err != nil {
+		return responseCh
+	}
 	defer ekey.Free()
 
 	var ctime_begin, ctime_end C.struct_dnet_time
@@ -261,21 +320,18 @@ func (s *Session) CopyIteratorStart(key string, ranges []DnetIteratorRange, grou
 		context.(func(error))(err)
 		return responseCh
 	}
-
-	var cranges = make([]C.struct_go_iterator_range, 0, len(ranges))
-	// Seems it's redundant copying
-	for _, rng := range ranges {
-		cranges = append(cranges, C.struct_go_iterator_range{
-			(*C.uint8_t)(&rng.KeyBegin[0]),
-			(*C.uint8_t)(&rng.KeyEnd[0]),
-		})
+	if len(timeFrame) != 0 {
+		iflags |= DNET_IFLAGS_TS_RANGE
 	}
 
+	iflags |= DNET_IFLAGS_KEY_RANGE
+	cranges := convertRanges(ranges)
+
 	C.session_start_copy_iterator(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
-		(*C.struct_go_iterator_range)(&cranges[0]), C.size_t(len(ranges)),
+		(*C.struct_go_iterator_range)(&cranges[0]), C.size_t(len(cranges)),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)),
 		ekey.key,
-		C.uint64_t(flags),
+		C.uint64_t(iflags),
 		ctime_begin,
 		ctime_end)
 
