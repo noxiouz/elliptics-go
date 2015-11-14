@@ -34,6 +34,15 @@ const defaultVOLUME = 10
 const max_chunk_size uint64 = 10 * 1024 * 1024
 
 const (
+	DNET_RECORD_FLAGS_REMOVE		= uint64(C.DNET_RECORD_FLAGS_REMOVE)
+	DNET_RECORD_FLAGS_NOCSUM		= uint64(C.DNET_RECORD_FLAGS_NOCSUM)
+	DNET_RECORD_FLAGS_APPEND		= uint64(C.DNET_RECORD_FLAGS_APPEND)
+	DNET_RECORD_FLAGS_EXTHDR		= uint64(C.DNET_RECORD_FLAGS_EXTHDR)
+	DNET_RECORD_FLAGS_UNCOMMITTED		= uint64(C.DNET_RECORD_FLAGS_UNCOMMITTED)
+	DNET_RECORD_FLAGS_CHUNKED_CSUM		= uint64(C.DNET_RECORD_FLAGS_CHUNKED_CSUM)
+)
+
+const (
 	indexesSet = iota
 	indexesUpdate
 )
@@ -222,6 +231,8 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 
 	errors := make([]error, 0)
 
+	var record_flags uint64 = 0
+
 	// size == 0 means 'read everything
 	for size >= 0 {
 		chunk_size := size
@@ -236,7 +247,12 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 		}
 
 		if offset != orig_offset {
-			s.SetIOflags(IOflag(C.DNET_IO_FLAGS_NOCSUM))
+			// only set no-checksum bit if it is non-chunked record,
+			// in this case the whole file has been already checked
+			// if it is chunked checksum, then several first chunks only have been verified
+			if (record_flags & DNET_RECORD_FLAGS_CHUNKED_CSUM) != 0 {
+				s.SetIOflags(IOflag(C.DNET_IO_FLAGS_NOCSUM))
+			}
 		}
 
 		for rd := range s.ReadKey(key, offset, chunk_size) {
@@ -256,6 +272,7 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 			}
 
 			data := rd.Data()
+			record_flags = rd.IO().RecordFlags
 
 			w.Write(data)
 

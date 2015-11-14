@@ -78,6 +78,9 @@ static uint64_t dnet_io_attr_get_offset(struct dnet_io_attr *io) {
 static uint64_t dnet_io_attr_get_size(struct dnet_io_attr *io) {
 	return io->size;
 }
+static uint64_t dnet_io_attr_get_record_flags(struct dnet_io_attr *io) {
+	return io->record_flags;
+}
 
 static char *dnet_id_str_raw(void *ptr, size_t len) {
 	static __thread char tmp[2 * DNET_ID_SIZE + 1];
@@ -239,35 +242,38 @@ func NewDnetCmd(cmd *C.struct_dnet_cmd) DnetCmd {
 }
 
 type DnetIOAttr struct {
-	Parent []byte
-	ID     []byte
+	Parent		[]byte
+	ID		[]byte
 
-	Start uint64
-	Num   uint64
+	Start		uint64
+	Num		uint64
 
-	Timestamp time.Time
-	UserFlags uint64
+	Timestamp	time.Time
+	UserFlags	uint64
 
-	TotalSize uint64
+	TotalSize	uint64
 
-	Flags uint32
+	Flags		uint32
 
-	Offset uint64
-	Size   uint64
+	Offset		uint64
+	Size		uint64
+
+	RecordFlags	uint64
 }
 
 func NewDnetIOAttr(io *C.struct_dnet_io_attr) DnetIOAttr {
 	return DnetIOAttr{
-		Parent:    C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
-		ID:        C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
-		Start:     uint64(C.dnet_io_attr_get_start(io)),
-		Num:       uint64(C.dnet_io_attr_get_num(io)),
-		Timestamp: time.Unix(int64(C.dnet_io_attr_get_tsec(io)), int64(C.dnet_io_attr_get_tnsec(io))),
-		UserFlags: uint64(C.dnet_io_attr_get_user_flags(io)),
-		TotalSize: uint64(C.dnet_io_attr_get_total_size(io)),
-		Flags:     uint32(C.dnet_io_attr_get_flags(io)),
-		Offset:    uint64(C.dnet_io_attr_get_offset(io)),
-		Size:      uint64(C.dnet_io_attr_get_size(io)),
+		Parent:		C.GoBytes(unsafe.Pointer(&io.parent[0]), C.int(C.DNET_ID_SIZE)),
+		ID:		C.GoBytes(unsafe.Pointer(&io.id[0]), C.int(C.DNET_ID_SIZE)),
+		Start:		uint64(C.dnet_io_attr_get_start(io)),
+		Num:		uint64(C.dnet_io_attr_get_num(io)),
+		Timestamp:	time.Unix(int64(C.dnet_io_attr_get_tsec(io)), int64(C.dnet_io_attr_get_tnsec(io))),
+		UserFlags:	uint64(C.dnet_io_attr_get_user_flags(io)),
+		TotalSize:	uint64(C.dnet_io_attr_get_total_size(io)),
+		Flags:		uint32(C.dnet_io_attr_get_flags(io)),
+		Offset:		uint64(C.dnet_io_attr_get_offset(io)),
+		Size:		uint64(C.dnet_io_attr_get_size(io)),
+		RecordFlags:	uint64(C.dnet_io_attr_get_record_flags(io)),
 	}
 }
 
