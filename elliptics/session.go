@@ -220,6 +220,8 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 	orig_offset := offset
 	orig_size := size
 
+	errors := make([]error, 0)
+
 	// size == 0 means 'read everything
 	for size >= 0 {
 		chunk_size := size
@@ -240,6 +242,7 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 		for rd := range s.ReadKey(key, offset, chunk_size) {
 			err = rd.Error()
 			if err != nil {
+				errors = append(errors, err)
 				continue
 			}
 
@@ -262,11 +265,20 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 		}
 
 		if err != nil {
-			return &DnetError{
-				Code:  ErrorStatus(err),
+			status := http.StatusServiceUnavailable
+			for _, err = range errors {
+				status = ErrorStatus(err)
+				if status != http.StatusServiceUnavailable {
+					break
+				}
+			}
+
+			return &DnetError {
+				Code:  status,
 				Flags: 0,
-				Message: fmt.Sprintf("could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d: %v",
-					orig_offset, offset, chunk_size, orig_size, size, err),
+				Message: fmt.Sprintf(
+					"could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d, errors: %v",
+					orig_offset, offset, chunk_size, orig_size, size, errors),
 			}
 		}
 
