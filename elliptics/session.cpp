@@ -550,13 +550,9 @@ void session_server_send(ell_session *session, context_t on_chunk_context, conte
 			uint64_t flags,
 			uint32_t *groups, size_t groups_count)
 {
-	ell_keys *keys = (ell_keys *)ekeys;
-	std::vector<dnet_raw_id> ids(keys->kk.size());
-	for (auto it = keys->kk.begin(); it != keys->kk.end(); ++it) {
-		ids.emplace_back(it->raw_id());
-	}
+	ell_dnet_raw_id_keys *keys = (ell_dnet_raw_id_keys *)ekeys;
 
-	session->server_send(ids, flags, std::vector<int>(groups, groups + groups_count)).connect(
+	session->server_send(keys->ids, flags, std::vector<int>(groups, groups + groups_count)).connect(
 		std::bind(&on_iterator, on_chunk_context, ph::_1),
 		std::bind(&on_finish, final_context, ph::_1));
 }

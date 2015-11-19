@@ -338,16 +338,12 @@ func (s *Session) CopyIteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
 	return responseCh
 }
 
-func (s *Session) ServerSend(keys []string, flags uint64, groups []uint32) <-chan IteratorResult {
-	responseCh := make(chan IteratorResult, defaultVOLUME)
-
-	kkeys, err := NewKeys(keys)
-	if err != nil {
-		responseCh <- &iteratorResult{err: err}
-		close(responseCh)
-		return responseCh
+func (s *Session) ServerSend(keys *DnetRawIDKeys, flags uint64, groups []uint32) (<-chan IteratorResult, error) {
+	if len(groups) == 0 {
+		return nil, fmt.Errorf("server-send: invalid empty group set, must contain at least one group")
 	}
-	defer kkeys.Free()
+
+	responseCh := make(chan IteratorResult, defaultVOLUME)
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
@@ -370,9 +366,9 @@ func (s *Session) ServerSend(keys []string, flags uint64, groups []uint32) <-cha
 	Pool.Store(onFinishContext, onFinish)
 
 	C.session_server_send(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
-		kkeys.keys,
+		keys.keys,
 		C.uint64_t(flags),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)))
 
-	return responseCh
+	return responseCh, nil
 }
