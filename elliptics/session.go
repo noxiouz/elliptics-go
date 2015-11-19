@@ -282,16 +282,16 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 		}
 
 		if err != nil {
-			status := http.StatusServiceUnavailable
+			code := ErrorCode(err)
 			for _, err = range errors {
-				status = ErrorStatus(err)
-				if status != http.StatusServiceUnavailable {
+				code = ErrorCode(err)
+				if code != -110 {
 					break
 				}
 			}
 
 			return &DnetError {
-				Code:  status,
+				Code:  code,
 				Flags: 0,
 				Message: fmt.Sprintf(
 					"could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d, errors: %v",

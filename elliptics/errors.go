@@ -51,7 +51,7 @@ func ErrorData(err error) string {
 	return err.Error()
 }
 
-func ErrorStatus(err error) int {
+func ErrorCode(err error) int {
 	if ke, ok := err.(*DnetError); ok {
 		return ke.Code
 	}
