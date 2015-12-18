@@ -92,6 +92,7 @@ char *ell_keys_find(ell_keys *keys, void *id);
 ell_dnet_raw_id_keys *ell_dnet_raw_id_keys_new();
 int ell_dnet_raw_id_keys_insert(ell_dnet_raw_id_keys *keys, const void *id, int len);
 void ell_dnet_raw_id_keys_free(ell_dnet_raw_id_keys *keys);
+size_t ell_dnet_raw_id_keys_size(ell_dnet_raw_id_keys *keys);
 
 #ifdef __cplusplus
 }

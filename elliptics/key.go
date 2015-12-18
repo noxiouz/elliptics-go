@@ -173,3 +173,7 @@ func (kk *DnetRawIDKeys) InsertID(id *DnetRawID) {
 func (kk *DnetRawIDKeys) Free() {
 	C.ell_dnet_raw_id_keys_free(kk.keys)
 }
+
+func (kk *DnetRawIDKeys) Size() int {
+	return int(C.ell_dnet_raw_id_keys_size(kk.keys))
+}
