@@ -30,8 +30,8 @@ ell_node *new_node(const char *logfile, const char *level)
 		cfg.io_thread_num = 8;
 		cfg.nonblocking_io_thread_num = 4;
 		cfg.net_thread_num = 4;
-		cfg.wait_timeout = 5;
-		cfg.check_timeout = 20;
+		cfg.wait_timeout = 15;
+		cfg.check_timeout = 30;
 
 		std::shared_ptr<elliptics::file_logger> base =
 			std::make_shared<elliptics::file_logger>(logfile, elliptics::file_logger::parse_level(level));
