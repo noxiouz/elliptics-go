@@ -2,6 +2,7 @@ package elliptics
 
 import (
 	"fmt"
+	"time"
 )
 
 // implements Reader and Seeker interfaces
@@ -18,6 +19,8 @@ type ReadSeeker struct {
 	read_offset	uint64
 	read_size	uint64
 	chunk		[]byte
+
+	Mtime		time.Time
 }
 
 func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
@@ -66,6 +69,7 @@ func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
 		r.read_size = rd.IO().Size
 		r.record_flags = rd.IO().RecordFlags
 		r.total_size = rd.IO().TotalSize
+		r.Mtime = rd.IO().Timestamp
 
 		return int(r.read_size), nil
 	}
