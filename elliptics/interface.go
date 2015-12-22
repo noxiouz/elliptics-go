@@ -38,6 +38,9 @@ func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 		return nil, err
 	}
 
+	// rewind to the beginning of the file
+	r.offset = 0
+
 	return r, nil
 }
 
@@ -60,6 +63,7 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 		// |-read_offset |-offset      |-offset + len(p)                |-read_offset + read_size
 		if r.read_offset + r.read_size >= offset + uint64(len(p)) {
 			copied := copy(p, r.chunk[offset - r.read_offset :])
+			r.offset += int64(copied)
 			return copied, nil
 		}
 
@@ -72,6 +76,7 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 		//                           |-end of the file
 		if r.read_offset + r.read_size == r.total_size {
 			copied := copy(p, r.chunk[offset - r.read_offset :])
+			r.offset += int64(copied)
 			return copied, nil
 		}
 	}
