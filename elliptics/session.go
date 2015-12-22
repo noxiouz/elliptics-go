@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"unsafe"
 )
 
@@ -213,98 +212,6 @@ func (r *readResult) Data() []byte {
 }
 func (r *readResult) Error() error {
 	return r.err
-}
-
-//StreamData sends a stream read from elliptics into given http response writer
-// It doesn't start reading next chunk (10M) until the one already read has not been written
-// into the client's pipe. This eliminates number of unneeded copies and adds flow control
-// of the client's pips.
-func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWriter) error {
-	key, err := NewKey(kstr)
-	if err != nil {
-		return err
-	}
-	defer key.Free()
-
-	orig_offset := offset
-	orig_size := size
-
-	errors := make([]error, 0)
-
-	var record_flags uint64 = 0
-
-	// size == 0 means 'read everything
-	for size >= 0 {
-		chunk_size := size
-		if chunk_size > max_chunk_size || chunk_size == 0 {
-			chunk_size = max_chunk_size
-		}
-
-		err = &DnetError{
-			Code:    -6,
-			Flags:   0,
-			Message: fmt.Sprintf("could not read anything at all"),
-		}
-
-		if offset != orig_offset {
-			// only set no-checksum bit if it is non-chunked record,
-			// in this case the whole file has been already checked
-			// if it is chunked checksum, then several first chunks only have been verified
-			if (record_flags & DNET_RECORD_FLAGS_CHUNKED_CSUM) != 0 {
-				s.SetIOflags(IOflag(C.DNET_IO_FLAGS_NOCSUM))
-			}
-		}
-
-		for rd := range s.ReadKey(key, offset, chunk_size) {
-			err = rd.Error()
-			if err != nil {
-				errors = append(errors, err)
-				continue
-			}
-
-			if offset == orig_offset {
-				if size == 0 || size > rd.IO().TotalSize-offset {
-					size = rd.IO().TotalSize - offset
-				}
-
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", size))
-				w.WriteHeader(http.StatusOK)
-			}
-
-			data := rd.Data()
-			record_flags = rd.IO().RecordFlags
-
-			w.Write(data)
-
-			offset += uint64(len(data))
-			size -= uint64(len(data))
-			break
-		}
-
-		if err != nil {
-			code := ErrorCode(err)
-			for _, err = range errors {
-				code = ErrorCode(err)
-				if code != -110 {
-					break
-				}
-			}
-
-			return &DnetError {
-				Code:  code,
-				Flags: 0,
-				Message: fmt.Sprintf(
-					"could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d, errors: %v",
-					orig_offset, offset, chunk_size, orig_size, size, errors),
-			}
-		}
-
-		if size == 0 {
-			break
-		}
-	}
-
-	return nil
 }
 
 //ReadInto reads data into specified buffer.
