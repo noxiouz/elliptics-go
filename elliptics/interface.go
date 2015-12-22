@@ -46,6 +46,9 @@ func (r *ReadSeeker) Free() {
 }
 
 func (r *ReadSeeker) Read(p []byte) (n int, err error) {
+	ioflags := r.session.GetIOflags()
+	defer r.session.SetIOflags(ioflags)
+
 	errors := make([]error, 0)
 
 	offset := uint64(r.offset)
@@ -71,6 +74,12 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 			copied := copy(p, r.chunk[offset - r.read_offset :])
 			return copied, nil
 		}
+	}
+
+	// if we have already read at least some data and this object doesn't have chunked checksum
+	// disable checksum verification, since the first call has already checked the whole file
+	if r.total_size != 0 && (r.record_flags & DNET_RECORD_FLAGS_CHUNKED_CSUM) == 0 {
+		r.session.SetIOflags(ioflags | DNET_IO_FLAGS_NOCSUM)
 	}
 
 	r.read_offset = uint64(r.offset)
