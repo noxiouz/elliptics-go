@@ -12,10 +12,9 @@ import (
 
 //export go_final_callback
 func go_final_callback(cerr *C.struct_go_error, key uint64) {
-	// callback := *(*func(error))(context)
 	context, err := Pool.Get(uint64(key))
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find final callback")
 	}
 	callback := context.(func(error))
 
@@ -34,10 +33,9 @@ func go_final_callback(cerr *C.struct_go_error, key uint64) {
 
 //export go_lookup_error
 func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, key uint64) {
-	// callback := *(*func(*lookupResult))(context)
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find lookup callback")
 	}
 	callback := context.(func(*lookupResult))
 
@@ -57,7 +55,7 @@ func go_lookup_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.s
 func go_lookup_callback(result *C.struct_go_lookup_result, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find lookup callback")
 	}
 	callback := context.(func(*lookupResult))
 
@@ -76,7 +74,7 @@ func go_lookup_callback(result *C.struct_go_lookup_result, key uint64) {
 func go_remove_callback(result *C.struct_go_remove_result, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find remove callback")
 	}
 	callback := context.(func(*removeResult))
 
@@ -88,10 +86,9 @@ func go_remove_callback(result *C.struct_go_remove_result, key uint64) {
 
 //export go_read_error
 func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.struct_go_error, key uint64) {
-	// callback := *(*func(*lookupResult))(context)
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find read callback")
 	}
 	callback := context.(func(*readResult))
 
@@ -108,10 +105,10 @@ func go_read_error(cmd *C.struct_dnet_cmd, addr *C.struct_dnet_addr, cerr *C.str
 }
 
 //export go_read_callback
-func go_read_callback(result *C.struct_go_read_result, key uint64) {
+func go_read_callback(result *C.struct_go_read_result, key uint64, buffer_key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find read callback")
 	}
 	callback := context.(func(*readResult))
 
@@ -122,11 +119,28 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 		err:    nil,
 	}
 
-	if result.size > 0 && result.file != nil {
-		Result.data = C.GoBytes(unsafe.Pointer(result.file), C.int(result.size))
+	if buffer_key != 0 {
+		buffer_context, err := Pool.Get(buffer_key)
+		if err != nil {
+			panic("Unable to find buffer key context")
+		}
+		buffer := buffer_context.([]byte)
+
+		Result.data = buffer
+		size := uint64(len(Result.data))
+		if size < uint64(result.size) {
+			size = uint64(result.size)
+		}
+
+		C.memcpy(unsafe.Pointer(&Result.data[0]), unsafe.Pointer(result.file), C.size_t(size))
 	} else {
-		Result.data = make([]byte, 0)
+		if result.size > 0 && result.file != nil {
+			Result.data = C.GoBytes(unsafe.Pointer(result.file), C.int(result.size))
+		} else {
+			Result.data = make([]byte, 0)
+		}
 	}
+
 	// All data from C++ has been copied here.
 	callback(Result)
 }
@@ -135,7 +149,7 @@ func go_read_callback(result *C.struct_go_read_result, key uint64) {
 func go_find_callback(result *C.struct_go_find_result, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find find callback")
 	}
 	callback := context.(func(*findResult))
 
@@ -162,7 +176,7 @@ func go_find_callback(result *C.struct_go_find_result, key uint64) {
 func go_index_entry_callback(result *C.struct_c_index_entry, key uint64) {
 	context, err := Pool.Get(key)
 	if err != nil {
-		panic("Unable to find session numbder")
+		panic("Unable to find index entry callback")
 	}
 	callback := context.(func(*IndexEntry))
 

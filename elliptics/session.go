@@ -307,6 +307,39 @@ func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWr
 	return nil
 }
 
+//ReadInto reads data into specified buffer.
+func (s *Session) ReadInto(key *Key, offset uint64, p []byte) <-chan ReadResult {
+	responseCh := make(chan ReadResult, defaultVOLUME)
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
+	bufContext := NextContext()
+
+	onResult := func(result *readResult) {
+		responseCh <- result
+	}
+
+	onFinish := func(err error) {
+		if err != nil {
+			responseCh <- &readResult{err: err}
+		}
+
+		close(responseCh)
+
+		Pool.Delete(bufContext)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
+	}
+
+	Pool.Store(bufContext, p)
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+
+	C.session_read_data_into(s.session,
+		C.context_t(onResultContext), C.context_t(bufContext), C.context_t(onFinishContext),
+		key.key, C.uint64_t(offset), C.uint64_t(len(p)))
+	return responseCh
+}
+
 //ReadKey performs a read operation by key.
 func (s *Session) ReadKey(key *Key, offset, size uint64) <-chan ReadResult {
 	responseCh := make(chan ReadResult, defaultVOLUME)
