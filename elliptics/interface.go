@@ -12,6 +12,7 @@ type ReadSeeker struct {
 	total_size	uint64
 	record_flags	uint64
 
+	// updated only when transferring data to caller, not when reading from elliptics
 	offset		int64
 
 	read_offset	uint64
@@ -31,15 +32,12 @@ func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 		chunk:			make([]byte, 10 * 1024 * 1024),
 	}
 
-	_, err = r.Read(r.chunk)
+	_, err = r.ReadInternal(r.chunk)
 	if err != nil {
 		key.Free()
 
 		return nil, err
 	}
-
-	// rewind to the beginning of the file
-	r.offset = 0
 
 	return r, nil
 }
@@ -48,47 +46,17 @@ func (r *ReadSeeker) Free() {
 	r.key.Free()
 }
 
-func (r *ReadSeeker) Read(p []byte) (n int, err error) {
-	ioflags := r.session.GetIOflags()
-	defer r.session.SetIOflags(ioflags)
-
+func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
 	errors := make([]error, 0)
-
-	offset := uint64(r.offset)
-
-	if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset {
-		// we have read and cached enough data (---) to satisfy client's request (+++)
-		// |-------------+++++++++++++++--------------------------------|
-		// ^             ^             ^                                ^
-		// |-read_offset |-offset      |-offset + len(p)                |-read_offset + read_size
-		if r.read_offset + r.read_size >= offset + uint64(len(p)) {
-			copied := copy(p, r.chunk[offset - r.read_offset :])
-			r.offset += int64(copied)
-			return copied, nil
-		}
-
-		// we have read and cached end of the file, but client request
-		// spans past the end of the file - we still can satisfy client's request
-		// we have to return what we have
-		// |-------------++++++++++++|++++++++++++++++++++++++++++++++|
-		// ^             ^           ^                                ^
-		// |-read_offset |-offset    |-read_offset + read_size        |-offset + len(p)
-		//                           |-end of the file
-		if r.read_offset + r.read_size == r.total_size {
-			copied := copy(p, r.chunk[offset - r.read_offset :])
-			r.offset += int64(copied)
-			return copied, nil
-		}
-	}
 
 	// if we have already read at least some data and this object doesn't have chunked checksum
 	// disable checksum verification, since the first call has already checked the whole file
 	if r.total_size != 0 && (r.record_flags & DNET_RECORD_FLAGS_CHUNKED_CSUM) == 0 {
-		r.session.SetIOflags(ioflags | DNET_IO_FLAGS_NOCSUM)
+		r.session.SetIOflags(r.session.GetIOflags() | DNET_IO_FLAGS_NOCSUM)
 	}
 
 	r.read_offset = uint64(r.offset)
-	for rd := range r.session.ReadInto(r.key, r.read_offset, p) {
+	for rd := range r.session.ReadInto(r.key, r.read_offset, buf) {
 		err = rd.Error()
 		if err != nil {
 			errors = append(errors, err)
@@ -99,7 +67,6 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 		r.record_flags = rd.IO().RecordFlags
 		r.total_size = rd.IO().TotalSize
 
-		r.offset += int64(r.read_size)
 		return int(r.read_size), nil
 	}
 
@@ -119,6 +86,55 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 		Message: fmt.Sprintf(
 			"read-seeker error: current-offset: %d, total-size: %d, errors: %v",
 			r.offset, r.total_size, errors),
+	}
+}
+
+func (r *ReadSeeker) Read(p []byte) (n int, err error) {
+	ioflags := r.session.GetIOflags()
+	defer r.session.SetIOflags(ioflags)
+
+	offset := uint64(r.offset)
+
+	for {
+		if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset {
+			// we have read and cached enough data (---) to satisfy client's request (+++)
+			// |-------------+++++++++++++++--------------------------------|
+			// ^             ^             ^                                ^
+			// |-read_offset |-offset      |-offset + len(p)                |-read_offset + read_size
+			if r.read_offset + r.read_size >= offset + uint64(len(p)) {
+				n = copy(p, r.chunk[offset - r.read_offset :])
+				r.offset += int64(n)
+				return n, nil
+			}
+
+			// we have read and cached end of the file, but client request
+			// spans past the end of the file - we still can satisfy client's request
+			// we have to return what we have
+			// |-------------++++++++++++|++++++++++++++++++++++++++++++++|
+			// ^             ^           ^                                ^
+			// |-read_offset |-offset    |-read_offset + read_size        |-offset + len(p)
+			//                           |-end of the file
+			if r.read_offset + r.read_size == r.total_size {
+				n = copy(p, r.chunk[offset - r.read_offset :])
+				r.offset += int64(n)
+				return n, nil
+			}
+		}
+
+		if len(p) > len(r.chunk) {
+			n, err = r.ReadInternal(p)
+			if err != nil {
+				return 0, err
+			}
+
+			r.offset += int64(n)
+			return n, nil
+		}
+
+		n, err = r.ReadInternal(r.chunk)
+		if err != nil {
+			return 0, nil
+		}
 	}
 }
 
