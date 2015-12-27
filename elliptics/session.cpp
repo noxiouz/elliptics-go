@@ -50,6 +50,12 @@ ell_session *new_elliptics_session(ell_node *node)
 	return session;
 }
 
+ell_session *clone_session(ell_session *session)
+{
+	return new elliptics::session(*session);
+}
+
+
 void delete_session(ell_session *session)
 {
 	delete session;

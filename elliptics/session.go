@@ -69,14 +69,30 @@ type Session struct {
 
 //NewSession returns Session connected with given Node.
 func NewSession(node *Node) (*Session, error) {
-	session, err := C.new_elliptics_session(node.node)
-	if err != nil {
-		return nil, err
+	session := C.new_elliptics_session(node.node)
+	if session == nil {
+		return nil, fmt.Errorf("could not create new elliptics session")
 	}
 	return &Session{
 		session: session,
 		groups:  make([]uint32, 0, 0),
-	}, err
+	}, nil
+}
+
+//CloneSession returns clone of the given Session.
+func CloneSession(session *Session) (*Session, error) {
+	new_session := C.clone_session(session.session)
+	if new_session == nil {
+		return nil, fmt.Errorf("could not clone elliptics session")
+	}
+
+	groups := make([]uint32, len(session.groups))
+	copy(groups, session.groups)
+
+	return &Session{
+		session: new_session,
+		groups:  groups,
+	}, nil
 }
 
 func (s *Session) Delete() {

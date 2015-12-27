@@ -102,6 +102,7 @@ struct go_iterator_result {
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
+ell_session *clone_session(ell_session *session);
 void delete_session(ell_session *session);
 
 const char *session_transform(ell_session *session, const char *key);
