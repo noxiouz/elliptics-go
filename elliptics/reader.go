@@ -8,7 +8,13 @@ import (
 // implements Reader and Seeker interfaces
 type ReadSeeker struct {
 	session		*Session
+
 	key		*Key
+	// if true, Free() method will free the key
+	// if ReadSeeker has been created with foreign key,
+	// for example using NewReadSeekerKey(),
+	// then we can not remove key, it belongs to the caller
+	want_key_free	bool
 
 	TotalSize	uint64
 	RecordFlags	uint64
@@ -16,6 +22,7 @@ type ReadSeeker struct {
 	// updated only when transferring data to caller, not when reading from elliptics
 	offset		int64
 
+	// offset to remote elliptics key which we use (have used) to read data into @chunk
 	read_offset	uint64
 	read_size	uint64
 	chunk		[]byte
@@ -35,6 +42,8 @@ func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 		return nil, err
 	}
 
+	rs.want_key_free = true
+
 	return rs, nil
 }
 
@@ -42,6 +51,7 @@ func NewReadSeekerKey(session *Session, key *Key) (*ReadSeeker, error) {
 	r := &ReadSeeker {
 		session:		session,
 		key:			key,
+		want_key_free:		false,
 		chunk:			make([]byte, 10 * 1024 * 1024),
 	}
 
@@ -54,10 +64,15 @@ func NewReadSeekerKey(session *Session, key *Key) (*ReadSeeker, error) {
 }
 
 func (r *ReadSeeker) Free() {
-	r.key.Free()
+	if r.want_key_free {
+		r.key.Free()
+	}
 }
 
 func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
+	ioflags := r.session.GetIOflags()
+	defer r.session.SetIOflags(ioflags)
+
 	errors := make([]error, 0)
 
 	// if we have already read at least some data and this object doesn't have chunked checksum
@@ -102,9 +117,6 @@ func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
 }
 
 func (r *ReadSeeker) Read(p []byte) (n int, err error) {
-	ioflags := r.session.GetIOflags()
-	defer r.session.SetIOflags(ioflags)
-
 	offset := uint64(r.offset)
 
 	for {
@@ -161,4 +173,26 @@ func (r *ReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	}
 
 	return r.offset, nil
+}
+
+func (r *ReadSeeker) SetKey(session *Session, key *Key) error {
+	r.Free()
+
+	r.session = session
+	r.key = key
+	r.want_key_free = false
+
+	r.TotalSize = 0
+	r.RecordFlags = 0
+
+	r.offset = 0
+	r.read_offset = 0
+	r.read_size = 0
+
+	_, err := r.ReadInternal(r.chunk)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
