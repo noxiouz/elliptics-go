@@ -146,7 +146,7 @@ type DnetRawIDKeys struct {
 	keys unsafe.Pointer
 }
 
-func NewDnetRawIDKeys(ids []*DnetRawID) (kk *DnetRawIDKeys, err error) {
+func NewDnetRawIDKeys(ids []DnetRawID) (kk *DnetRawIDKeys, err error) {
 	var ckeys unsafe.Pointer
 	ckeys = C.ell_dnet_raw_id_keys_new()
 	if ckeys == nil {
@@ -159,8 +159,8 @@ func NewDnetRawIDKeys(ids []*DnetRawID) (kk *DnetRawIDKeys, err error) {
 		keys: ckeys,
 	}
 
-	for _, id := range ids {
-		kk.InsertID(id)
+	for idx, _ := range ids {
+		kk.InsertID(&ids[idx])
 	}
 
 	return
