@@ -338,10 +338,20 @@ func (s *Session) CopyIteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
 	return responseCh
 }
 
-func (s *Session) ServerSend(keys *DnetRawIDKeys, flags uint64, groups []uint32) (<-chan IteratorResult, error) {
+func (s *Session) ServerSend(keys []DnetRawID, flags uint64, groups []uint32) (<-chan IteratorResult, error) {
 	if len(groups) == 0 {
 		return nil, fmt.Errorf("server-send: invalid empty group set, must contain at least one group")
 	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("server-send: invalid empty key set, must contain at least one key")
+	}
+
+	id_keys, err := NewDnetRawIDKeys(keys)
+	if err != nil {
+		return nil, fmt.Errorf("server-send: could not allocate vector of dnet_raw_id structures: %v", err)
+	}
+	defer id_keys.Free()
+
 
 	responseCh := make(chan IteratorResult, defaultVOLUME)
 
@@ -366,7 +376,7 @@ func (s *Session) ServerSend(keys *DnetRawIDKeys, flags uint64, groups []uint32)
 	Pool.Store(onFinishContext, onFinish)
 
 	C.session_server_send(s.session, C.context_t(onResultContext), C.context_t(onFinishContext),
-		keys.keys,
+		id_keys.keys,
 		C.uint64_t(flags),
 		(*C.uint32_t)(&groups[0]), (C.size_t)(len(groups)))
 
