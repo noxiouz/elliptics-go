@@ -139,3 +139,41 @@ func (kk *Keys) Find(id []uint8) (ret string, err error) {
 func (kk *Keys) Free() {
 	C.ell_keys_free(kk.keys)
 }
+
+// Key based on std::vector<dnet_raw_id>
+
+type DnetRawIDKeys struct {
+	keys unsafe.Pointer
+}
+
+func NewDnetRawIDKeys(ids []*DnetRawID) (kk *DnetRawIDKeys, err error) {
+	var ckeys unsafe.Pointer
+	ckeys = C.ell_dnet_raw_id_keys_new()
+	if ckeys == nil {
+		err = fmt.Errorf("could not create key array")
+		return
+	}
+
+	err = nil
+	kk = &DnetRawIDKeys {
+		keys: ckeys,
+	}
+
+	for _, id := range ids {
+		kk.InsertID(id)
+	}
+
+	return
+}
+
+func (kk *DnetRawIDKeys) InsertID(id *DnetRawID) {
+	C.ell_dnet_raw_id_keys_insert(kk.keys, unsafe.Pointer(&id.ID[0]), C.int(len(id.ID)))
+}
+
+func (kk *DnetRawIDKeys) Free() {
+	C.ell_dnet_raw_id_keys_free(kk.keys)
+}
+
+func (kk *DnetRawIDKeys) Size() int {
+	return int(C.ell_dnet_raw_id_keys_size(kk.keys))
+}
