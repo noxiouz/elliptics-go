@@ -136,36 +136,4 @@ void ell_keys_free(ell_keys *keys)
 	delete keys;
 }
 
-
-
-ell_dnet_raw_id_keys *ell_dnet_raw_id_keys_new()
-{
-	try {
-		return new ell_dnet_raw_id_keys;
-	} catch (...) {
-		return NULL;
-	}
-}
-
-int ell_dnet_raw_id_keys_insert(ell_dnet_raw_id_keys *keys, const void *id, int len)
-{
-	try {
-		keys->insert(id, len);
-		return 0;
-	} catch (...) {
-		return -ENOMEM;
-	}
-}
-
-void ell_dnet_raw_id_keys_free(ell_dnet_raw_id_keys *keys)
-{
-	delete keys;
-}
-
-
-size_t ell_dnet_raw_id_keys_size(ell_dnet_raw_id_keys *keys)
-{
-	return keys->ids.size();
-}
-
 } // extern "C"

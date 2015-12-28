@@ -45,30 +45,11 @@ typedef struct {
 	}
 } ell_keys;
 
-typedef struct {
-	std::vector<dnet_raw_id>	ids;
-
-	void insert(const void *id, int len) {
-		dnet_raw_id raw;
-
-		if (len > DNET_ID_SIZE)
-			len = DNET_ID_SIZE;
-		if (len != DNET_ID_SIZE) {
-			memset(&raw, 0, sizeof(dnet_raw_id));
-		}
-
-		memcpy(raw.id, id, len);
-
-		ids.emplace_back(std::move(raw));
-	}
-} ell_dnet_raw_id_keys;
-
 extern "C" {
 #else
 #include <elliptics/interface.h>
 typedef void ell_key;
 typedef void ell_keys;
-typedef void ell_dnet_raw_id_keys;
 #endif
 
 ell_key *new_key();
@@ -88,11 +69,6 @@ ell_keys *ell_keys_new();
 void ell_keys_free(ell_keys *keys);
 int ell_keys_insert(ell_keys *keys, const char *str, int len);
 char *ell_keys_find(ell_keys *keys, void *id);
-
-ell_dnet_raw_id_keys *ell_dnet_raw_id_keys_new();
-int ell_dnet_raw_id_keys_insert(ell_dnet_raw_id_keys *keys, const void *id, int len);
-void ell_dnet_raw_id_keys_free(ell_dnet_raw_id_keys *keys);
-size_t ell_dnet_raw_id_keys_size(ell_dnet_raw_id_keys *keys);
 
 #ifdef __cplusplus
 }
