@@ -61,7 +61,7 @@ static int64_t dnet_io_attr_get_tsec(struct dnet_io_attr *io) {
 	return io->timestamp.tsec;
 }
 static int64_t dnet_io_attr_get_tnsec(struct dnet_io_attr *io) {
-	return io->timestamp.tsec;
+	return io->timestamp.tnsec;
 }
 static uint64_t dnet_io_attr_get_user_flags(struct dnet_io_attr *io) {
 	return io->user_flags;
