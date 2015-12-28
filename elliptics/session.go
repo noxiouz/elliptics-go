@@ -20,13 +20,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"time"
 	"unsafe"
 )
 
-/*
-#include "session.h"
-#include <stdio.h>
-*/
+//#include "session.h"
+//#include <elliptics/packet.h>
 import "C"
 
 const defaultVOLUME = 10
@@ -144,6 +143,23 @@ func (s *Session) SetTraceID(trace TraceID) {
 
 func (s *Session) GetTraceID() TraceID {
 	return TraceID(C.session_get_trace_id(s.session))
+}
+
+func (s *Session) SetTimestamp(ts time.Time) {
+	dtime := C.struct_dnet_time {
+		tsec:	C.uint64_t(ts.Unix()),
+		tnsec:	C.uint64_t(ts.Nanosecond()),
+	}
+
+	C.session_set_timestamp(s.session, &dtime)
+}
+
+func (s *Session) GetTimestamp() time.Time {
+	var dtime C.struct_dnet_time
+
+	C.session_get_timestamp(s.session, &dtime)
+
+	return time.Unix(int64(dtime.tsec), int64(dtime.tnsec))
 }
 
 /*

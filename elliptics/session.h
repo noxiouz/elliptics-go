@@ -127,6 +127,9 @@ ioflags_t session_get_ioflags(ell_session *session);
 void session_set_trace_id(ell_session *session, trace_id_t trace_id);
 trace_id_t session_get_trace_id(ell_session *session);
 
+void session_set_timestamp(ell_session *session, const struct dnet_time *ts);
+void session_get_timestamp(ell_session *session, struct dnet_time *ts);
+
 // ->lookup() returns only the first group where given key has been found
 void session_lookup(ell_session *session, context_t on_chunk_context,
 		context_t final_context, ell_key *key);

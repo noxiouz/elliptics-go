@@ -106,6 +106,16 @@ trace_id_t session_get_trace_id(ell_session *session)
 	return session->get_trace_id();
 }
 
+void session_set_timestamp(ell_session *session, const struct dnet_time *ts)
+{
+	session->set_timestamp(ts);
+}
+
+void session_get_timestamp(ell_session *session, struct dnet_time *ts)
+{
+	session->get_timestamp(ts);
+}
+
 long session_get_timeout(ell_session *session)
 {
 	return session->get_timeout();
