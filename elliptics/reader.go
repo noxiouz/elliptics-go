@@ -30,6 +30,17 @@ type ReadSeeker struct {
 	Mtime		time.Time
 }
 
+func NewEmptyReadSeeker() (*ReadSeeker, error) {
+	r := &ReadSeeker {
+		session:		nil,
+		key:			nil,
+		want_key_free:		false,
+		chunk:			make([]byte, 10 * 1024 * 1024),
+	}
+
+	return r, nil
+}
+
 func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 	key, err := NewKey(kstr)
 	if err != nil {
@@ -70,6 +81,10 @@ func (r *ReadSeeker) Free() {
 }
 
 func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
+	if r.session == nil || r.key == nil {
+		return 0, fmt.Errorf("trying to read from empty interface")
+	}
+
 	ioflags := r.session.GetIOflags()
 	defer r.session.SetIOflags(ioflags)
 
@@ -117,6 +132,10 @@ func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
 }
 
 func (r *ReadSeeker) Read(p []byte) (n int, err error) {
+	if r.session == nil || r.key == nil {
+		return 0, fmt.Errorf("trying to read from empty interface")
+	}
+
 	offset := uint64(r.offset)
 
 	for {
