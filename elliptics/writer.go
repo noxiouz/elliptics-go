@@ -41,6 +41,17 @@ type WriteSeeker struct {
 	mtime			time.Time
 }
 
+func NewEmptyWriteSeeker() (*WriteSeeker, error) {
+	w := &WriteSeeker {
+		session:		nil,
+		key:			nil,
+		want_key_free:		false,
+		chunk:			make([]byte, 10 * 1024 * 1024),
+	}
+
+	return w, nil
+}
+
 func NewWriteSeeker(session *Session, kstr string, remote_offset int64, total_size, reserve_size uint64) (*WriteSeeker, error) {
 	key, err := NewKey(kstr)
 	if err != nil {
@@ -114,6 +125,10 @@ func (wch *write_channel) on_finish(err error) {
 }
 
 func (w *WriteSeeker) Flush(buf []byte) (err error) {
+	if w.session == nil || w.key == nil {
+		return fmt.Errorf("trying to write into empty interface")
+	}
+
 	if w.local_offset == 0 {
 		return nil
 	}
@@ -170,6 +185,10 @@ func (w *WriteSeeker) Flush(buf []byte) (err error) {
 }
 
 func (w *WriteSeeker) Write(p []byte) (int, error) {
+	if w.session == nil || w.key == nil {
+		return 0, fmt.Errorf("trying to write into empty interface")
+	}
+
 	var err error
 
 	data_len := len(p)
