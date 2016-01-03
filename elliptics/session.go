@@ -591,21 +591,13 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	return responseCh
 }
 
-// ParallelLookup returns all information about given Key,
+// ParallelLookupKey returns all information about given Key,
 // it sends multiple lookup requests in parallel to all session groups
 // and returns information about all specified group where given key has been found.
-func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
+func (s *Session) ParallelLookupKey(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
-
-	key, err := NewKey(kstr)
-	if err != nil {
-		responseCh <- &lookupResult{err: err}
-		close(responseCh)
-		return responseCh
-	}
-	defer key.Free()
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -625,6 +617,34 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	/* To keep callbacks alive */
 	C.session_parallel_lookup(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), key.key)
 	return responseCh
+}
+
+func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
+	key, err := NewKey(kstr)
+	if err != nil {
+		responseCh := make(chan Lookuper, defaultVOLUME)
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
+	return s.ParallelLookupKey(key)
+}
+
+func (s *Session) ParallelLookupID(id *DnetRawID) <-chan Lookuper {
+	key, err := NewKey()
+	if err != nil {
+		responseCh := make(chan Lookuper, defaultVOLUME)
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
+	key.SetRawId(id.ID)
+
+	return s.ParallelLookupKey(key)
 }
 
 /*
