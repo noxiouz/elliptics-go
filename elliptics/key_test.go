@@ -3,56 +3,44 @@ package elliptics
 import (
 	"crypto/sha512"
 	"errors"
-	"testing"
+	. "gopkg.in/check.v1"
 )
 
-/*
-	Key
-*/
+type KeySuite struct {
+	badKey  int
+	goodKey string
+}
 
-const (
-	badKeyCreationArg  = 9999
-	goodKeyCreationArg = "some_key"
-)
+func init() {
+	Suite(&KeySuite{
+		badKey:  9999,
+		goodKey: "some_key",
+	})
 
-func TestKeyDefaultCreationAndFree(t *testing.T) {
+	Suite(&DnetErrorSuite{})
+}
+
+func (s *KeySuite) TestKeyDefaultCreationAndFree(c *C) {
 	key, err := NewKey()
-	if err != nil {
-		t.Errorf("%v", key)
-	}
+	c.Assert(err, IsNil)
+	defer key.Free()
 
-	// t.Log(key.CmpID([]uint8{1, 2, 3, 4, 5}))
+	c.Assert(key.ById(), Equals, false)
+}
 
-	if key.ById() {
-		t.Errorf("%s", "Create key without ID")
-	}
+func (s *KeySuite) TestKeyCreationAndFree(c *C) {
+	_, err := NewKey(s.badKey)
+	c.Assert(err, Equals, InvalidKeyArgument)
 
+	key, err := NewKey(s.goodKey)
+	c.Assert(err, IsNil)
 	key.Free()
 }
 
-func TestKeyCreationAndFree(t *testing.T) {
-	_, err := NewKey(badKeyCreationArg)
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-
-	key, err := NewKey(goodKeyCreationArg)
-	if err != nil {
-		t.Fatalf("Error in a key creation, got %v", err)
-	}
-	key.Free()
-}
-
-/*
-	Keys
-*/
-
-func TestKeysCreationAndFree(t *testing.T) {
-	t.Skip("Skip this test")
+func (s *KeySuite) TestKeysCreationAndFree(c *C) {
+	c.Skip("Skip this test")
 	keys, err := NewKeys([]string{"A", "B", "C"})
-	if err != nil {
-		t.Fatalf("NewKeys: Unexpected error %s", err)
-	}
+	c.Assert(err, IsNil)
 	defer keys.Free()
 
 	var hash []uint8
@@ -61,42 +49,32 @@ func TestKeysCreationAndFree(t *testing.T) {
 	}
 	name, err := keys.Find(hash)
 	if err != nil {
-		t.Errorf("Find: Unexpected error %s", err)
+		c.Errorf("Find: Unexpected error %s", err)
 	}
 
 	if name != "A" {
-		t.Errorf("Unexpected `name` value %s", name)
+		c.Errorf("Unexpected `name` value %s", name)
 	}
 }
 
-/*
-	Error
-*/
+type DnetErrorSuite struct{}
 
-func TestDnetError(t *testing.T) {
-	const (
+func (s *KeySuite) TestDnetError(c *C) {
+	var (
 		dnetCode = 100
-		dnetFlag = 16
+		dnetFlag = uint64(16)
 		dnetMsg  = "dummy_dnet_error_message"
+
+		derr = &DnetError{
+			Code:    dnetCode,
+			Flags:   dnetFlag,
+			Message: dnetMsg,
+		}
+
+		dummyErr = errors.New("dummy_err")
 	)
-	derr := DnetError{
-		Code:    dnetCode,
-		Flags:   dnetFlag,
-		Message: dnetMsg,
-	}
 
-	dummyErr := errors.New("dummy_err")
-
-	if msg := ErrorData(&derr); msg != dnetMsg {
-		t.Errorf("ErroData: expected %s, got %s", dnetMsg, msg)
-	}
-
-	if msg := ErrorData(dummyErr); msg != dummyErr.Error() {
-		t.Errorf("ErroData: expected %s, got %s", dummyErr.Error(), msg)
-	}
-
-	if len(derr.Error()) == 0 {
-		t.Errorf("DnetError: a malformed error representation")
-	}
-
+	c.Assert(ErrorData(derr), Equals, dnetMsg)
+	c.Assert(ErrorData(dummyErr), Equals, dummyErr.Error())
+	c.Assert(derr.Error(), Not(HasLen), 0)
 }
