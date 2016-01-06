@@ -15,279 +15,253 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { TestingT(t) }
 
-func TestSession(t *testing.T) {
-	var (
-		sessionGroups  = []uint32{1, 2, 100, 505}
-		sessionTraceID = TraceID(99999)
-
-		sessionCflags  = DNET_FLAGS_NOCACHE
-		sessionIOflags = DNET_IO_FLAGS_NOCSUM
-	)
-
-	const (
-		sessionNamespace = "sessionNamespace"
-		sessionTimeout   = 5
-	)
-
-	node, err := NewNode("/dev/stderr", "error")
-	if err != nil {
-		t.Fatalf("NewNode: unexpected error %s", err)
-	}
-
-	defer func() {
-		time.Sleep(1 * time.Second)
-		node.Free()
-	}()
-
-	session, err := NewSession(node)
-	if err != nil {
-		t.Fatalf("NewSession: unexpected error %s", err)
-	}
-	defer session.Delete()
-
-	session.SetGroups(sessionGroups)
-
-	if gotGroups := session.GetGroups(); len(gotGroups) != len(sessionGroups) {
-		t.Errorf("SetGroups & GetGroups: invalid groups number. Expected %d, got %d",
-			len(sessionGroups), len(gotGroups))
-	}
-
-	session.SetNamespace(sessionNamespace)
-
-	session.SetTimeout(sessionTimeout)
-	if gotTimeout := session.GetTimeout(); gotTimeout != sessionTimeout {
-		t.Errorf("Set/GetTimeout: invalid timeout value. Expected %d, got %d",
-			sessionTimeout, gotTimeout)
-	}
-
-	session.SetTraceID(sessionTraceID)
-	if gotTraceId := session.GetTraceID(); gotTraceId != sessionTraceID {
-		t.Errorf("Set/GetTraceID: invalid timeout value. Expected %d, got %d",
-			sessionTraceID, gotTraceId)
-	}
-
-	session.SetCflags(sessionCflags)
-	if gotCflags := session.GetCflags(); gotCflags != sessionCflags {
-		t.Errorf("Set/GetCflags: invalid timeout value. Expected %d, got %d",
-			sessionCflags, gotCflags)
-	}
-
-	session.SetIOflags(sessionIOflags)
-	if gotIOflags := session.GetIOflags(); gotIOflags != sessionIOflags {
-		t.Errorf("Set/GetIOflags: invalid timeout value. Expected %d, got %d",
-			sessionIOflags, gotIOflags)
-	}
-
-	dnetStat := session.DnetStat()
-	t.Log(dnetStat)
-	defer session.GetRoutes(dnetStat)
-	t.Log(dnetStat.StatData())
+func init() {
+	Suite(&SessionSuite{})
 }
 
-func TestFull(t *testing.T) {
-	/* Preparing */
+type SessionSuite struct {
+	NodeSuite
+	session *Session
+	groups  []uint32
+}
 
+func (s *SessionSuite) SetUpSuite(c *C) {
 	const (
-		FULL_TEST_REMOTES = `FULL_TEST_REMOTES`
-		FULL_TEST_GROUPS  = `FULL_TEST_GROUPS`
-
-		TEST_BLOB = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testRemotesEnv = `TEST_REMOTES`
+		testGroupsEnv  = `TEST_GROUPS`
 	)
 	var (
-		testRemotes = os.Getenv(FULL_TEST_REMOTES)
-		testGroups  = os.Getenv(FULL_TEST_GROUPS)
-
-		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
-		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
-		testBlobReader io.Reader = strings.NewReader(TEST_BLOB)
+		testRemotes = os.Getenv(testRemotesEnv)
+		testGroups  = os.Getenv(testGroupsEnv)
 	)
 
 	if testRemotes == "" || testGroups == "" {
-		t.Log(testRemotes, testGroups)
-		t.Skipf(`TestFull: Skipped as remotes and groups aren't specified.
-Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`,
-			FULL_TEST_REMOTES, FULL_TEST_GROUPS)
+		c.Log(testRemotes, testGroups)
+		c.Skip(fmt.Sprintf(`TestFull: Skipped as remotes and groups aren't specified.
+	Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`,
+			testRemotesEnv, testGroupsEnv))
 	}
 
-	Remotes := strings.Split(testRemotes, ",")
-
-	raw_groups := strings.Split(testGroups, ",")
-	Groups := make([]uint32, len(raw_groups))
-	for i, groups := range raw_groups {
-		gr, err := strconv.Atoi(groups)
+	s.NodeSuite.SetUpTest(c)
+	s.node.AddRemotes(strings.Split(testRemotes, ","))
+	for _, group := range strings.Split(testGroups, ",") {
+		gr, err := strconv.ParseUint(group, 10, 32)
 		if err != nil {
-			t.Fatalf("TestFull: invalid group number %s", err)
-		} else {
-			Groups[i] = uint32(gr)
+			c.Fatalf("TestFull: invalid group number %v", err)
 		}
+		s.groups = append(s.groups, uint32(gr))
+	}
+}
+
+func (s *SessionSuite) TearDownSuite(c *C) {
+	s.NodeSuite.TearDownTest(c)
+}
+
+func (s *SessionSuite) SetUpTest(c *C) {
+	session, err := NewSession(s.node)
+	c.Assert(err, IsNil)
+
+	s.session = session
+}
+
+func (s *SessionSuite) TearDownTest(c *C) {
+	if s.session != nil {
+		s.session.Delete()
+	}
+}
+
+func (s *SessionSuite) TestGroups(c *C) {
+	var sessionGroups = []uint32{1, 2, 100, 505}
+	s.session.SetGroups(sessionGroups)
+	c.Assert(s.session.GetGroups(), DeepEquals, sessionGroups)
+}
+
+func (s *SessionSuite) TestClone(c *C) {
+	var sessionGroups = []uint32{1, 2, 100, 505}
+	s.session.SetGroups(sessionGroups)
+	s.session.SetCflags(DNET_FLAGS_NOCACHE)
+	s.session.SetIOflags(DNET_IO_FLAGS_NOCSUM)
+
+	session, err := CloneSession(s.session)
+	c.Assert(err, IsNil)
+	defer session.Delete()
+
+	c.Assert(session.groups, DeepEquals, s.session.groups)
+	c.Assert(session.GetCflags(), Equals, s.session.GetCflags())
+	c.Assert(session.GetIOflags(), Equals, s.session.GetIOflags())
+}
+
+func (s *SessionSuite) TestTimeout(c *C) {
+	const sessionTimeout = 5
+	s.session.SetTimeout(sessionTimeout)
+	c.Assert(s.session.GetTimeout(), Equals, sessionTimeout)
+}
+
+func (s *SessionSuite) TestNamespace(c *C) {
+	const sessionNamespace = "sessionNamespace"
+	s.session.SetNamespace(sessionNamespace)
+}
+
+func (s *SessionSuite) TestTraceID(c *C) {
+	var sessionTraceID = TraceID(99999)
+	s.session.SetTraceID(sessionTraceID)
+	c.Assert(s.session.GetTraceID(), Equals, sessionTraceID)
+}
+
+func (s *SessionSuite) TestCFlags(c *C) {
+	var sessionCflags = DNET_FLAGS_NOCACHE
+	s.session.SetCflags(sessionCflags)
+	c.Assert(s.session.GetCflags(), Equals, sessionCflags)
+}
+
+func (s *SessionSuite) TestIOFlags(c *C) {
+	var sessionIOflags = DNET_IO_FLAGS_NOCSUM
+	s.session.SetIOflags(sessionIOflags)
+	c.Assert(s.session.GetIOflags(), Equals, sessionIOflags)
+}
+
+func (s *SessionSuite) TestSessionStat(c *C) {
+	dnetStat := s.session.DnetStat()
+	c.Log(dnetStat)
+	defer s.session.GetRoutes(dnetStat)
+	c.Log(dnetStat.StatData())
+}
+
+func (s *SessionSuite) TestTimestamp(c *C) {
+	ts := time.Now()
+	s.session.SetTimestamp(ts)
+	c.Assert(s.session.GetTimestamp(), Equals, ts)
+}
+
+// TestReadWrite writes a key with a data, then read it
+func (s *SessionSuite) TestWriteRead(c *C) {
+	var (
+		testBlob                 = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testBlobReader io.Reader = strings.NewReader(testBlob)
+	)
+
+	s.session.SetGroups(s.groups)
+	s.session.SetNamespace(testNamespace)
+
+	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
+		c.Assert(res.Error(), IsNil)
 	}
 
-	indexes_names := []string{"A", "B"}
-	bad_indexes_names := []string{"Y", "Z"}
-	indexes := make(map[string]string)
-	reverse_indexes := make(map[string]string)
-	for _, index_name := range indexes_names {
-		value := fmt.Sprintf("extended_value_%s", index_name)
-		indexes[index_name] = value
-		reverse_indexes[value] = index_name
+	// No overflow must be there
+	// TODO: addd Assert
+	offset, size := uint64(1), uint64(2)
+	for res := range s.session.ReadData(testKey, offset, size) {
+		// No read error
+		c.Assert(res.Error(), IsNil)
+		// Read exactly size
+		c.Assert(res.Data(), HasLen, int(size))
+		c.Assert(res.Data(), DeepEquals, []byte(testBlob[offset:offset+size]))
+	}
+}
+
+// TestReadWrite writes a key with a data, then read it into buffer
+func (s *SessionSuite) TestWriteReadInto(c *C) {
+	var (
+		testBlob                 = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testBlobReader io.Reader = strings.NewReader(testBlob)
+	)
+
+	s.session.SetGroups(s.groups)
+	s.session.SetNamespace(testNamespace)
+
+	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
+		c.Assert(res.Error(), IsNil)
 	}
 
-	extended_indexes := make(map[string]string)
-	extended_reverse_indexes := make(map[string]string)
-	extended_indexes_names := append(indexes_names, bad_indexes_names...)
-	for _, index_name := range extended_indexes_names {
-		value := fmt.Sprintf("value%s", index_name)
-		extended_indexes[index_name] = value
-		extended_reverse_indexes[value] = index_name
-	}
-	/*  End of the preparing */
+	// No overflow must be there
+	// TODO: addd Assert
+	offset := uint64(2)
+	p := make([]byte, 2)
+	key, _ := NewKey(testKey)
+	defer key.Free()
 
-	//Create Node
-	node, err := NewNode("/dev/stderr", "error")
-	if err != nil {
-		t.Fatalf("unexpected error %s during NewNode", err)
+	for res := range s.session.ReadInto(key, offset, p) {
+		// No read error
+		c.Assert(res.Error(), IsNil)
+		// Read exactly size
+		c.Assert(res.Data(), HasLen, len(p))
+		c.Assert(p, DeepEquals, []byte(testBlob[offset:offset+uint64(len(p))]))
 	}
+}
 
-	t.Logf("Adding remotes %s and groups %v", Remotes, Groups)
-	if err = node.AddRemotes(Remotes); err != nil {
-		t.Fatalf("unexpected error %s during AddRemotes", err)
-	}
+// TestLookupWriteLookup lookups a random key, writes it, then looks it up again
+func (s *SessionSuite) TestLookupWriteLookup(c *C) {
+	// TODO: copy-paste
+	var (
+		testBlob                 = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testBlobReader io.Reader = strings.NewReader(testBlob)
+	)
 
-	defer func() {
-		time.Sleep(1 * time.Second)
-		node.Free()
-	}()
-
-	session, err := NewSession(node)
-	if err != nil {
-		t.Fatalf("unexpected error %s during NewSession", err)
-	}
-	session.SetGroups(Groups)
-	session.SetNamespace(testNamespace)
-
-	for res := range session.WriteData(testKey, testBlobReader, 0, 0) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("lookup result error: %s", err)
-		}
-	}
+	s.session.SetGroups(s.groups)
+	s.session.SetNamespace(testNamespace)
 
 	key, _ := NewKey(testKey)
-	for res := range session.Lookup(key) {
-		dnet_add := res.Addr()
+	defer key.Free()
 
-		if len(dnet_add.String()) == 0 {
-			t.Fatalf("session.Lookup error: invalid String()")
-		}
-
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.Lookup error: %s", err)
-		}
-
+	for res := range s.session.Lookup(key) {
+		c.Assert(res.Error(), ErrorMatches, ".*Failed to process LOOKUP command: No such file or directory: -2.*$")
 	}
 
-	for res := range session.ParallelLookup(testKey) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.Lookup error: %s", err)
-		}
+	for res := range s.session.ParallelLookup(testKey) {
+		c.Assert(res.Error(), ErrorMatches, ".*Failed to process LOOKUP command: No such file or directory: -2.*$")
 	}
 
-	for res := range session.ReadData(testKey, 1, 1) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.ReadData error: %s", err)
-		}
-
-		if res_size := len(res.Data()); res_size != 1 {
-			t.Fatalf("session.ReadData: wrong response size. Expected 1, got %d", res_size)
-		}
-
-		if res.Data()[0] != TEST_BLOB[1] {
-			t.Fatalf("session.ReadData: wrong response content. Expected %v, got %v", TEST_BLOB[1], res.Data()[0])
-		}
+	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
+		c.Assert(res.Error(), IsNil)
 	}
 
-	for res := range session.SetIndexes(testKey, indexes) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.SetIndexes error: %s", err)
-		}
+	for res := range s.session.Lookup(key) {
+		// No error
+		c.Assert(res.Error(), IsNil)
+		// Address must not be empty
+		c.Assert(res.Addr().String(), Not(HasLen), 0)
+		c.Assert(res.Info().Size, DeepEquals, uint64(len(testBlob)))
 	}
 
-	var i int
-	for res := range session.ListIndexes(testKey) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.ListIndexes error: %s", err)
-		}
+	for res := range s.session.ParallelLookup(testKey) {
+		// No error
+		c.Assert(res.Error(), IsNil)
+		c.Assert(res.Addr().String(), Not(HasLen), 0)
+		c.Assert(res.Info().Size, DeepEquals, uint64(len(testBlob)))
+	}
+}
 
-		i++
-		index_item_name := res.Data
-		if _, ok := reverse_indexes[index_item_name]; !ok {
-			t.Fatalf("session.ListIndexes error: unset index is found %s", index_item_name)
-		}
+func (s *SessionSuite) TestWriteRemove(c *C) {
+	// TODO: copy-paste
+	var (
+		testBlob                 = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testBlobReader io.Reader = strings.NewReader(testBlob)
+	)
+
+	s.session.SetGroups(s.groups)
+	s.session.SetNamespace(testNamespace)
+
+	key, _ := NewKey(testKey)
+	defer key.Free()
+
+	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
+		c.Assert(res.Error(), IsNil)
 	}
 
-	if i != len(indexes_names) {
-		t.Fatalf("session.ListIndexes error: invalid total numbes of indxes. Expected %d, got %d", len(indexes_names), i)
+	for res := range s.session.Remove(testKey) {
+		c.Assert(res.Error(), IsNil)
 	}
 
-	// FindAll. Must be empty
-	for res := range session.FindAllIndexes(append(indexes_names, bad_indexes_names...)) {
-		t.Fatalf("Result must empty, but got %v", res)
+	for res := range s.session.Lookup(key) {
+		// Check that the key was actually removed
+		c.Assert(res.Error(), ErrorMatches, ".*Failed to process LOOKUP command: No such file or directory: -2.*$")
 	}
-
-	// FindAny
-	i = 0
-	for res := range session.FindAnyIndexes(append(bad_indexes_names, indexes_names[0])) {
-		i++
-		t.Logf("%s", res.Data()[0].Data)
-	}
-
-	if i != 1 {
-		t.Fatalf("session.FindAnyIndexes error: invalid total numbes of indxes. Expected 1, got %d", i)
-	}
-	//=====================
-
-	// Case: Update indexes, remove old ones, and list
-	for res := range session.UpdateIndexes(testKey, extended_indexes) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.UpdateIndexes error: %s", err)
-		}
-	}
-
-	for res := range session.RemoveIndexes(testKey, indexes_names) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.RemoveIndexes error: %s", err)
-		}
-	}
-
-	i = 0
-	for res := range session.ListIndexes(testKey) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.ListIndexes error: %s", err)
-		}
-
-		i++
-		index_item_name := res.Data
-		if _, ok := reverse_indexes[index_item_name]; ok {
-			t.Fatalf("session.ListIndexes error: removed index is found %s", index_item_name)
-		}
-	}
-
-	if i != len(bad_indexes_names) {
-		t.Fatalf("session.ListIndexes error: invalid total numbes of indxes. Expected %d, got %d", len(bad_indexes_names), i)
-	}
-	//================================================
-
-	// Remove
-	for res := range session.Remove(testKey) {
-		if err := res.Error(); err != nil {
-			t.Fatalf("session.Remove error: %s", err)
-		}
-	}
-
-	// Lookup after Remove
-	for res := range session.Lookup(key) {
-		if err := res.Error(); err == nil {
-			t.Fatalf("session.Lookup. Expected error, but got nil")
-		}
-	}
-
 }

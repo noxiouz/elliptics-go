@@ -38,9 +38,9 @@ func (err *DnetError) Error() string {
 func DnetErrorFromError(err error) *DnetError {
 	if ke, ok := err.(*DnetError); ok {
 		return ke
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 func ErrorData(err error) string {
