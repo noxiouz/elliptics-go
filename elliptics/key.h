@@ -21,13 +21,13 @@
 #include <elliptics/session.hpp>
 typedef ioremap::elliptics::key ell_key;
 
-typedef struct
-{
+typedef struct {
 	std::vector<ioremap::elliptics::key>	kk;
 	void insert(const char *str, int len) {
 		std::string tmp(str, len);
 		kk.emplace_back(std::move(ioremap::elliptics::key(tmp)));
 	}
+
 	std::string find(const ioremap::elliptics::key &tmp) const {
 		auto it = std::lower_bound(kk.begin(), kk.end(), tmp, *this);
 		if (it != kk.end()) {
@@ -45,11 +45,30 @@ typedef struct
 	}
 } ell_keys;
 
+typedef struct {
+	std::vector<dnet_raw_id>	ids;
+
+	void insert(const void *id, int len) {
+		dnet_raw_id raw;
+
+		if (len > DNET_ID_SIZE)
+			len = DNET_ID_SIZE;
+		if (len != DNET_ID_SIZE) {
+			memset(&raw, 0, sizeof(dnet_raw_id));
+		}
+
+		memcpy(raw.id, id, len);
+
+		ids.emplace_back(std::move(raw));
+	}
+} ell_dnet_raw_id_keys;
+
 extern "C" {
 #else
 #include <elliptics/interface.h>
 typedef void ell_key;
 typedef void ell_keys;
+typedef void ell_dnet_raw_id_keys;
 #endif
 
 ell_key *new_key();
@@ -59,7 +78,8 @@ ell_key *new_key_from_id(const char *id);
 const char *key_remote(ell_key *key);
 
 int key_by_id(ell_key *key);
-void key_set_id(ell_key *c_key, const struct dnet_id *id);
+void key_set_id(ell_key *key, const void *raw, int size, int group_id);
+void key_set_raw_id(ell_key *key, const void *raw, int size);
 int key_id_cmp(ell_key *key, const void *id);
 
 void delete_key(ell_key *c_key);
@@ -68,6 +88,11 @@ ell_keys *ell_keys_new();
 void ell_keys_free(ell_keys *keys);
 int ell_keys_insert(ell_keys *keys, const char *str, int len);
 char *ell_keys_find(ell_keys *keys, void *id);
+
+ell_dnet_raw_id_keys *ell_dnet_raw_id_keys_new();
+int ell_dnet_raw_id_keys_insert(ell_dnet_raw_id_keys *keys, const void *id, int len);
+void ell_dnet_raw_id_keys_free(ell_dnet_raw_id_keys *keys);
+size_t ell_dnet_raw_id_keys_size(ell_dnet_raw_id_keys *keys);
 
 #ifdef __cplusplus
 }

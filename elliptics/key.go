@@ -61,7 +61,7 @@ func NewKey(args ...interface{}) (key *Key, err error) {
 	return &Key{ckey}, nil
 }
 
-func NewKeyFromID(id string) (key *Key, err error) {
+func NewKeyFromIdStr(id string) (key *Key, err error) {
 	cid := C.CString(id)
 	defer C.free(unsafe.Pointer(cid))
 	ckey := C.new_key_from_id(cid)
@@ -77,10 +77,14 @@ func (k *Key) ById() bool {
 	return int(C.key_by_id(k.key)) > 0
 }
 
-// func (k *Key) SetId(dnetId *DnetId) (err error) {
-// 	_, err = C.key_set_id(k.key, dnetId._dnet_id)
-// 	return
-// }
+func (k *Key) SetId(id []byte, group_id uint32) {
+	C.key_set_id(k.key, unsafe.Pointer(&id[0]), C.int(len(id)), C.int(group_id))
+	return
+}
+func (k *Key) SetRawId(id []byte) {
+	C.key_set_raw_id(k.key, unsafe.Pointer(&id[0]), C.int(len(id)))
+	return
+}
 
 func (k *Key) Free() {
 	C.delete_key(k.key)
@@ -134,4 +138,42 @@ func (kk *Keys) Find(id []uint8) (ret string, err error) {
 
 func (kk *Keys) Free() {
 	C.ell_keys_free(kk.keys)
+}
+
+// Key based on std::vector<dnet_raw_id>
+
+type DnetRawIDKeys struct {
+	keys unsafe.Pointer
+}
+
+func NewDnetRawIDKeys(ids []DnetRawID) (kk *DnetRawIDKeys, err error) {
+	var ckeys unsafe.Pointer
+	ckeys = C.ell_dnet_raw_id_keys_new()
+	if ckeys == nil {
+		err = fmt.Errorf("could not create key array")
+		return
+	}
+
+	err = nil
+	kk = &DnetRawIDKeys {
+		keys: ckeys,
+	}
+
+	for idx, _ := range ids {
+		kk.InsertID(&ids[idx])
+	}
+
+	return
+}
+
+func (kk *DnetRawIDKeys) InsertID(id *DnetRawID) {
+	C.ell_dnet_raw_id_keys_insert(kk.keys, unsafe.Pointer(&id.ID[0]), C.int(len(id.ID)))
+}
+
+func (kk *DnetRawIDKeys) Free() {
+	C.ell_dnet_raw_id_keys_free(kk.keys)
+}
+
+func (kk *DnetRawIDKeys) Size() int {
+	return int(C.ell_dnet_raw_id_keys_size(kk.keys))
 }

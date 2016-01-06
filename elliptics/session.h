@@ -39,7 +39,7 @@ struct go_read_result {
 	const struct dnet_addr		*addr;
 	const struct dnet_io_attr	*io_attribute;
 	const char			*file;
-	uint64_t				size;
+	uint64_t			size;
 };
 
 //lookup_result_entry
@@ -58,8 +58,8 @@ struct go_remove_result {
 
 //index_entry
 struct c_index_entry {
-	const char		*data;
-	uint64_t		size;
+	const char			*data;
+	uint64_t			size;
 };
 
 //find_indexes_result_entry
@@ -75,9 +75,9 @@ struct go_data_pointer {
 };
 
 struct go_error {
-	int			code;		// elliptics error code, should be negative errno value
-	uint64_t	flags;		// dnet_cmd.flags
-	const char	*message;
+	int				code;		// elliptics error code, should be negative errno value
+	uint64_t			flags;		// dnet_cmd.flags
+	const char			*message;
 };
 
 
@@ -88,20 +88,21 @@ struct go_iterator_range {
 
 struct go_iterator_result {
 	// dnet_iterator_response
-	struct dnet_iterator_response *reply;
+	struct dnet_iterator_response	*reply;
 
 	// data_pointer
-	const char* reply_data;
-	const uint64_t reply_size;
+	const char			*reply_data;
+	const uint64_t			reply_size;
 
 	// iterator_id
-	uint64_t id;
+	uint64_t			id;
 };
 
 
 struct go_data_pointer new_data_pointer(char *data, int size);
 
 ell_session *new_elliptics_session(ell_node *node);
+ell_session *clone_session(ell_session *session);
 void delete_session(ell_session *session);
 
 const char *session_transform(ell_session *session, const char *key);
@@ -126,6 +127,9 @@ ioflags_t session_get_ioflags(ell_session *session);
 void session_set_trace_id(ell_session *session, trace_id_t trace_id);
 trace_id_t session_get_trace_id(ell_session *session);
 
+void session_set_timestamp(ell_session *session, const struct dnet_time *ts);
+void session_get_timestamp(ell_session *session, struct dnet_time *ts);
+
 // ->lookup() returns only the first group where given key has been found
 void session_lookup(ell_session *session, context_t on_chunk_context,
 		context_t final_context, ell_key *key);
@@ -133,6 +137,8 @@ void session_lookup(ell_session *session, context_t on_chunk_context,
 void session_parallel_lookup(ell_session *session, context_t on_chunk_context,
 		context_t final_context, ell_key *key);
 
+void session_read_data_into(ell_session *session, context_t on_chunk_context, context_t buf_context,
+		context_t final_context, ell_key *key, uint64_t offset, uint64_t size);
 void session_read_data(ell_session *session, context_t on_chunk_context,
 		context_t final_context, ell_key *key, uint64_t offset, uint64_t size);
 void session_write_data(ell_session *session, context_t on_chunk_context,

@@ -20,18 +20,25 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
+	"time"
 	"unsafe"
 )
 
-/*
-#include "session.h"
-#include <stdio.h>
-*/
+//#include "session.h"
+//#include <elliptics/packet.h>
 import "C"
 
 const defaultVOLUME = 10
 const max_chunk_size uint64 = 10 * 1024 * 1024
+
+const (
+	DNET_RECORD_FLAGS_REMOVE		= uint64(C.DNET_RECORD_FLAGS_REMOVE)
+	DNET_RECORD_FLAGS_NOCSUM		= uint64(C.DNET_RECORD_FLAGS_NOCSUM)
+	DNET_RECORD_FLAGS_APPEND		= uint64(C.DNET_RECORD_FLAGS_APPEND)
+	DNET_RECORD_FLAGS_EXTHDR		= uint64(C.DNET_RECORD_FLAGS_EXTHDR)
+	DNET_RECORD_FLAGS_UNCOMMITTED		= uint64(C.DNET_RECORD_FLAGS_UNCOMMITTED)
+	DNET_RECORD_FLAGS_CHUNKED_CSUM		= uint64(C.DNET_RECORD_FLAGS_CHUNKED_CSUM)
+)
 
 const (
 	indexesSet = iota
@@ -61,14 +68,30 @@ type Session struct {
 
 //NewSession returns Session connected with given Node.
 func NewSession(node *Node) (*Session, error) {
-	session, err := C.new_elliptics_session(node.node)
-	if err != nil {
-		return nil, err
+	session := C.new_elliptics_session(node.node)
+	if session == nil {
+		return nil, fmt.Errorf("could not create new elliptics session")
 	}
 	return &Session{
 		session: session,
 		groups:  make([]uint32, 0, 0),
-	}, err
+	}, nil
+}
+
+//CloneSession returns clone of the given Session.
+func CloneSession(session *Session) (*Session, error) {
+	new_session := C.clone_session(session.session)
+	if new_session == nil {
+		return nil, fmt.Errorf("could not clone elliptics session")
+	}
+
+	groups := make([]uint32, len(session.groups))
+	copy(groups, session.groups)
+
+	return &Session{
+		session: new_session,
+		groups:  groups,
+	}, nil
 }
 
 func (s *Session) Delete() {
@@ -120,6 +143,23 @@ func (s *Session) SetTraceID(trace TraceID) {
 
 func (s *Session) GetTraceID() TraceID {
 	return TraceID(C.session_get_trace_id(s.session))
+}
+
+func (s *Session) SetTimestamp(ts time.Time) {
+	dtime := C.struct_dnet_time {
+		tsec:	C.uint64_t(ts.Unix()),
+		tnsec:	C.uint64_t(ts.Nanosecond()),
+	}
+
+	C.session_set_timestamp(s.session, &dtime)
+}
+
+func (s *Session) GetTimestamp() time.Time {
+	var dtime C.struct_dnet_time
+
+	C.session_get_timestamp(s.session, &dtime)
+
+	return time.Unix(int64(dtime.tsec), int64(dtime.tnsec))
 }
 
 /*
@@ -206,76 +246,37 @@ func (r *readResult) Error() error {
 	return r.err
 }
 
-//StreamData sends a stream read from elliptics into given http response writer
-// It doesn't start reading next chunk (10M) until the one already read has not been written
-// into the client's pipe. This eliminates number of unneeded copies and adds flow control
-// of the client's pips.
-func (s *Session) StreamHTTP(kstr string, offset, size uint64, w http.ResponseWriter) error {
-	key, err := NewKey(kstr)
-	if err != nil {
-		return err
+//ReadInto reads data into specified buffer.
+func (s *Session) ReadInto(key *Key, offset uint64, p []byte) <-chan ReadResult {
+	responseCh := make(chan ReadResult, defaultVOLUME)
+	onResultContext := NextContext()
+	onFinishContext := NextContext()
+	bufContext := NextContext()
+
+	onResult := func(result *readResult) {
+		responseCh <- result
 	}
-	defer key.Free()
 
-	orig_offset := offset
-	orig_size := size
-
-	// size == 0 means 'read everything
-	for size >= 0 {
-		chunk_size := size
-		if chunk_size > max_chunk_size || chunk_size == 0 {
-			chunk_size = max_chunk_size
-		}
-
-		err = &DnetError{
-			Code:    -6,
-			Flags:   0,
-			Message: fmt.Sprintf("could not read anything at all"),
-		}
-
-		if offset != orig_offset {
-			s.SetIOflags(IOflag(C.DNET_IO_FLAGS_NOCSUM))
-		}
-
-		for rd := range s.ReadKey(key, offset, chunk_size) {
-			err = rd.Error()
-			if err != nil {
-				continue
-			}
-
-			if offset == orig_offset {
-				if size == 0 || size > rd.IO().TotalSize-offset {
-					size = rd.IO().TotalSize - offset
-				}
-
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", size))
-				w.WriteHeader(http.StatusOK)
-			}
-
-			data := rd.Data()
-
-			w.Write(data)
-
-			offset += uint64(len(data))
-			size -= uint64(len(data))
-			break
-		}
-
+	onFinish := func(err error) {
 		if err != nil {
-			return &DnetError{
-				Code:  ErrorStatus(err),
-				Flags: 0,
-				Message: fmt.Sprintf("could not stream data: current-offset: %d/%d, current-size: %d, rest-size: %d/%d: %v",
-					orig_offset, offset, chunk_size, orig_size, size, err),
-			}
+			responseCh <- &readResult{err: err}
 		}
 
-		if size == 0 {
-			break
-		}
+		close(responseCh)
+
+		Pool.Delete(bufContext)
+		Pool.Delete(onResultContext)
+		Pool.Delete(onFinishContext)
 	}
 
-	return nil
+	Pool.Store(bufContext, p)
+	Pool.Store(onResultContext, onResult)
+	Pool.Store(onFinishContext, onFinish)
+
+	C.session_read_data_into(s.session,
+		C.context_t(onResultContext), C.context_t(bufContext), C.context_t(onFinishContext),
+		key.key, C.uint64_t(offset), C.uint64_t(len(p)))
+	return responseCh
 }
 
 //ReadKey performs a read operation by key.
@@ -590,21 +591,13 @@ func (s *Session) Lookup(key *Key) <-chan Lookuper {
 	return responseCh
 }
 
-// ParallelLookup returns all information about given Key,
+// ParallelLookupKey returns all information about given Key,
 // it sends multiple lookup requests in parallel to all session groups
 // and returns information about all specified group where given key has been found.
-func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
+func (s *Session) ParallelLookupKey(key *Key) <-chan Lookuper {
 	responseCh := make(chan Lookuper, defaultVOLUME)
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
-
-	key, err := NewKey(kstr)
-	if err != nil {
-		responseCh <- &lookupResult{err: err}
-		close(responseCh)
-		return responseCh
-	}
-	defer key.Free()
 
 	onResult := func(lookup *lookupResult) {
 		responseCh <- lookup
@@ -624,6 +617,34 @@ func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
 	/* To keep callbacks alive */
 	C.session_parallel_lookup(s.session, C.context_t(onResultContext), C.context_t(onFinishContext), key.key)
 	return responseCh
+}
+
+func (s *Session) ParallelLookup(kstr string) <-chan Lookuper {
+	key, err := NewKey(kstr)
+	if err != nil {
+		responseCh := make(chan Lookuper, defaultVOLUME)
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
+	return s.ParallelLookupKey(key)
+}
+
+func (s *Session) ParallelLookupID(id *DnetRawID) <-chan Lookuper {
+	key, err := NewKey()
+	if err != nil {
+		responseCh := make(chan Lookuper, defaultVOLUME)
+		responseCh <- &lookupResult{err: err}
+		close(responseCh)
+		return responseCh
+	}
+	defer key.Free()
+
+	key.SetRawId(id.ID)
+
+	return s.ParallelLookupKey(key)
 }
 
 /*

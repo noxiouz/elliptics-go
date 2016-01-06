@@ -182,7 +182,9 @@ func (entry *StatEntry) AddressBackend() AddressBackend {
 
 
 type StatBackend struct {
-	Ab AddressBackend
+	// Address+Backend for given stats, do not put it into json
+	// since @RawAddr is an array of bytes and it can not be parsed by human
+	Ab AddressBackend `json:"-"`
 
 	Error BackendError `json:"error"`
 
@@ -243,8 +245,13 @@ func (backend *StatBackend) PIDPain() float64 {
 func (backend *StatBackend) PIDUpdate(e float64) {
 	p := &backend.PID
 	p.Lock()
+	defer p.Unlock()
 
 	delta_T := time.Since(p.ErrorTime).Seconds()
+	if delta_T == 0 {
+		return
+	}
+
 	integral_new := e*delta_T + p.IntegralError
 	diff := (e - p.Error) / delta_T
 
@@ -262,8 +269,6 @@ func (backend *StatBackend) PIDUpdate(e float64) {
 	p.Error = e
 	p.ErrorTime = time.Now()
 	p.Pain = u
-
-	p.Unlock()
 }
 
 func (sb *StatBackend) Len() int {
