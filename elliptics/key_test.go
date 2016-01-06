@@ -75,32 +75,24 @@ func TestKeysCreationAndFree(t *testing.T) {
 
 func TestDnetError(t *testing.T) {
 	const (
-		dnet_code = 100
-		dnet_flag = 16
-		dnet_msg  = "dummy_dnet_error_message"
+		dnetCode = 100
+		dnetFlag = 16
+		dnetMsg  = "dummy_dnet_error_message"
 	)
 	derr := DnetError{
-		Code:    dnet_code,
-		Flags:   dnet_flag,
-		Message: dnet_msg,
+		Code:    dnetCode,
+		Flags:   dnetFlag,
+		Message: dnetMsg,
 	}
 
-	dummy_err := errors.New("dummy_err")
+	dummyErr := errors.New("dummy_err")
 
-	if msg := ErrorData(&derr); msg != dnet_msg {
-		t.Errorf("ErroData: expected %s, got %s", dnet_msg, msg)
+	if msg := ErrorData(&derr); msg != dnetMsg {
+		t.Errorf("ErroData: expected %s, got %s", dnetMsg, msg)
 	}
 
-	if msg := ErrorData(dummy_err); msg != dummy_err.Error() {
-		t.Errorf("ErroData: expected %s, got %s", dummy_err.Error(), msg)
-	}
-
-	if errcode := ErrorStatus(&derr); errcode != dnet_code {
-		t.Errorf("ErroStatus: expected %d, got %d", dnet_code, errcode)
-	}
-
-	if errcode := ErrorStatus(dummy_err); errcode != -22 {
-		t.Errorf("ErroStatus: expected %d, got %d", -22, errcode)
+	if msg := ErrorData(dummyErr); msg != dummyErr.Error() {
+		t.Errorf("ErroData: expected %s, got %s", dummyErr.Error(), msg)
 	}
 
 	if len(derr.Error()) == 0 {

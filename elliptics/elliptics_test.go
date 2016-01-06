@@ -3,7 +3,6 @@ package elliptics
 import (
 	"fmt"
 	"io"
-	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
@@ -90,11 +89,11 @@ func TestFull(t *testing.T) {
 		TEST_BLOB = `MY_TEST_BLOB_WITH_DUMMY_DATA`
 	)
 	var (
-		testRemotes string = os.Getenv(FULL_TEST_REMOTES)
-		testGroups  string = os.Getenv(FULL_TEST_GROUPS)
+		testRemotes = os.Getenv(FULL_TEST_REMOTES)
+		testGroups  = os.Getenv(FULL_TEST_GROUPS)
 
-		testKey        string    = fmt.Sprintf("testkey-%d", time.Now().Unix())
-		testNamespace  string    = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
 		testBlobReader io.Reader = strings.NewReader(TEST_BLOB)
 	)
 
@@ -201,28 +200,19 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 		}
 	}
 
-	w := httptest.NewRecorder()
-	size := uint64(10)
-	if err := session.StreamHTTP(testKey, 0, size, w); err != nil {
-		t.Fatalf("session.StreamHTTP. Unexpected error %s", err)
-	}
-	if uint64(w.Body.Len()) != size {
-		t.Errorf("session.StreamHTTP. Invalid Body length")
-	}
-
 	for res := range session.SetIndexes(testKey, indexes) {
 		if err := res.Error(); err != nil {
 			t.Fatalf("session.SetIndexes error: %s", err)
 		}
 	}
 
-	var i int = 0
+	var i int
 	for res := range session.ListIndexes(testKey) {
 		if err := res.Error(); err != nil {
 			t.Fatalf("session.ListIndexes error: %s", err)
 		}
 
-		i += 1
+		i++
 		index_item_name := res.Data
 		if _, ok := reverse_indexes[index_item_name]; !ok {
 			t.Fatalf("session.ListIndexes error: unset index is found %s", index_item_name)
@@ -241,7 +231,7 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 	// FindAny
 	i = 0
 	for res := range session.FindAnyIndexes(append(bad_indexes_names, indexes_names[0])) {
-		i += 1
+		i++
 		t.Logf("%s", res.Data()[0].Data)
 	}
 
@@ -269,7 +259,7 @@ Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`
 			t.Fatalf("session.ListIndexes error: %s", err)
 		}
 
-		i += 1
+		i++
 		index_item_name := res.Data
 		if _, ok := reverse_indexes[index_item_name]; ok {
 			t.Fatalf("session.ListIndexes error: removed index is found %s", index_item_name)
