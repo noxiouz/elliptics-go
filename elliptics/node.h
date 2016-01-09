@@ -45,7 +45,10 @@ extern "C" {
 typedef void ell_node;
 #endif
 
+#include <elliptics/interface.h>
+
 ell_node *new_node(const char *logfile, const char *level);
+ell_node *new_node_config(const char *logfile, const char *level, struct dnet_config *cfg);
 void delete_node(ell_node *node);
 
 int node_add_remote(ell_node *node, const char *addr, int port, int family);
