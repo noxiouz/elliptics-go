@@ -1,110 +1,109 @@
 package elliptics
 
 import (
-	"crypto/sha512"
 	"errors"
-	"testing"
+
+	. "gopkg.in/check.v1"
 )
 
-/*
-	Key
-*/
+type KeySuite struct {
+	badKey  int
+	goodKey string
+}
 
-const (
-	badKeyCreationArg  = 9999
-	goodKeyCreationArg = "some_key"
-)
+func init() {
+	Suite(&KeySuite{
+		badKey:  9999,
+		goodKey: "some_key",
+	})
 
-func TestKeyDefaultCreationAndFree(t *testing.T) {
+	Suite(&DnetErrorSuite{})
+}
+
+func (s *KeySuite) TestKeyDefaultNewAndFree(c *C) {
 	key, err := NewKey()
-	if err != nil {
-		t.Errorf("%v", key)
-	}
+	c.Assert(err, IsNil)
+	defer key.Free()
 
-	// t.Log(key.CmpID([]uint8{1, 2, 3, 4, 5}))
+	c.Assert(key.ById(), Equals, false)
+}
 
-	if key.ById() {
-		t.Errorf("%s", "Create key without ID")
-	}
+func (s *KeySuite) TestKeySetIdSetRawId(c *C) {
+	key, err := NewKey()
+	c.Assert(err, IsNil)
+	defer key.Free()
 
+	var id = []byte("21b4f4bd9e64ed355c3eb676a28ebedaf6d8f17bdc365995b319097153044080516bd083bfcce66121a3072646994c8430cc382b8dc543e84880183bf856cff5")
+	err = key.SetId(id, 3)
+	c.Assert(err, Equals, ErrInvalidDnetID)
+	err = key.SetRawId(id)
+	c.Assert(err, Equals, ErrInvalidDnetID)
+
+	id = id[:64]
+	err = key.SetId(id, 3)
+	c.Assert(err, IsNil)
+	c.Assert(key.CmpID(id), Equals, 0)
+
+	err = key.SetRawId(id)
+	c.Assert(err, IsNil)
+	c.Assert(key.CmpID(id), Equals, 0)
+}
+
+func (s *KeySuite) TestKeyNewAndFree(c *C) {
+	_, err := NewKey(s.badKey)
+	c.Assert(err, Equals, InvalidKeyArgument)
+
+	key, err := NewKey(s.goodKey)
+	c.Assert(err, IsNil)
 	key.Free()
 }
 
-func TestKeyCreationAndFree(t *testing.T) {
-	_, err := NewKey(badKeyCreationArg)
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-
-	key, err := NewKey(goodKeyCreationArg)
-	if err != nil {
-		t.Fatalf("Error in a key creation, got %v", err)
-	}
-	key.Free()
+func (s *KeySuite) TestKeyFromIDAndFree(c *C) {
+	const id = "21b4f4bd9e64ed355c3eb676a28ebedaf6d8f17bdc365995b319097153044080516bd083bfcce66121a3072646994c8430cc382b8dc543e84880183bf856cff5"
+	key, err := NewKeyFromIdStr(id)
+	c.Assert(err, IsNil)
+	defer key.Free()
+	c.Assert(key.ById(), Equals, true)
 }
 
-/*
-	Keys
-*/
-
-func TestKeysCreationAndFree(t *testing.T) {
-	t.Skip("Skip this test")
+func (s *KeySuite) TestKeysNewAndFree(c *C) {
 	keys, err := NewKeys([]string{"A", "B", "C"})
-	if err != nil {
-		t.Fatalf("NewKeys: Unexpected error %s", err)
-	}
+	c.Assert(err, IsNil)
 	defer keys.Free()
-
-	var hash []uint8
-	for _, v := range sha512.Sum512([]byte("A")) {
-		hash = append(hash, v)
-	}
-	name, err := keys.Find(hash)
-	if err != nil {
-		t.Errorf("Find: Unexpected error %s", err)
-	}
-
-	if name != "A" {
-		t.Errorf("Unexpected `name` value %s", name)
-	}
 }
 
-/*
-	Error
-*/
+func (s *KeySuite) TestDnetRawIDKeysNewAndFree(c *C) {
+	ids := []DnetRawID{
+		DnetRawID{[]byte("21b4f4bd9e64ed355c3eb676a28ebedaf6d8f17bdc365995b319097153044080516bd083bfcce66121a3072646994c8430cc382b8dc543e84880183bf856cff5")},
+		DnetRawID{[]byte("848b0779ff415f0af4ea14df9dd1d3c29ac41d836c7808896c4eba19c51ac40a439caf5e61ec88c307c7d619195229412eaa73fb2a5ea20d23cc86a9d8f86a0f")},
+	}
+	keys, err := NewDnetRawIDKeys(ids)
+	c.Assert(err, IsNil)
+	defer keys.Free()
+	c.Assert(keys.Size(), Equals, len(ids))
 
-func TestDnetError(t *testing.T) {
-	const (
-		dnet_code = 100
-		dnet_flag = 16
-		dnet_msg  = "dummy_dnet_error_message"
+	keys.InsertID(&DnetRawID{[]byte("3d637ae63d59522dd3cb1b81c1ad67e56d46185b0971e0bc7dd2d8ad3b26090acb634c252fc6a63b3766934314ea1a6e59fa0c8c2bc027a7b6a460b291cd4dfb")})
+	c.Assert(keys.Size(), Equals, len(ids)+1)
+}
+
+type DnetErrorSuite struct{}
+
+func (s *KeySuite) TestDnetError(c *C) {
+	var (
+		dnetCode = 100
+		dnetFlag = uint64(16)
+		dnetMsg  = "dummy_dnet_error_message"
+
+		derr = &DnetError{
+			Code:    dnetCode,
+			Flags:   dnetFlag,
+			Message: dnetMsg,
+		}
+
+		dummyErr = errors.New("dummy_err")
 	)
-	derr := DnetError{
-		Code:    dnet_code,
-		Flags:   dnet_flag,
-		Message: dnet_msg,
-	}
 
-	dummy_err := errors.New("dummy_err")
-
-	if msg := ErrorData(&derr); msg != dnet_msg {
-		t.Errorf("ErroData: expected %s, got %s", dnet_msg, msg)
-	}
-
-	if msg := ErrorData(dummy_err); msg != dummy_err.Error() {
-		t.Errorf("ErroData: expected %s, got %s", dummy_err.Error(), msg)
-	}
-
-	if errcode := ErrorStatus(&derr); errcode != dnet_code {
-		t.Errorf("ErroStatus: expected %d, got %d", dnet_code, errcode)
-	}
-
-	if errcode := ErrorStatus(dummy_err); errcode != -22 {
-		t.Errorf("ErroStatus: expected %d, got %d", -22, errcode)
-	}
-
-	if len(derr.Error()) == 0 {
-		t.Errorf("DnetError: a malformed error representation")
-	}
-
+	c.Assert(ErrorData(derr), Equals, dnetMsg)
+	c.Assert(ErrorData(dummyErr), Equals, dummyErr.Error())
+	c.Assert(derr.Error(), Not(HasLen), 0)
 }
