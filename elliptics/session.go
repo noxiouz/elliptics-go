@@ -32,12 +32,12 @@ const defaultVOLUME = 10
 const max_chunk_size uint64 = 10 * 1024 * 1024
 
 const (
-	DNET_RECORD_FLAGS_REMOVE       = uint64(C.DNET_RECORD_FLAGS_REMOVE)
-	DNET_RECORD_FLAGS_NOCSUM       = uint64(C.DNET_RECORD_FLAGS_NOCSUM)
-	DNET_RECORD_FLAGS_APPEND       = uint64(C.DNET_RECORD_FLAGS_APPEND)
-	DNET_RECORD_FLAGS_EXTHDR       = uint64(C.DNET_RECORD_FLAGS_EXTHDR)
-	DNET_RECORD_FLAGS_UNCOMMITTED  = uint64(C.DNET_RECORD_FLAGS_UNCOMMITTED)
-	DNET_RECORD_FLAGS_CHUNKED_CSUM = uint64(C.DNET_RECORD_FLAGS_CHUNKED_CSUM)
+	DNET_RECORD_FLAGS_REMOVE		= uint64(C.DNET_RECORD_FLAGS_REMOVE)
+	DNET_RECORD_FLAGS_NOCSUM		= uint64(C.DNET_RECORD_FLAGS_NOCSUM)
+	DNET_RECORD_FLAGS_APPEND		= uint64(C.DNET_RECORD_FLAGS_APPEND)
+	DNET_RECORD_FLAGS_EXTHDR		= uint64(C.DNET_RECORD_FLAGS_EXTHDR)
+	DNET_RECORD_FLAGS_UNCOMMITTED		= uint64(C.DNET_RECORD_FLAGS_UNCOMMITTED)
+	DNET_RECORD_FLAGS_CHUNKED_CSUM		= uint64(C.DNET_RECORD_FLAGS_CHUNKED_CSUM)
 )
 
 const (
@@ -111,7 +111,6 @@ func (s *Session) GetGroups() []uint32 {
 
 //SetTimeout sets wait timeout in seconds (time to wait for operation to complete) for all subsequent session operations
 func (s *Session) SetTimeout(timeout int) {
-	// TODO: should it accept time.Duration?
 	// replace C.int to C.long as soon as fix is done in elliptics
 	C.session_set_timeout(s.session, C.int(timeout))
 }
@@ -147,9 +146,9 @@ func (s *Session) GetTraceID() TraceID {
 }
 
 func (s *Session) SetTimestamp(ts time.Time) {
-	dtime := C.struct_dnet_time{
-		tsec:  C.uint64_t(ts.Unix()),
-		tnsec: C.uint64_t(ts.Nanosecond()),
+	dtime := C.struct_dnet_time {
+		tsec:	C.uint64_t(ts.Unix()),
+		tnsec:	C.uint64_t(ts.Nanosecond()),
 	}
 
 	C.session_set_timestamp(s.session, &dtime)

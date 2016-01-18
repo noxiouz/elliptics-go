@@ -3,8 +3,6 @@ package elliptics
 import (
 	"fmt"
 	"io"
-	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -23,38 +21,34 @@ type SessionSuite struct {
 	NodeSuite
 	session *Session
 	groups  []uint32
+	ioserv  *DnetIOServ
 }
 
 func (s *SessionSuite) SetUpSuite(c *C) {
-	const (
-		testRemotesEnv = `TEST_REMOTES`
-		testGroupsEnv  = `TEST_GROUPS`
-	)
-	var (
-		testRemotes = os.Getenv(testRemotesEnv)
-		testGroups  = os.Getenv(testGroupsEnv)
-	)
+	// set groups
+	s.groups = []uint32{1, 2, 3}
 
-	if testRemotes == "" || testGroups == "" {
-		c.Log(testRemotes, testGroups)
-		c.Skip(fmt.Sprintf(`TestFull: Skipped as remotes and groups aren't specified.
-	Setup env variables. Example: export %s="localhost:1025:2" && export %s="1,2,3"`,
-			testRemotesEnv, testGroupsEnv))
+	// start ioserver
+	ioserv, err := StartDnetIOServ(s.groups)
+	if err != nil {
+		c.Fatal(err)
 	}
+	s.ioserv = ioserv
 
+	c.Logf("ioserv started [PID %d] on %s, groups %v",
+		ioserv.cmd.Process.Pid, strings.Join(s.ioserv.Address(), ","), s.groups)
+	// create node
 	s.NodeSuite.SetUpTest(c)
-	s.node.AddRemotes(strings.Split(testRemotes, ","))
-	for _, group := range strings.Split(testGroups, ",") {
-		gr, err := strconv.ParseUint(group, 10, 32)
-		if err != nil {
-			c.Fatalf("TestFull: invalid group number %v", err)
-		}
-		s.groups = append(s.groups, uint32(gr))
-	}
+	c.Logf("add remotes %s", strings.Join(s.ioserv.Address(), ","))
+	s.node.AddRemotes(s.ioserv.Address())
 }
 
 func (s *SessionSuite) TearDownSuite(c *C) {
 	s.NodeSuite.TearDownTest(c)
+
+	if s.ioserv != nil {
+		s.ioserv.Close()
+	}
 }
 
 func (s *SessionSuite) SetUpTest(c *C) {
@@ -122,9 +116,7 @@ func (s *SessionSuite) TestIOFlags(c *C) {
 
 func (s *SessionSuite) TestSessionStat(c *C) {
 	dnetStat := s.session.DnetStat()
-	c.Log(dnetStat)
 	defer s.session.GetRoutes(dnetStat)
-	c.Log(dnetStat.StatData())
 }
 
 func (s *SessionSuite) TestTimestamp(c *C) {
