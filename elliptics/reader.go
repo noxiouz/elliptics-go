@@ -47,7 +47,7 @@ func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 		return nil, err
 	}
 
-	rs, err := NewReadSeekerKey(session, key)
+	rs, err := NewReadSeekerKeyOffsetSize(session, key, 0, 0)
 	if err != nil {
 		key.Free()
 		return nil, err
@@ -58,12 +58,34 @@ func NewReadSeeker(session *Session, kstr string) (*ReadSeeker, error) {
 	return rs, nil
 }
 
-func NewReadSeekerKey(session *Session, key *Key) (*ReadSeeker, error) {
+func NewReadSeekerOffsetSize(session *Session, kstr string, offset, size uint64) (*ReadSeeker, error) {
+	key, err := NewKey(kstr)
+	if err != nil {
+		return nil, err
+	}
+
+	rs, err := NewReadSeekerKeyOffsetSize(session, key, offset, size)
+	if err != nil {
+		key.Free()
+		return nil, err
+	}
+
+	rs.want_key_free = true
+
+	return rs, nil
+}
+
+func NewReadSeekerKeyOffsetSize(session *Session, key *Key, offset, size uint64) (*ReadSeeker, error) {
+	if size == 0 {
+		size = 10 * 1024 * 1024
+	}
+
 	r := &ReadSeeker {
 		session:		session,
 		key:			key,
 		want_key_free:		false,
-		chunk:			make([]byte, 10 * 1024 * 1024),
+		offset:			int64(offset),
+		chunk:			make([]byte, size),
 	}
 
 	_, err := r.ReadInternal(r.chunk)
@@ -139,7 +161,7 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 	offset := uint64(r.offset)
 
 	for {
-		if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset {
+		if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset && offset - r.read_offset < uint64(len(r.chunk)) {
 			// we have read and cached enough data (---) to satisfy client's request (+++)
 			// |-------------+++++++++++++++--------------------------------|
 			// ^             ^             ^                                ^

@@ -20,6 +20,7 @@ package elliptics
 
 #include "node.h"
 #include <stdlib.h>
+#include <string.h>
 
 static char**makeCharArray(int size) {
         return calloc(sizeof(char*), size);
@@ -49,6 +50,44 @@ import (
 // To initialize the Node you should use NewNode.
 type Node struct {
 	node unsafe.Pointer
+}
+
+type NodeConfig struct {
+	IOThreadNum		int			`json:"io-thread-num"`
+	NonBlockingIOThreadNum	int			`json:"nonblocking-io-thread-num"`
+	NetThreadNum		int			`json:"net-thread-num"`
+	WaitTimeout		uint64			`json:"wait-timeout"`
+	CheckTimeout		uint64			`json:"check-timeout"`
+	Flags			int			`json:"flags"`
+	StallCount		int			`json:"stall-count"`
+}
+
+// NewNode returns new Node with a given Logger.
+func NewNodeConfig(logfile string, level string, cfg *NodeConfig) (node *Node, err error) {
+	clevel := C.CString(level)
+	defer C.free(unsafe.Pointer(clevel))
+
+	clogfile := C.CString(logfile)
+	defer C.free(unsafe.Pointer(clogfile))
+
+	var dcfg C.struct_dnet_config
+	C.memset(unsafe.Pointer(&dcfg), 0, C.sizeof_struct_dnet_config)
+
+	dcfg.io_thread_num = C.int(cfg.IOThreadNum)
+	dcfg.nonblocking_io_thread_num = C.int(cfg.NonBlockingIOThreadNum)
+	dcfg.net_thread_num = C.int(cfg.NetThreadNum)
+	dcfg.wait_timeout = C.long(cfg.WaitTimeout)
+	dcfg.check_timeout = C.long(cfg.CheckTimeout)
+	dcfg.flags = C.int(cfg.Flags)
+	dcfg.stall_count = C.long(cfg.StallCount)
+
+	cnode := C.new_node_config(clogfile, clevel, &dcfg)
+	if cnode == nil {
+		err = fmt.Errorf("could not create node, please check stderr output")
+		return
+	}
+	node = &Node{cnode}
+	return
 }
 
 // NewNode returns new Node with a given Logger.

@@ -53,13 +53,13 @@ const (
 )
 
 var (
-	backend_state = map[int32]string{
+	BackendStateString = map[int32]string{
 		BackendStateDisabled:     "disabled",
 		BackendStateEnabled:      "enabled",
 		BackendStateActivating:   "activating",
 		BackendStateDeactivating: "deactivating",
 	}
-	defrag_state = map[int32]string{
+	DefragStateString = map[int32]string{
 		DefragStateNotStarted: "not-started",
 		DefragStateInProgress: "in-progress",
 	}
@@ -625,7 +625,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 		backend.DefragCompletionTime = time.Unix(int64(vnode.Backend.GlobalStats.DataSortCompletionTime), 0)
 		backend.DefragCompletionStatus = vnode.Backend.GlobalStats.DataSortCompletionStatus
 		backend.DefragState = vnode.Status.DefragState
-		backend.DefragStateStr = defrag_state[vnode.Status.DefragState]
+		backend.DefragStateStr = DefragStateString[vnode.Status.DefragState]
 		backend.RO = vnode.Status.RO
 		backend.Delay = vnode.Status.Delay
 

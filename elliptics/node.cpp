@@ -23,20 +23,25 @@ extern "C" {
 
 ell_node *new_node(const char *logfile, const char *level)
 {
-	try {
-		dnet_config cfg;
-		memset(&cfg, 0, sizeof(dnet_config));
-		//cfg.flags = DNET_CFG_MIX_STATES;
-		cfg.io_thread_num = 8;
-		cfg.nonblocking_io_thread_num = 4;
-		cfg.net_thread_num = 4;
-		cfg.wait_timeout = 15;
-		cfg.check_timeout = 30;
+	struct dnet_config cfg;
+	memset(&cfg, 0, sizeof(dnet_config));
+	//cfg.flags = DNET_CFG_MIX_STATES;
+	cfg.io_thread_num = 8;
+	cfg.nonblocking_io_thread_num = 4;
+	cfg.net_thread_num = 4;
+	cfg.wait_timeout = 15;
+	cfg.check_timeout = 30;
 
+	return new_node_config(logfile, level, &cfg);
+}
+
+ell_node *new_node_config(const char *logfile, const char *level, struct dnet_config *cfg)
+{
+	try {
 		std::shared_ptr<elliptics::file_logger> base =
 			std::make_shared<elliptics::file_logger>(logfile, elliptics::file_logger::parse_level(level));
 
-		return new ell_node(base, cfg);
+		return new ell_node(base, *cfg);
 	} catch (const std::exception &e) {
 		fprintf(stderr, "could not create new node: exception: %s\n", e.what());
 		return NULL;
