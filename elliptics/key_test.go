@@ -28,24 +28,25 @@ func (s *KeySuite) TestKeyDefaultNewAndFree(c *C) {
 	c.Assert(key.ById(), Equals, false)
 }
 
-func (s *KeySuite) TestKeySetRawId(c *C) {
+func (s *KeySuite) TestKeySetIdSetRawId(c *C) {
 	key, err := NewKey()
 	c.Assert(err, IsNil)
 	defer key.Free()
 
-	const id = "21b4f4bd9e64ed355c3eb676a28ebedaf6d8f17bdc365995b319097153044080516bd083bfcce66121a3072646994c8430cc382b8dc543e84880183bf856cff5"
-	// TODO: need size check
-	// *** buffer overflow detected ***: /tmp/go-build709277340/github.com/noxiouz/elliptics-go/elliptics/_test/elliptics.test terminated
-	// ======= Backtrace: =========
-	// /lib/x86_64-linux-gnu/libc.so.6(__fortify_fail+0x37)[0x7f453ad69007]
-	// /lib/x86_64-linux-gnu/libc.so.6(+0x107f00)[0x7f453ad67f00]
-	// /tmp/go-build709277340/github.com/noxiouz/elliptics-go/elliptics/_test/elliptics.test(key_set_id+0x47)[0x412637]
-	// /tmp/go-build709277340/github.com/noxiouz/elliptics-go/elliptics/_test/elliptics.test[0x47877a]
-	key.SetId([]byte(id)[:64], 3)
-	c.Assert(key.CmpID([]byte(id)), Equals, 0)
+	var id = []byte("21b4f4bd9e64ed355c3eb676a28ebedaf6d8f17bdc365995b319097153044080516bd083bfcce66121a3072646994c8430cc382b8dc543e84880183bf856cff5")
+	err = key.SetId(id, 3)
+	c.Assert(err, Equals, ErrInvalidDnetID)
+	err = key.SetRawId(id)
+	c.Assert(err, Equals, ErrInvalidDnetID)
 
-	key.SetRawId([]byte(id)[:64])
-	c.Assert(key.CmpID([]byte(id)), Equals, 0)
+	id = id[:64]
+	err = key.SetId(id, 3)
+	c.Assert(err, IsNil)
+	c.Assert(key.CmpID(id), Equals, 0)
+
+	err = key.SetRawId(id)
+	c.Assert(err, IsNil)
+	c.Assert(key.CmpID(id), Equals, 0)
 }
 
 func (s *KeySuite) TestKeyNewAndFree(c *C) {

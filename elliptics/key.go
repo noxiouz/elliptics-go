@@ -30,6 +30,9 @@ import (
 
 var (
 	InvalidKeyArgument = errors.New("InvalidKeyArgument")
+
+	DNET_ID_SIZE = int(C.DNET_ID_SIZE)
+	ErrInvalidDnetID = fmt.Errorf("Id must be shorter than %d", DNET_ID_SIZE)
 )
 
 type Key struct {
@@ -77,13 +80,21 @@ func (k *Key) ById() bool {
 	return int(C.key_by_id(k.key)) > 0
 }
 
-func (k *Key) SetId(id []byte, group_id uint32) {
+func (k *Key) SetId(id []byte, group_id uint32) error {
+	if len(id) > DNET_ID_SIZE {
+		return ErrInvalidDnetID
+	}
+
 	C.key_set_id(k.key, unsafe.Pointer(&id[0]), C.int(len(id)), C.int(group_id))
-	return
+	return nil
 }
-func (k *Key) SetRawId(id []byte) {
+func (k *Key) SetRawId(id []byte) error {
+	if len(id) > DNET_ID_SIZE {
+		return ErrInvalidDnetID
+	}
+
 	C.key_set_raw_id(k.key, unsafe.Pointer(&id[0]), C.int(len(id)))
-	return
+	return nil
 }
 
 func (k *Key) Free() {
