@@ -1,4 +1,4 @@
-# Go binding for Elliptics
+# Go binding for Elliptics  [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) [![codecov.io](https://codecov.io/github/noxiouz/elliptics-go/coverage.svg?branch=master)](https://codecov.io/github/noxiouz/elliptics-go?branch=master)
 
 [Elliptics](https://github.com/reverbrain/elliptics) is an amazing, distributed, fault tolerant, key-value storage.
 Use [Elliptics](https://github.com/reverbrain/elliptics) from **Go** language.
@@ -7,11 +7,6 @@ Use [Elliptics](https://github.com/reverbrain/elliptics) from **Go** language.
 
 [![GoDoc](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics?status.png)](https://godoc.org/github.com/noxiouz/elliptics-go/elliptics)
 
-### CI status
-
-Branch  | Build status | Coverage
-------------- | ------------- | -------
-master  | [![Build Status](https://travis-ci.org/noxiouz/elliptics-go.png?branch=master)](https://travis-ci.org/noxiouz/elliptics-go?branch=master) | [![Coverage Status](https://coveralls.io/repos/noxiouz/elliptics-go/badge.svg?branch=master)](https://coveralls.io/r/noxiouz/elliptics-go?branch=master)
 ## Installation
 
 You should install `elliptics-client-dev` to build this one.
@@ -28,4 +23,3 @@ Specify the following environment variables, if libraries and heders are located
  * `CGO_CPPFLAGS` - both C++/C flags
  * `CGO_CXXFLAGS` - C++ flags
  * `CGO_LDFLAGS` - linker flags
-
