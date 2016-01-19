@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	. "gopkg.in/check.v1"
@@ -284,6 +285,36 @@ func (s *SessionSuite) TestWriteRemove(c *C) {
 		c.Assert(res.Error(), ErrorMatches, ".*Failed to process LOOKUP command: No such file or directory: -2.*$")
 	}
 }
+
+func (s *SessionSuite) TestWriteKeyZeroLengthError(c *C) {
+	var testEmptyBlobReader io.Reader = strings.NewReader("")
+
+	key, _ := NewKey("test-key")
+	defer key.Free()
+
+	for res := range s.session.WriteKey(key, testEmptyBlobReader, 0, 0) {
+		c.Assert(res.Error(), NotNil)
+
+		dnetErr, ok := res.Error().(*DnetError)
+		c.Assert(ok, Equals, true)
+		// NOTE: EINVAL
+		c.Check(dnetErr.Code, Equals, -22)
+		c.Check(dnetErr.Flags, Equals, uint64(0))
+	}
+}
+
+
+func (s *SessionSuite) TestWriteKeyReaderError(c *C) {
+	var testErrorReader = iotest.TimeoutReader(strings.NewReader("ABCD"))
+
+	key, _ := NewKey("test-key")
+	defer key.Free()
+
+	for res := range s.session.WriteKey(key, testErrorReader, 0, 0) {
+		c.Assert(res.Error(), Equals, iotest.ErrTimeout)
+	}
+}
+
 
 func (s *SessionSuite) TestLookupBackend(c *C) {
 	var group = s.groups[0]
