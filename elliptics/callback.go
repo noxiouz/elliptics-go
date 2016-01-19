@@ -6,7 +6,6 @@ package elliptics
 import "C"
 
 import (
-	"reflect"
 	"unsafe"
 )
 
@@ -146,42 +145,4 @@ func go_read_callback(result *C.struct_go_read_result, key uint64, buffer_key ui
 
 	// All data from C++ has been copied here.
 	callback(Result)
-}
-
-//export go_find_callback
-func go_find_callback(result *C.struct_go_find_result, key uint64) {
-	context, err := Pool.Get(key)
-	if err != nil {
-		panic("Unable to find find callback")
-	}
-	callback := context.(func(*findResult))
-
-	var indexEntries []C.struct_c_index_entry
-	size := int(result.entries_count)
-	sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&indexEntries)))
-	sliceHeader.Cap = size
-	sliceHeader.Len = size
-	sliceHeader.Data = uintptr(unsafe.Pointer(result.entries))
-	var IndexDatas []IndexEntry
-	for _, item := range indexEntries {
-		IndexDatas = append(IndexDatas, IndexEntry{
-			Data: C.GoStringN(item.data, C.int(item.size)),
-		})
-	}
-	callback(&findResult{
-		id:   *result.id,
-		data: IndexDatas,
-		err:  nil,
-	})
-}
-
-//export go_index_entry_callback
-func go_index_entry_callback(result *C.struct_c_index_entry, key uint64) {
-	context, err := Pool.Get(key)
-	if err != nil {
-		panic("Unable to find index entry callback")
-	}
-	callback := context.(func(*IndexEntry))
-
-	callback(&IndexEntry{Data: C.GoStringN(result.data, C.int(result.size))})
 }

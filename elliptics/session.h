@@ -56,18 +56,6 @@ struct go_remove_result {
 	const struct dnet_cmd		*cmd;
 };
 
-//index_entry
-struct c_index_entry {
-	const char			*data;
-	uint64_t			size;
-};
-
-//find_indexes_result_entry
-struct go_find_result {
-	const struct dnet_raw_id	*id;
-	const uint64_t			entries_count;
-	struct c_index_entry		*entries;
-};
 
 struct go_data_pointer {
 	char *data;
@@ -167,26 +155,6 @@ void session_write_commit(ell_session *session, context_t on_chunk_context,
 void session_remove(ell_session *session, context_t on_chunk_context,
 		context_t final_context, ell_key *key);
 void session_bulk_remove(ell_session *session, context_t on_chunk_context, context_t final_context, void *ekeys);
-
-void session_find_all_indexes(ell_session *session, context_t on_chunk_context,
-		context_t final_context, char *indexes[], uint64_t nsize);
-void session_find_any_indexes(ell_session *session, context_t on_chunk_context,
-		context_t final_context, char *indexes[], uint64_t nsize);
-
-void session_set_indexes(ell_session *session, context_t on_chunk_context,
-		context_t final_context, ell_key *key, char *indexes[],
-		struct go_data_pointer *data, uint64_t count);
-
-void session_update_indexes(ell_session *session, context_t on_chunk_context,
-		context_t final_context, ell_key *key,
-		char *indexes[], struct go_data_pointer *data, uint64_t count);
-
-void session_remove_indexes(ell_session *session, context_t on_chunk_context,
-		context_t final_context, ell_key *key,
-		char *indexes[], uint64_t nsize);
-
-void session_list_indexes(ell_session *sesion, context_t on_chunk_context,
-		context_t final_context, ell_key *key);
 
 struct go_backends_status {
 	struct dnet_backend_status_list		*list;
