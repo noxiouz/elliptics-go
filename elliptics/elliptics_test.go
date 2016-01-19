@@ -96,6 +96,13 @@ func (s *SessionSuite) TestNamespace(c *C) {
 	s.session.SetNamespace(sessionNamespace)
 }
 
+func (s *SessionSuite) TestTransform(c *C) {
+	const key = "some_data"
+	id := s.session.Transform(key)
+	// NOTE: add more asserts
+	c.Assert(id, Not(HasLen), 0)
+}
+
 func (s *SessionSuite) TestTraceID(c *C) {
 	var sessionTraceID = TraceID(99999)
 	s.session.SetTraceID(sessionTraceID)
@@ -236,24 +243,74 @@ func (s *SessionSuite) TestWriteRemove(c *C) {
 		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
 		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
 		testBlobReader io.Reader = strings.NewReader(testBlob)
+		sessionTraceID = TraceID(99999)
 	)
 
 	s.session.SetGroups(s.groups)
+	s.session.SetTraceID(sessionTraceID)
 	s.session.SetNamespace(testNamespace)
 
 	key, _ := NewKey(testKey)
 	defer key.Free()
 
+	var backend int32
+
 	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
 		c.Assert(res.Error(), IsNil)
+
+		dnetCmd := res.Cmd()
+		c.Assert(dnetCmd, NotNil)
+		c.Check(dnetCmd.Trace, DeepEquals, uint64(sessionTraceID))
+		// TODO: dnetCmd.Flags -> uin64, should return IOflag
+		c.Check(IOflag(dnetCmd.Flags), Equals, DNET_IO_FLAGS_NODATA)
+
+		backend = res.Cmd().Backend
 	}
 
 	for res := range s.session.Remove(testKey) {
 		c.Assert(res.Error(), IsNil)
+		c.Check(res.Key(), Equals, testKey)
+
+		dnetCmd := res.Cmd()
+		c.Assert(dnetCmd, NotNil)
+
+		c.Check(dnetCmd.Trace, DeepEquals, uint64(sessionTraceID))
+		c.Check(dnetCmd.Flags, Equals, uint64(0))
+		c.Check(dnetCmd.Backend, Equals, backend)
 	}
 
 	for res := range s.session.Lookup(key) {
 		// Check that the key was actually removed
 		c.Assert(res.Error(), ErrorMatches, ".*Failed to process LOOKUP command: No such file or directory: -2.*$")
 	}
+}
+
+func (s *SessionSuite) TestLookupBackend(c *C) {
+	var group = s.groups[0]
+	addr, backend, err := s.session.LookupBackend("test-key", group)
+	c.Assert(err, IsNil)
+
+	c.Check(backend, Equals, int32(group))
+
+	// NOTE: assume IPv4 or hostname
+	port := strings.Split(s.ioserv.Address()[0], ":")[1]
+
+	// NOTE: test server is run on localhost and IPv4
+	c.Check(addr.HostString(), Equals, "127.0.0.1")
+
+	// 2 means IPv4
+	c.Check(addr.Family, Equals, uint16(2))
+	c.Check(addr.String(), Equals, fmt.Sprintf("127.0.0.1:%s:2", port))
+}
+
+func (s *SessionSuite) TestLookupBackendError(c *C) {
+	const nonExistentGroup = 1000
+	_, _, err := s.session.LookupBackend("test-key", nonExistentGroup)
+	c.Assert(err, NotNil)
+	c.Check(err, ErrorMatches, "elliptics error: -6: could not lookup backend: key '.*', group: .*: -6")
+
+	dnetErr, ok := err.(*DnetError)
+	c.Assert(ok, Equals, true)
+	c.Check(dnetErr.Code, Equals, -6)
+	c.Check(dnetErr.Flags, Equals, uint64(0))
 }

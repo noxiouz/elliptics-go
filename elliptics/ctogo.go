@@ -150,7 +150,7 @@ func (a *DnetAddr) HostString() string {
 	defer C.dnet_addr_free(tmp)
 
 	a.CAddr(tmp)
-	return fmt.Sprintf("%s", C.GoString(C.dnet_addr_host_string(tmp)))
+	return C.GoString(C.dnet_addr_host_string(tmp))
 }
 
 type DnetRawID struct {
