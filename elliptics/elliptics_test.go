@@ -382,8 +382,13 @@ func (s *SessionSuite) TestReader(c *C) {
 	readSeeker.Seek(int64(-buf_size) + 1, 2)
 	n, err = readSeeker.Read(buff)
 	c.Check(n, Equals, len(buff) - 1)
-	c.Check(err, Equals, io.EOF)
+	c.Assert(err, IsNil)
 
 	buff = buff[:n]
 	c.Assert(string(buff), DeepEquals, testBlob[len(testBlob) - buf_size + 1:])
+
+	readSeeker.Seek(0, 2)
+	n, err = readSeeker.Read(buff)
+	// we are at the very end of the file, reading should fail
+	c.Check(err, Equals, io.EOF)
 }
