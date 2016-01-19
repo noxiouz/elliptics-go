@@ -303,7 +303,6 @@ func (s *SessionSuite) TestWriteKeyZeroLengthError(c *C) {
 	}
 }
 
-
 func (s *SessionSuite) TestWriteKeyReaderError(c *C) {
 	var testErrorReader = iotest.TimeoutReader(strings.NewReader("ABCD"))
 
@@ -314,7 +313,6 @@ func (s *SessionSuite) TestWriteKeyReaderError(c *C) {
 		c.Assert(res.Error(), Equals, iotest.ErrTimeout)
 	}
 }
-
 
 func (s *SessionSuite) TestLookupBackend(c *C) {
 	var group = s.groups[0]
@@ -344,4 +342,44 @@ func (s *SessionSuite) TestLookupBackendError(c *C) {
 	c.Assert(ok, Equals, true)
 	c.Check(dnetErr.Code, Equals, -6)
 	c.Check(dnetErr.Flags, Equals, uint64(0))
+}
+
+// TestReadWrite writes a key with a data, then read it
+func (s *SessionSuite) TestReader(c *C) {
+	var (
+		testBlob                 = `MY_TEST_BLOB_WITH_DUMMY_DATA`
+		testKey                  = fmt.Sprintf("testkey-%d", time.Now().Unix())
+		testNamespace            = fmt.Sprintf("testnamespace-%d", time.Now().Unix())
+		testBlobReader io.Reader = strings.NewReader(testBlob)
+	)
+
+	s.session.SetGroups(s.groups)
+	s.session.SetNamespace(testNamespace)
+
+	// Store test data
+	for res := range s.session.WriteData(testKey, testBlobReader, 0, 0) {
+		c.Assert(res.Error(), IsNil)
+	}
+
+	var (
+		offset = uint64(2)
+		size = uint64(len(testBlob)) - offset
+	)
+
+	readSeeker, err := NewReadSeekerOffsetSize(s.session, testKey, offset, size)
+	c.Assert(err, IsNil)
+	defer readSeeker.Free()
+
+	var buff = make([]byte, 2)
+	n, err := readSeeker.Read(buff)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, len(buff))
+	c.Assert(string(buff), DeepEquals, testBlob[int(offset):int(offset)+len(buff)])
+
+	buff = make([]byte, 2)
+	readSeeker.Seek(int64(-len(buff)) + 1, 2)
+	n, err = readSeeker.Read(buff)
+	c.Check(n, Equals, len(buff) - 1)
+	c.Check(err, Equals, io.EOF)
+	c.Assert(string(buff), DeepEquals, testBlob[len(testBlob) - len(buff) + 1:])
 }
