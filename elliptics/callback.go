@@ -125,14 +125,14 @@ func go_read_callback(result *C.struct_go_read_result, key uint64, buffer_key ui
 		}
 		buffer := buffer_context.([]byte)
 
-		Result.data = buffer
-		size := uint64(len(Result.data))
+		size := uint64(len(buffer))
 		if uint64(result.size) < size {
 			size = uint64(result.size)
 		}
 
-		C.memmove(unsafe.Pointer(&Result.data[0]), unsafe.Pointer(result.file), C.size_t(size))
+		C.memmove(unsafe.Pointer(&buffer[0]), unsafe.Pointer(result.file), C.size_t(size))
 		Result.ioattr.Size = size
+		Result.data = buffer[:size]
 	} else {
 		if result.size > 0 && result.file != nil {
 			Result.data = C.GoBytes(unsafe.Pointer(result.file), C.int(result.size))

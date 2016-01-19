@@ -2,6 +2,7 @@ package elliptics
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -159,6 +160,9 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 	}
 
 	offset := uint64(r.offset)
+	if offset >= r.TotalSize {
+		return 0, io.EOF
+	}
 
 	for {
 		if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset && offset - r.read_offset < uint64(len(r.chunk)) {
@@ -181,6 +185,8 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 			//                           |-end of the file
 			if r.read_offset + r.read_size == r.TotalSize {
 				n = copy(p, r.chunk[offset - r.read_offset :])
+				//fmt.Printf("read_offset: %d, read_size: %d, total_size: %d, offset: %d, p-size: %d, n: %d\n",
+				//	r.read_offset, r.read_size, r.TotalSize, offset, len(p), n)
 				r.offset += int64(n)
 				return n, nil
 			}
@@ -198,7 +204,7 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 
 		n, err = r.ReadInternal(r.chunk)
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 	}
 }
