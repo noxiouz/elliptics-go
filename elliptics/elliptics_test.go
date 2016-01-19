@@ -376,10 +376,14 @@ func (s *SessionSuite) TestReader(c *C) {
 	c.Assert(n, Equals, len(buff))
 	c.Assert(string(buff), DeepEquals, testBlob[int(offset):int(offset)+len(buff)])
 
-	buff = make([]byte, 2)
-	readSeeker.Seek(int64(-len(buff)) + 1, 2)
+	buf_size := 2
+	buff = make([]byte, buf_size)
+
+	readSeeker.Seek(int64(-buf_size) + 1, 2)
 	n, err = readSeeker.Read(buff)
 	c.Check(n, Equals, len(buff) - 1)
 	c.Check(err, Equals, io.EOF)
-	c.Assert(string(buff), DeepEquals, testBlob[len(testBlob) - len(buff) + 1:])
+
+	buff = buff[:n]
+	c.Assert(string(buff), DeepEquals, testBlob[len(testBlob) - buf_size + 1:])
 }
