@@ -530,7 +530,12 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 				continue
 			}
 
-			sb.PID = psb.PID
+			psb.PID.Lock()
+			sb.PID.Error = psb.PID.Error
+			sb.PID.IntegralError = psb.PID.IntegralError
+			sb.PID.ErrorTime = psb.PID.ErrorTime
+			sb.PID.Pain = psb.PID.Pain
+			psb.PID.Unlock()
 
 			for cmd, cstat := range sb.Commands {
 				pcstat, ok := psb.Commands[cmd]
