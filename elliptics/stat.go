@@ -595,7 +595,7 @@ func (stat *DnetStat) AddStatEntry(entry *StatEntry) {
 	for _, vnode := range r.Backends {
 		if vnode.Status.State != BackendStateEnabled {
 			log.Printf("stat: addr: %s, backend: %d, group: %d: DISABLED\n",
-				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group, vnode.Backend.Error.Code)
+				entry.addr.String(), int32(vnode.BackendID), vnode.Backend.Config.Group)
 			// do not update backend statistics
 			continue
 		}
