@@ -128,8 +128,8 @@ type PID struct {
 	Pain          float64
 }
 
-func NewPIDController() PID {
-	return PID{
+func NewPIDController() *PID {
+	return &PID {
 		ErrorTime: time.Now(),
 	}
 }
@@ -216,7 +216,7 @@ type StatBackend struct {
 	VFS VFS
 
 	// PID-controller used for data writing
-	PID PID
+	PID *PID
 
 	// per-command size/number counters
 	// difference between the two divided by the time difference equals to RPS/BPS
@@ -235,15 +235,14 @@ func NewStatBackend(ab AddressBackend) *StatBackend {
 }
 
 func (backend *StatBackend) PIDPain() float64 {
-	p := &backend.PID
 
-	p.RLock()
-	defer p.RUnlock()
+	backend.PID.RLock()
+	defer backend.PID.RUnlock()
 
-	return p.Pain
+	return backend.PID.Pain
 }
 func (backend *StatBackend) PIDUpdate(e float64) {
-	p := &backend.PID
+	p := backend.PID
 	p.Lock()
 	defer p.Unlock()
 
@@ -530,7 +529,12 @@ func (stat *DnetStat) Diff(prev *DnetStat) {
 				continue
 			}
 
-			sb.PID = psb.PID
+			psb.PID.Lock()
+			sb.PID.Error = psb.PID.Error
+			sb.PID.IntegralError = psb.PID.IntegralError
+			sb.PID.ErrorTime = psb.PID.ErrorTime
+			sb.PID.Pain = psb.PID.Pain
+			psb.PID.Unlock()
 
 			for cmd, cstat := range sb.Commands {
 				pcstat, ok := psb.Commands[cmd]
