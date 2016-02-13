@@ -98,7 +98,7 @@ type write_channel struct {
 
 func new_write_channel() *write_channel {
 	wch := &write_channel {
-		response:		make(chan Lookuper, 16),
+		response:		make(chan Lookuper, defaultVOLUME),
 		on_result_context:	NextContext(),
 		on_finish_context:	NextContext(),
 	}

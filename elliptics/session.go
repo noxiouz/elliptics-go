@@ -28,7 +28,11 @@ import (
 //#include <elliptics/packet.h>
 import "C"
 
-const defaultVOLUME = 10
+// it must be large enough to host all replies from all clients before reader starts getting them,
+// since it is possible that async c++ code will invoke onResult callbacks synchronously right in the
+// suposed-to-be-async call (in ::connect() actually).
+const defaultVOLUME = 10240
+
 const max_chunk_size uint64 = 10 * 1024 * 1024
 
 const (

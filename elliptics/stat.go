@@ -464,7 +464,14 @@ func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 }
 
 func (s *Session) DnetStat() *DnetStat {
-	response := make(chan *StatEntry, 10)
+	// this should be large enough to host all stat replies from every node before
+	// reads from this channel will start. It is possible, that @C.session_get_stats()
+	// will synchronously invoke @onResult callback in its ::connect() call,
+	// and if @response channel is small, this will block waiting for channel reader,
+	// which will only be called after @C.session_get_stats() (and thus possible sync callbacks)
+	// completes
+
+	response := make(chan *StatEntry, defaultVOLUME)
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
