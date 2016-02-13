@@ -471,7 +471,7 @@ func (s *Session) DnetStat() *DnetStat {
 	// which will only be called after @C.session_get_stats() (and thus possible sync callbacks)
 	// completes
 
-	response := make(chan *StatEntry, defaultVOLUME)
+	response := make(chan *StatEntry, 10000)
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()

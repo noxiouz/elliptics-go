@@ -57,6 +57,8 @@ static inline int dnet_backend_status_from_list(struct dnet_backend_status_list 
 */
 import "C"
 
+const defaultBackendVOLUME = 1024
+
 type DnetBackendStatus struct {
 	Backend      int32
 	State        int32
@@ -126,7 +128,7 @@ func go_backend_status_error(key uint64, cerr *C.struct_go_error) {
 }
 
 func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -145,7 +147,7 @@ func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
 }
 
 func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -164,7 +166,7 @@ func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *D
 }
 
 func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -183,7 +185,7 @@ func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBa
 }
 
 func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -202,7 +204,7 @@ func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetB
 }
 
 func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -221,7 +223,7 @@ func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *
 }
 
 func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
@@ -240,7 +242,7 @@ func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *
 }
 
 func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultVOLUME)
+	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
