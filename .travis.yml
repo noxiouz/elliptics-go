@@ -1,10 +1,13 @@
 language: go
 
+sudo: required
+dist: trusty
+
 go:
   - tip
 
 before_install:
-  - echo 'deb http://repo.reverbrain.com/precise current/amd64/' | sudo tee -a /etc/apt/sources.list
+  - echo 'deb http://repo.reverbrain.com/trusty current/amd64/' | sudo tee -a /etc/apt/sources.list
   - sudo apt-get update -qq
   - sudo apt-get install elliptics-dev elliptics-client elliptics libboost-system-dev --force-yes
   - go get golang.org/x/tools/cmd/cover
@@ -12,7 +15,7 @@ before_install:
 
 script:
   - go vet ./elliptics
-  - go test -v -coverprofile=coverage.out  -covermode=atomic ./elliptics
+  - go test -v -msan -coverprofile=coverage.out  -covermode=atomic ./elliptics
   - bash <(curl -s https://codecov.io/bash)
 
 branches:
