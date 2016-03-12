@@ -9,7 +9,7 @@ go:
 addons:
   apt:
     sources:
-    - llvm-toolchain-precise
+    - llvm-toolchain-trusty
     packages:
     - clang-3.8
 
