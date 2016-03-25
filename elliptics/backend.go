@@ -57,8 +57,6 @@ static inline int dnet_backend_status_from_list(struct dnet_backend_status_list 
 */
 import "C"
 
-const defaultBackendVOLUME = 1024
-
 type DnetBackendStatus struct {
 	Backend      int32
 	State        int32
@@ -127,13 +125,13 @@ func go_backend_status_error(key uint64, cerr *C.struct_go_error) {
 	return
 }
 
-func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendsStatus(addr *DnetAddr) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -146,13 +144,13 @@ func (s *Session) BackendsStatus(addr *DnetAddr) <-chan *DnetBackendsStatus {
 	return responseCh
 }
 
-func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -165,13 +163,13 @@ func (s *Session) BackendStartDefrag(addr *DnetAddr, backend_id int32) <-chan *D
 	return responseCh
 }
 
-func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -184,13 +182,13 @@ func (s *Session) BackendEnable(addr *DnetAddr, backend_id int32) <-chan *DnetBa
 	return responseCh
 }
 
-func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -203,13 +201,13 @@ func (s *Session) BackendDisable(addr *DnetAddr, backend_id int32) <-chan *DnetB
 	return responseCh
 }
 
-func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -222,13 +220,13 @@ func (s *Session) BackendMakeWritable(addr *DnetAddr, backend_id int32) <-chan *
 	return responseCh
 }
 
-func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)
@@ -241,13 +239,13 @@ func (s *Session) BackendMakeReadOnly(addr *DnetAddr, backend_id int32) <-chan *
 	return responseCh
 }
 
-func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32) <-chan *DnetBackendsStatus {
-	responseCh := make(chan *DnetBackendsStatus, defaultBackendVOLUME)
+func (s *Session) BackendSetDelay(addr *DnetAddr, backend_id int32, delay uint32) *DChannel {
+	responseCh := NewDChannel()
 	context := NextContext()
 
 	onFinish := func(tmp *DnetBackendsStatus) {
-		responseCh <- tmp
-		close(responseCh)
+		responseCh.In <- tmp
+		close(responseCh.In)
 		Pool.Delete(context)
 	}
 	Pool.Store(context, onFinish)

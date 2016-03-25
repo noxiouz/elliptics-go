@@ -464,30 +464,23 @@ func go_stat_callback(result *C.struct_go_stat_result, key uint64) {
 }
 
 func (s *Session) DnetStat() *DnetStat {
-	// this should be large enough to host all stat replies from every node before
-	// reads from this channel will start. It is possible, that @C.session_get_stats()
-	// will synchronously invoke @onResult callback in its ::connect() call,
-	// and if @response channel is small, this will block waiting for channel reader,
-	// which will only be called after @C.session_get_stats() (and thus possible sync callbacks)
-	// completes
-
-	response := make(chan *StatEntry, 10000)
+	response := NewDChannel()
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
 
 	onResult := func(result *StatEntry) {
-		response <- result
+		response.In <- result
 	}
 
 	onFinish := func(err error) {
 		if err != nil {
-			response <- &StatEntry{
+			response.In <- &StatEntry{
 				err: err,
 			}
 		}
 
-		close(response)
+		close(response.In)
 		Pool.Delete(onResultContext)
 		Pool.Delete(onFinishContext)
 	}
@@ -508,8 +501,8 @@ func (s *Session) DnetStat() *DnetStat {
 	s.GetRoutes(st)
 
 	// read stat results from the channel and update DnetStat
-	for se := range response {
-		st.AddStatEntry(se)
+	for se := range response.Out {
+		st.AddStatEntry(se.(*StatEntry))
 	}
 
 	return st

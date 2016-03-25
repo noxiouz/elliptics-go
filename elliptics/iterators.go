@@ -143,12 +143,12 @@ func go_iterator_callback(result *C.struct_go_iterator_result, key uint64) {
 	callback(&Result)
 }
 
-func iteratorHelper(id *DnetRawID) (*Key, uint64, uint64, <-chan IteratorResult, error) {
-	responseCh := make(chan IteratorResult, defaultVOLUME)
+func iteratorHelper(id *DnetRawID) (*Key, uint64, uint64, *DChannel, error) {
+	responseCh := NewDChannel()
 	ekey, err := NewKey()
 	if err != nil {
-		responseCh <- &iteratorResult{err: err}
-		close(responseCh)
+		responseCh.In <- &iteratorResult{err: err}
+		close(responseCh.In)
 
 		return nil, 0, 0, responseCh, err
 	}
@@ -159,14 +159,14 @@ func iteratorHelper(id *DnetRawID) (*Key, uint64, uint64, <-chan IteratorResult,
 	onFinishContext := NextContext()
 
 	onResult := func(iterres *iteratorResult) {
-		responseCh <- iterres
+		responseCh.In <- iterres
 	}
 
 	onFinish := func(err error) {
 		if err != nil {
-			responseCh <- &iteratorResult{err: err}
+			responseCh.In <- &iteratorResult{err: err}
 		}
-		close(responseCh)
+		close(responseCh.In)
 
 		Pool.Delete(onResultContext)
 		Pool.Delete(onFinishContext)
@@ -227,7 +227,7 @@ func convertRanges(ranges []DnetIteratorRange) []C.struct_go_iterator_range {
 }
 
 func (s *Session) IteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
-		itype uint64, iflags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+		itype uint64, iflags uint64, timeFrame ...time.Time) *DChannel {
 	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
 	if err != nil {
 		return responseCh
@@ -263,7 +263,7 @@ func (s *Session) IteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
 	return responseCh
 }
 
-func (s *Session) IteratorPause(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+func (s *Session) IteratorPause(id *DnetRawID, iteratorId uint64) *DChannel {
 	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
 	if err != nil {
 		return responseCh
@@ -276,7 +276,7 @@ func (s *Session) IteratorPause(id *DnetRawID, iteratorId uint64) <-chan Iterato
 	return responseCh
 }
 
-func (s *Session) IteratorContinue(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+func (s *Session) IteratorContinue(id *DnetRawID, iteratorId uint64) *DChannel {
 	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
 	if err != nil {
 		return responseCh
@@ -289,7 +289,7 @@ func (s *Session) IteratorContinue(id *DnetRawID, iteratorId uint64) <-chan Iter
 	return responseCh
 }
 
-func (s *Session) IteratorCancel(id *DnetRawID, iteratorId uint64) <-chan IteratorResult {
+func (s *Session) IteratorCancel(id *DnetRawID, iteratorId uint64) *DChannel {
 	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
 	if err != nil {
 		return responseCh
@@ -303,7 +303,7 @@ func (s *Session) IteratorCancel(id *DnetRawID, iteratorId uint64) <-chan Iterat
 }
 
 func (s *Session) CopyIteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
-		groups []uint32, iflags uint64, timeFrame ...time.Time) <-chan IteratorResult {
+		groups []uint32, iflags uint64, timeFrame ...time.Time) *DChannel {
 	ekey, onResultContext, onFinishContext, responseCh, err := iteratorHelper(id)
 	if err != nil {
 		return responseCh
@@ -338,7 +338,7 @@ func (s *Session) CopyIteratorStart(id *DnetRawID, ranges []DnetIteratorRange,
 	return responseCh
 }
 
-func (s *Session) ServerSend(keys []DnetRawID, flags uint64, groups []uint32) (<-chan IteratorResult, error) {
+func (s *Session) ServerSend(keys []DnetRawID, flags uint64, groups []uint32) (*DChannel, error) {
 	if len(groups) == 0 {
 		return nil, fmt.Errorf("server-send: invalid empty group set, must contain at least one group")
 	}
@@ -353,20 +353,20 @@ func (s *Session) ServerSend(keys []DnetRawID, flags uint64, groups []uint32) (<
 	defer id_keys.Free()
 
 
-	responseCh := make(chan IteratorResult, defaultVOLUME)
+	responseCh := NewDChannel()
 
 	onResultContext := NextContext()
 	onFinishContext := NextContext()
 
 	onResult := func(iterres *iteratorResult) {
-		responseCh <- iterres
+		responseCh.In <- iterres
 	}
 
 	onFinish := func(err error) {
 		if err != nil {
-			responseCh <- &iteratorResult{err: err}
+			responseCh.In <- &iteratorResult{err: err}
 		}
-		close(responseCh)
+		close(responseCh.In)
 
 		Pool.Delete(onResultContext)
 		Pool.Delete(onFinishContext)
