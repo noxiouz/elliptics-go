@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+const maxReaderChunkSize int = 1 * 1024 * 1024
+const defaultReaderChunkSize int = 64 * 1024
+
 // implements Reader and Seeker interfaces
 type ReadSeeker struct {
 	session		*Session
@@ -36,7 +39,7 @@ func NewEmptyReadSeeker() (*ReadSeeker, error) {
 		session:		nil,
 		key:			nil,
 		want_key_free:		false,
-		chunk:			make([]byte, 10 * 1024 * 1024),
+		chunk:			make([]byte, defaultReaderChunkSize),
 	}
 
 	return r, nil
@@ -78,7 +81,10 @@ func NewReadSeekerOffsetSize(session *Session, kstr string, offset, size uint64)
 
 func NewReadSeekerKeyOffsetSize(session *Session, key *Key, offset, size uint64) (*ReadSeeker, error) {
 	if size == 0 {
-		size = 10 * 1024 * 1024
+		size = uint64(defaultReaderChunkSize)
+	}
+	if  size > uint64(maxReaderChunkSize) {
+		size = uint64(maxReaderChunkSize)
 	}
 
 	r := &ReadSeeker {

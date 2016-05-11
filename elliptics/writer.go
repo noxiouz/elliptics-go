@@ -12,6 +12,8 @@ import (
 */
 import "C"
 
+const maxWriterChunkSize int = 1 * 1024 * 1024
+const defaultWriterChunkSize int = 64 * 1024
 
 // implements Writer and Seeker interfaces
 type WriteSeeker struct {
@@ -46,7 +48,7 @@ func NewEmptyWriteSeeker() (*WriteSeeker, error) {
 		session:		nil,
 		key:			nil,
 		want_key_free:		false,
-		chunk:			make([]byte, 10 * 1024 * 1024),
+		chunk:			make([]byte, defaultWriterChunkSize),
 	}
 
 	return w, nil
@@ -70,6 +72,11 @@ func NewWriteSeeker(session *Session, kstr string, remote_offset int64, total_si
 }
 
 func NewWriteSeekerKey(session *Session, key *Key, remote_offset int64, total_size, reserve_size uint64) (*WriteSeeker, error) {
+	size := total_size
+	if total_size > uint64(maxWriterChunkSize) {
+		size = uint64(maxWriterChunkSize)
+	}
+
 	w := &WriteSeeker {
 		session:		session,
 		key:			key,
@@ -78,7 +85,7 @@ func NewWriteSeekerKey(session *Session, key *Key, remote_offset int64, total_si
 		reserve_size:		reserve_size,
 		remote_offset:		remote_offset,
 		orig_remote_offset:	remote_offset,
-		chunk:			make([]byte, 10 * 1024 * 1024),
+		chunk:			make([]byte, size),
 	}
 
 	return w, nil
