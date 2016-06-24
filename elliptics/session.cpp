@@ -42,7 +42,7 @@ void on_finish(context_t context, const elliptics::error_info &error)
 
 ell_session *new_elliptics_session(ell_node *node)
 {
-	ell_session *session = new elliptics::session(*node);
+	ell_session *session = new elliptics::session(*node->node());
 	session->set_exceptions_policy(elliptics::session::no_exceptions);
 	// do not set negative/all filters without checking all callbacks,
 	// they expect only valid values
