@@ -40,6 +40,9 @@ type WriteSeeker struct {
 	local_offset		int
 	chunk			[]byte
 
+	// specifies whether prepare/plain_write/commit was used or it was always common write
+	prepared		bool
+
 	mtime			time.Time
 }
 
@@ -86,12 +89,18 @@ func NewWriteSeekerKey(session *Session, key *Key, remote_offset int64, total_si
 		remote_offset:		remote_offset,
 		orig_remote_offset:	remote_offset,
 		chunk:			make([]byte, size),
+		prepared:		false,
 	}
 
 	return w, nil
 }
 
 func (w *WriteSeeker) Free() {
+	if w.local_offset != 0 {
+		_ = w.Flush(w.chunk[0 : w.local_offset], true)
+		w.local_offset = 0
+	}
+
 	if w.want_key_free {
 		w.key.Free()
 	}
@@ -131,7 +140,7 @@ func (wch *write_channel) on_finish(err error) {
 	Pool.Delete(wch.on_finish_context)
 }
 
-func (w *WriteSeeker) Flush(buf []byte) (err error) {
+func (w *WriteSeeker) Flush(buf []byte, final bool) (err error) {
 	if w.session == nil || w.key == nil {
 		return fmt.Errorf("trying to write into empty interface")
 	}
@@ -144,29 +153,33 @@ func (w *WriteSeeker) Flush(buf []byte) (err error) {
 
 	len64 := uint64(len(buf))
 
-	if (w.remote_offset == w.orig_remote_offset) {
-		if uint64(w.remote_offset) + len64 == w.total_size {
+	if w.prepared {
+		if (uint64(w.remote_offset) + len64 == w.total_size) || final {
+			w.prepared = false
+			C.session_write_commit(w.session.session,
+				C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
+				w.key.key, C.uint64_t(w.remote_offset), C.uint64_t(w.total_size),
+				(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
+		} else {
+			C.session_write_plain(w.session.session,
+				C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
+				w.key.key, C.uint64_t(w.remote_offset),
+				(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
+		}
+	} else {
+		if uint64(w.remote_offset) + len64 == w.total_size || w.reserve_size == 0 {
 			// the whole package fits this chunk, use common write
 			C.session_write_data(w.session.session,
 				C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
 				w.key.key, C.uint64_t(w.remote_offset),
 				(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
 		} else {
+			w.prepared = true
 			C.session_write_prepare(w.session.session,
 				C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
 				w.key.key, C.uint64_t(w.remote_offset), C.uint64_t(w.reserve_size),
 				(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
 		}
-	} else if uint64(w.remote_offset) + len64 == w.total_size {
-		C.session_write_commit(w.session.session,
-			C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
-			w.key.key, C.uint64_t(w.remote_offset), C.uint64_t(w.total_size),
-			(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
-	} else {
-		C.session_write_plain(w.session.session,
-			C.context_t(wch.on_result_context), C.context_t(wch.on_finish_context),
-			w.key.key, C.uint64_t(w.remote_offset),
-			(*C.char)(unsafe.Pointer(&buf[0])), C.uint64_t(len64))
 	}
 
 	w.remote_offset += int64(len64)
@@ -207,7 +220,7 @@ func (w *WriteSeeker) Write(p []byte) (int, error) {
 
 	// flush internal buffer if new data will overflow it
 	if w.local_offset + data_len > len(w.chunk) {
-		err = w.Flush(w.chunk[0 : w.local_offset])
+		err = w.Flush(w.chunk[0 : w.local_offset], false)
 		if err != nil {
 			return 0, err
 		}
@@ -217,7 +230,7 @@ func (w *WriteSeeker) Write(p []byte) (int, error) {
 
 	// if new data can not be copied into the internal write it directly into elliptics
 	if data_len > len(w.chunk) {
-		err = w.Flush(p)
+		err = w.Flush(p, false)
 		if err != nil {
 			return 0, err
 		}
@@ -231,7 +244,7 @@ func (w *WriteSeeker) Write(p []byte) (int, error) {
 	// if we have finished our whole write, i.e. @total_size equals to already written data (@remote_offset) plus
 	// what we have in the internal buffer (@w.local_offset), flush internal buffer
 	if uint64(w.remote_offset) + uint64(w.local_offset) >= w.total_size {
-		err = w.Flush(w.chunk[0 : w.local_offset])
+		err = w.Flush(w.chunk[0 : w.local_offset], false)
 		if err != nil {
 			return 0, err
 		}
