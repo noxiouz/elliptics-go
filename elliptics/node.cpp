@@ -56,7 +56,7 @@ void delete_node(ell_node *node)
 int node_add_remote(ell_node *node, const char *addr, int port, int family)
 {
 	try {
-		node->add_remote(ioremap::elliptics::address(addr, port, family));
+		node->node()->add_remote(ioremap::elliptics::address(addr, port, family));
 	} catch(const elliptics::error &e) {
 		return e.error_code();
 	}
@@ -67,7 +67,7 @@ int node_add_remote(ell_node *node, const char *addr, int port, int family)
 int node_add_remote_one(ell_node *node, const char *addr)
 {
 	try {
-		node->add_remote(ioremap::elliptics::address(addr));
+		node->node()->add_remote(ioremap::elliptics::address(addr));
 	} catch(const elliptics::error &e) {
 		return e.error_code();
 	}
@@ -87,7 +87,7 @@ int node_add_remote_array(ell_node *node, const char **addr, int num)
 			}
 
 		}
-		node->add_remote(vaddr);
+		node->node()->add_remote(vaddr);
 	} catch (const elliptics::error &e) {
 		return e.error_code();
 	} catch (const std::exception &e) {
@@ -98,7 +98,7 @@ int node_add_remote_array(ell_node *node, const char **addr, int num)
 
 void node_set_timeouts(ell_node *node, int wait_timeout, int check_timeout)
 {
-	node->set_timeouts(wait_timeout, check_timeout);
+	node->node()->set_timeouts(wait_timeout, check_timeout);
 }
 
 } // extern "C"

@@ -23,20 +23,23 @@
 #include <blackhole/formatter/string.hpp>
 #undef BOOST_BIND_NO_PLACEHOLDERS
 
-class ell_node : public ioremap::elliptics::node {
+class ell_node {
 public:
-	ell_node(std::shared_ptr<ioremap::elliptics::file_logger> &base, dnet_config &cfg) :
-		::ioremap::elliptics::node(
-			ioremap::elliptics::logger(*base,
-				blackhole::log::attributes_t({
-					ioremap::elliptics::keyword::request_id() = 0
-				})
-			),
-		cfg),
-		m_log(base) {
+	ell_node(std::shared_ptr<ioremap::elliptics::file_logger> &base, dnet_config &cfg)
+		: m_node(new ioremap::elliptics::node(ioremap::elliptics::logger(*base, blackhole::log::attributes_t({
+							ioremap::elliptics::keyword::request_id() = 0
+							})
+						), cfg))
+		, m_log(base)
+	{
+	}
+
+	std::shared_ptr<ioremap::elliptics::node> node() {
+		return m_node;
 	}
 
 private:
+	std::shared_ptr<ioremap::elliptics::node> m_node;
 	std::shared_ptr<ioremap::elliptics::file_logger> m_log;
 };
 
