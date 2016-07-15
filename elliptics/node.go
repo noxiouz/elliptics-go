@@ -113,6 +113,11 @@ func (node *Node) Free() {
 	C.delete_node(node.node)
 }
 
+// Get raw elliptics node pointer
+func (node *Node) GetRawPointer() unsafe.Pointer {
+	return node.node
+}
+
 /*
  * SetTimeouts overrides the default values for timeouts.
  *

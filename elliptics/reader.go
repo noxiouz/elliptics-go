@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+const maxReaderChunkSize int = 1 * 1024 * 1024
+const defaultReaderChunkSize int = 64 * 1024
+
 // implements Reader and Seeker interfaces
 type ReadSeeker struct {
 	session		*Session
@@ -36,7 +39,7 @@ func NewEmptyReadSeeker() (*ReadSeeker, error) {
 		session:		nil,
 		key:			nil,
 		want_key_free:		false,
-		chunk:			make([]byte, 10 * 1024 * 1024),
+		chunk:			make([]byte, defaultReaderChunkSize),
 	}
 
 	return r, nil
@@ -78,7 +81,10 @@ func NewReadSeekerOffsetSize(session *Session, kstr string, offset, size uint64)
 
 func NewReadSeekerKeyOffsetSize(session *Session, key *Key, offset, size uint64) (*ReadSeeker, error) {
 	if size == 0 {
-		size = 10 * 1024 * 1024
+		size = uint64(defaultReaderChunkSize)
+	}
+	if  size > uint64(maxReaderChunkSize) {
+		size = uint64(maxReaderChunkSize)
 	}
 
 	r := &ReadSeeker {
@@ -132,6 +138,9 @@ func (r *ReadSeeker) ReadInternal(buf []byte) (n int, err error) {
 		r.TotalSize = rd.IO().TotalSize
 		r.Mtime = rd.IO().Timestamp
 
+		//fmt.Printf("ReadInternal: read_offset: %d, read_size: %d, record_flags: 0x%x, total_size: %d, buf_size: %d, mtime: %s\n",
+		//		r.read_offset, r.read_size, r.RecordFlags, r.TotalSize, len(buf), r.Mtime.String())
+
 		return int(r.read_size), nil
 	}
 
@@ -161,10 +170,15 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 
 	offset := uint64(r.offset)
 	if offset >= r.TotalSize {
+		//fmt.Printf("read_offset: %d, read_size: %d, total_size: %d, offset: %d, p-size: %d: finished, returning io.EOF\n",
+		//		r.read_offset, r.read_size, r.TotalSize, offset, len(p))
 		return 0, io.EOF
 	}
 
 	for {
+		//fmt.Printf("read_offset: %d, read_size: %d, total_size: %d, offset: %d, p-size: %d, r-size: %d\n",
+		//		r.read_offset, r.read_size, r.TotalSize, offset, len(p), len(r.chunk))
+
 		if r.read_size != 0 && len(r.chunk) != 0 && r.read_offset <= offset && offset - r.read_offset < uint64(len(r.chunk)) {
 			// we have read and cached enough data (---) to satisfy client's request (+++)
 			// |-------------+++++++++++++++--------------------------------|
@@ -184,9 +198,9 @@ func (r *ReadSeeker) Read(p []byte) (n int, err error) {
 			// |-read_offset |-offset    |-read_offset + read_size        |-offset + len(p)
 			//                           |-end of the file
 			if r.read_offset + r.read_size == r.TotalSize {
-				n = copy(p, r.chunk[offset - r.read_offset :])
-				//fmt.Printf("read_offset: %d, read_size: %d, total_size: %d, offset: %d, p-size: %d, n: %d\n",
-				//	r.read_offset, r.read_size, r.TotalSize, offset, len(p), n)
+				n = copy(p, r.chunk[offset - r.read_offset : r.read_size])
+				//fmt.Printf("read_offset: %d, read_size: %d, total_size: %d, offset: %d, p-size: %d, r-size: %d, n: %d\n",
+				//	r.read_offset, r.read_size, r.TotalSize, offset, len(p), len(r.chunk), n)
 				r.offset += int64(n)
 				return n, nil
 			}
